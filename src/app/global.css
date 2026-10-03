@@ -1,3 +1,21 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer utilities {
+	.font-inter {
+		font-family: "Inter-Regular";
+	}
+	.font-inter-light {
+		font-family: "Inter-Light";
+	}
+	.font-inter-medium {
+		font-family: "Inter-Medium";
+	}
+	.font-inter-semibold {
+		font-family: "Inter-SemiBold";
+	}
+	.font-inter-bold {
+		font-family: "Inter-Bold";
+	}
+}
