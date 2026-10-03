@@ -119,7 +119,7 @@ export default function Index() {
 					{/* Date */}
 					<View className="flex-row gap-3 mb-4">
 						<Pressable
-							onPress={() => router.push("/departure-date")}
+							onPress={() => router.push("/flight-dates")}
 							className="flex-1 w-1/2 border border-border rounded-xl p-3 relative"
 						>
 							<Text className="absolute -top-2.5 left-4 bg-white px-1 text-xs font-inter-light text-gray-200">
@@ -128,14 +128,19 @@ export default function Index() {
 
 							<View className="flex-row items-center mt-1 gap-3">
 								<Feather name={departureDate ? "calendar" : "plus"} size={16} color="#555" />
-								<Text className="font-inter-medium text-sm text-black">
+								<Text
+									className={clsx(
+										"font-inter-medium text-sm",
+										departureDate ? "text-black" : "text-gray-200",
+									)}
+								>
 									{departureDate ?? "Add Departure Date"}
 								</Text>
 							</View>
 						</Pressable>
 
 						<Pressable
-							onPress={() => router.push("/return-date")}
+							onPress={() => router.push("/flight-dates")}
 							className="flex w-1/2 border border-border rounded-xl p-3 relative"
 						>
 							<Text className="absolute -top-2.5 left-4 bg-white px-1 text-xs font-inter-light text-gray-200">
@@ -144,7 +149,12 @@ export default function Index() {
 
 							<View className="flex-row items-center mt-1 gap-3">
 								<Feather name={returnDate ? "calendar" : "plus"} size={16} color="#555" />
-								<Text className="font-inter-medium text-sm text-gray-200">
+								<Text
+									className={clsx(
+										"font-inter-medium text-sm",
+										returnDate ? "text-black" : "text-gray-200",
+									)}
+								>
 									{returnDate ?? "Add Return Date"}
 								</Text>
 							</View>

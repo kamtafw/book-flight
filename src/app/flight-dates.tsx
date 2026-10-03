@@ -1,5 +1,6 @@
 import { MonthGrid } from "@/components/month-grid"
 import { Feather, Ionicons } from "@expo/vector-icons"
+import clsx from "clsx"
 import { router } from "expo-router"
 import { useMemo, useState } from "react"
 import { Pressable, ScrollView, Text, View } from "react-native"
@@ -51,7 +52,6 @@ function getCalendarDays(year: number, month: number) {
 
 	// leading days in next month
 	const remaining = 7 - (days.length % 7)
-
 	if (remaining < 7) {
 		for (let day = 1; day <= remaining; day++) {
 			days.push(new Date(year, month + 1, day))
@@ -61,13 +61,16 @@ function getCalendarDays(year: number, month: number) {
 	return days
 }
 
-export default function DepartureDateScreen() {
+export default function FlightDatesScreen() {
 	const today = new Date()
 
 	const [visibleMonth, setVisibleMonth] = useState(
 		new Date(today.getFullYear(), today.getMonth(), 1),
 	)
-	const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+
+	const [departureDate, setDepartureDate] = useState<Date | null>(null)
+	const [returnDate, setReturnDate] = useState<Date | null>(null)
+	const [activeField, setActiveField] = useState<"departure" | "return">("departure")
 
 	const calendarDaysForCurrentMonth = useMemo(
 		() => getCalendarDays(visibleMonth.getFullYear(), visibleMonth.getMonth()),
@@ -85,12 +88,30 @@ export default function DepartureDateScreen() {
 		[visibleMonth],
 	)
 
+	const handleDateSelect = (date: Date) => {
+		if (activeField === "departure") {
+			setDepartureDate(date)
+
+			if (returnDate && date > returnDate) {
+				setReturnDate(null)
+			}
+
+			setActiveField("return")
+			return
+		}
+
+		setReturnDate(date)
+	}
+
 	const handleSelect = () => {
-		if (!selectedDate) return
+		if (!departureDate) return
 
 		router.replace({
 			pathname: "/",
-			params: { departureDate: formatDate(selectedDate) },
+			params: {
+				departureDate: formatDate(departureDate),
+				returnDate: returnDate ? formatDate(returnDate) : "",
+			},
 		})
 	}
 
@@ -106,38 +127,69 @@ export default function DepartureDateScreen() {
 					<Ionicons name="chevron-back" size={24} color="#191919" />
 				</Pressable>
 				<Text className="flex-1 text-center font-inter-bold text-xl text-black mr-6">
-					Departure Date
+					Select Dates
 				</Text>
 			</View>
 
-			{/* Date Fields */}
+			{/* Date Input Range Cards */}
 			<View className="flex-row gap-4 px-5 py-4">
 				{/* Departure */}
-				<View className="flex-1 border border-border rounded-xl p-3 relative">
-					<Text className="absolute -top-2.5 left-4 bg-background px-1 text-xs font-inter-light text-gray-200">
+				<Pressable
+					onPress={() => setActiveField("departure")}
+					className={clsx(
+						"flex-1 border rounded-xl p-3 relative bg-white",
+						activeField === "departure" ? "border-primary" : "border-border",
+					)}
+				>
+					<Text
+						className={clsx(
+							"absolute -top-2.5 left-4 px-1 text-xs font-inter-light bg-background",
+							activeField === "departure" ? "text-primary" : "text-gray-200",
+						)}
+					>
 						Departure
 					</Text>
 
 					<View className="flex-row items-center gap-3 mt-1">
-						<Feather name={selectedDate ? "calendar" : "plus"} size={16} color="#555" />
+						<Feather
+							name={departureDate ? "calendar" : "plus"}
+							size={16}
+							color={activeField === "departure" ? "#EC441E" : "#555"}
+						/>
 						<Text className="font-inter-semibold text-sm text-black">
-							{selectedDate ? formatDate(selectedDate) : "Add Departure Date"}
+							{departureDate ? formatDate(departureDate) : "Add Departure Date"}
 						</Text>
 					</View>
-				</View>
+				</Pressable>
 
 				{/* Return */}
-
-				<View className="flex-1 border border-border rounded-xl p-3 relative">
-					<Text className="absolute -top-2.5 left-4 bg-background px-1 text-xs font-inter-light text-gray-200">
+				<Pressable
+					onPress={() => setActiveField("return")}
+					className={clsx(
+						"flex-1 border rounded-xl p-3 relative bg-white",
+						activeField === "return" ? "border-primary" : "border-border",
+					)}
+				>
+					<Text
+						className={clsx(
+							"absolute -top-2.5 left-4 px-1 text-xs font-inter-light bg-background",
+							activeField === "return" ? "text-primary" : "text-gray-200",
+						)}
+					>
 						Return
 					</Text>
 
 					<View className="flex-row items-center gap-3 mt-1">
-						<Feather name="plus" size={16} color="#555" />
-						<Text className="font-inter-semibold text-sm text-black">Add Return Date</Text>
+						<Feather
+							name={returnDate ? "calendar" : "plus"}
+							size={16}
+							color={activeField === "return" ? "#EC441E" : "#555"}
+						/>
+						<Text className="font-inter-semibold text-sm text-black">
+							{returnDate ? formatDate(returnDate) : "Add Return Date"}
+						</Text>
 					</View>
-				</View>
+				</Pressable>
 			</View>
 
 			{/* Weekdays Header */}
@@ -165,8 +217,10 @@ export default function DepartureDateScreen() {
 					monthName={MONTHS[visibleMonth.getMonth()]}
 					year={visibleMonth.getFullYear()}
 					targetMonthIndex={visibleMonth.getMonth()}
-					selectedDate={selectedDate}
-					onSelectDate={setSelectedDate}
+					startDate={departureDate}
+					endDate={returnDate}
+					minDate={activeField === "return" ? departureDate : today}
+					onSelectDate={handleDateSelect}
 				/>
 
 				{/* Next Month */}
@@ -175,16 +229,22 @@ export default function DepartureDateScreen() {
 					monthName={MONTHS[nextMonthIndex]}
 					year={nextMonthYear}
 					targetMonthIndex={nextMonthIndex}
-					selectedDate={selectedDate}
-					onSelectDate={setSelectedDate}
+					startDate={departureDate}
+					endDate={returnDate}
+					minDate={activeField === "return" ? departureDate : today}
+					onSelectDate={handleDateSelect}
 				/>
 			</ScrollView>
 
-			{/* Lower Call To Action Action Ribbon */}
+			{/* Form Execution Banner */}
 			<View className="px-5 pt-2 pb-8 bg-white">
 				<Pressable
 					onPress={handleSelect}
-					className="bg-primary w-full py-4 rounded-2xl items-center active:opacity-90 shadow-md shadow-primary/20 elevation-5"
+					disabled={!departureDate}
+					className={clsx(
+						"w-full py-4 rounded-2xl items-center shadow-md shadow-primary/20 elevation-5",
+						departureDate ? "bg-primary active:opacity-90" : "bg-gray-300",
+					)}
 				>
 					<Text className="text-white font-inter-bold text-base">Select</Text>
 				</Pressable>
