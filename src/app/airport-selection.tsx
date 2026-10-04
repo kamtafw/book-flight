@@ -1,22 +1,19 @@
 import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons"
+import { clsx } from "clsx"
 import { router, useLocalSearchParams } from "expo-router"
 import { useMemo, useState } from "react"
 import { FlatList, Pressable, Text, TextInput, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
 import { airports } from "@/lib/data"
-import clsx from "clsx"
+import { useFlightSearchStore } from "@/store/flight-search.store"
 
 export default function AirportSelectionScreen() {
-	const { field, tripType, departureDate, returnDate, fromAirport, toAirport } =
-		useLocalSearchParams<{
-			field?: AppConfig.AirportField
-			tripType?: string
-			departureDate?: string
-			returnDate?: string
-			fromAirport?: string
-			toAirport?: string
-		}>()
+	const { field } = useLocalSearchParams<{ field?: AppConfig.AirportField }>()
+
+	const setAirports = useFlightSearchStore((state) => state.setAirports)
+	const fromAirport = useFlightSearchStore((state) => state.fromAirport)
+	const toAirport = useFlightSearchStore((state) => state.toAirport)
 
 	const [search, setSearch] = useState("")
 
@@ -37,17 +34,13 @@ export default function AirportSelectionScreen() {
 	}, [search])
 
 	const handleSelectAirport = (airport: AppConfig.Airport) => {
-		router.replace({
-			pathname: "/",
-			params: {
-				tripType,
-				departureDate,
-				returnDate,
-				...(isDeparture
-					? { fromAirport: airport.code, toAirport }
-					: { toAirport: airport.code, fromAirport }),
-			},
-		})
+		if (isDeparture) {
+			setAirports(airport.code, toAirport)
+		} else {
+			setAirports(fromAirport, airport.code)
+		}
+
+		router.back()
 	}
 
 	return (

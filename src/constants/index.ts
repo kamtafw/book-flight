@@ -39,6 +39,47 @@ export const tripOptions: { value: AppConfig.TripType; label: string }[] = [
 	{ value: "multi-city", label: "Multi City" },
 ]
 
+export const cabinOptions: { value: AppConfig.CabinClass; label: string; description: string }[] = [
+	{
+		value: "economy",
+		label: "Economy",
+		description: "Standard seating and services",
+	},
+	{
+		value: "premium-economy",
+		label: "Premium Economy",
+		description: "More space and added comfort",
+	},
+	{
+		value: "business",
+		label: "Business",
+		description: "Premium seating and services",
+	},
+	{
+		value: "first",
+		label: "First Class",
+		description: "The highest level of comfort",
+	},
+]
+
+export const passengerRows: { type: AppConfig.PassengerType; label: string; description: string }[] = [
+	{
+		type: "adults",
+		label: "Adults",
+		description: "12 years and above",
+	},
+	{
+		type: "children",
+		label: "Children",
+		description: "2 - 11 years",
+	},
+	{
+		type: "infants",
+		label: "Infants",
+		description: "Under 2 years",
+	},
+]
+
 export const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
 export const months = [

@@ -1,80 +1,69 @@
-import { tripOptions } from "@/constants"
-import { airports } from "@/lib/data"
 import { Feather, FontAwesome5, MaterialIcons, Octicons } from "@expo/vector-icons"
-import clsx from "clsx"
-import { router, useLocalSearchParams } from "expo-router"
+import { clsx } from "clsx"
+import { router } from "expo-router"
+import { useState } from "react"
 import { Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
-export default function Index() {
-	const {
-		tripType: tripTypeParam,
-		departureDate,
-		returnDate,
-		fromAirport,
-		toAirport,
-	} = useLocalSearchParams<{
-		tripType?: AppConfig.TripType
-		departureDate?: string
-		returnDate?: string
-		fromAirport?: string
-		toAirport?: string
-	}>()
+import BookingPreferencesModal from "@/components/booking-preferences-modal"
+import { cabinOptions, tripOptions } from "@/constants"
+import { airports } from "@/lib/data"
+import { useFlightSearchStore } from "@/store/flight-search.store"
 
-	const tripType = tripTypeParam ?? "one-way"
+export default function Index() {
+	const { tripType, departureDate, returnDate, fromAirport, toAirport, passengers, cabinClass } =
+		useFlightSearchStore()
+	const setTripType = useFlightSearchStore((state) => state.setTripType)
+	const setAirports = useFlightSearchStore((state) => state.setAirports)
 
 	const selectedFromAirport = airports.find((airport) => airport.code === fromAirport)
 	const selectedToAirport = airports.find((airport) => airport.code === toAirport)
 
+	const travellerSummary = [
+		`${passengers.adults} Adult${passengers.adults !== 1 ? "s" : ""}`,
+		passengers.children > 0
+			? `${passengers.children} Child${passengers.children !== 1 ? "ren" : ""}`
+			: null,
+		passengers.infants > 0
+			? `${passengers.infants} Infant${passengers.infants !== 1 ? "s" : ""}`
+			: null,
+	]
+		.filter(Boolean)
+		.join(", ")
+
+	const cabinLabel = cabinOptions.find((cabin) => cabin.value === cabinClass)?.label
+
+	const [preference, setPreference] = useState<"travellers" | "class" | null>(null)
+
 	const handleTripTypeChange = (type: AppConfig.TripType) => {
-		router.setParams({
-			tripType: type,
-			returnDate: type === "one-way" ? "" : (returnDate ?? ""),
-		})
+		setTripType(type)
 	}
 
 	const handleSelectAirport = (field: AppConfig.AirportField) => {
 		router.push({
 			pathname: "/airport-selection",
-			params: {
-				field,
-				tripType,
-				departureDate,
-				returnDate,
-				fromAirport,
-				toAirport,
-			},
+			params: { field },
 		})
 	}
 
 	const handleSelectDate = () => {
-		router.push({
-			pathname: "/date-selection",
-			params: {
-				tripType,
-				departureDate,
-				returnDate,
-				fromAirport,
-				toAirport,
-			},
-		})
+		router.push("/date-selection")
 	}
 
 	const handleSwapAirports = () => {
 		if (!fromAirport || !toAirport) return
 
-		router.setParams({
-			fromAirport: toAirport,
-			toAirport: fromAirport,
-		})
+		setAirports(toAirport, fromAirport)
 	}
 
 	const canSearch =
-		tripType === "one-way"
+		!!fromAirport &&
+		!!toAirport &&
+		(tripType === "one-way"
 			? !!departureDate
 			: tripType === "round"
 				? !!departureDate && !!returnDate
-				: false
+				: false)
 
 	return (
 		<SafeAreaView className="flex-1 bg-background">
@@ -253,25 +242,31 @@ export default function Index() {
 
 						{/* Metadata (Passenger & Cabin Class) */}
 						<View className="flex-row gap-3 mb-6">
-							<View className="flex-1 w-1/2 border border-border rounded-xl p-3 relative">
+							<Pressable
+								onPress={() => setPreference("travellers")}
+								className="flex-1 w-1/2 border border-border rounded-xl p-3 relative"
+							>
 								<Text className="absolute -top-2.5 left-4 bg-white px-1 text-xs font-inter-light text-gray-200">
 									Traveller
 								</Text>
 
 								<View className="flex-row items-center mt-1">
-									<Text className="font-inter-medium text-sm text-black">1 Adult</Text>
+									<Text className="font-inter-medium text-sm text-black">{travellerSummary}</Text>
 								</View>
-							</View>
+							</Pressable>
 
-							<View className="flex w-1/2 border border-border rounded-xl p-3 relative">
+							<Pressable
+								onPress={() => setPreference("class")}
+								className="flex w-1/2 border border-border rounded-xl p-3 relative"
+							>
 								<Text className="absolute -top-2.5 left-4 bg-white px-1 text-xs font-inter-light text-gray-200">
 									Class
 								</Text>
 
 								<View className="flex-row items-center mt-1 gap-3">
-									<Text className="font-inter-medium text-sm text-black">Economy</Text>
+									<Text className="font-inter-medium text-sm text-black">{cabinLabel}</Text>
 								</View>
-							</View>
+							</Pressable>
 						</View>
 
 						{/* Submit */}
@@ -382,6 +377,12 @@ export default function Index() {
 					<Text className="font-inter text-xs text-white mt-1">Profile</Text>
 				</TouchableOpacity>
 			</View>
+
+			<BookingPreferencesModal
+				visible={preference !== null}
+				preference={preference ?? "travellers"}
+				onClose={() => setPreference(null)}
+			/>
 		</SafeAreaView>
 	)
 }

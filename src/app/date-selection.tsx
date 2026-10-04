@@ -1,11 +1,13 @@
-import { MonthGrid } from "@/components/month-grid"
-import { months, weekdays } from "@/constants"
 import { Feather, Ionicons } from "@expo/vector-icons"
-import clsx from "clsx"
-import { router, useLocalSearchParams } from "expo-router"
+import { clsx } from "clsx"
+import { router } from "expo-router"
 import { useMemo, useState } from "react"
 import { Pressable, ScrollView, Text, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
+
+import { MonthGrid } from "@/components/month-grid"
+import { months, weekdays } from "@/constants"
+import { useFlightSearchStore } from "@/store/flight-search.store"
 
 function formatDate(date: Date) {
 	const day = String(date.getDate()).padStart(2, "0")
@@ -56,22 +58,13 @@ function parseDate(value?: string) {
 }
 
 export default function DateSelectionScreen() {
-	const {
-		tripType,
-		departureDate: departureDateParam,
-		returnDate: returnDateParam,
-		fromAirport,
-		toAirport,
-	} = useLocalSearchParams<{
-		tripType?: AppConfig.TripType
-		departureDate?: string
-		returnDate?: string
-		fromAirport?: string
-		toAirport?: string
-	}>()
+	const setDates = useFlightSearchStore((state) => state.setDates)
+	const storeDepartureDate = useFlightSearchStore((state) => state.departureDate)
+	const storeReturnDate = useFlightSearchStore((state) => state.returnDate)
+	const tripType = useFlightSearchStore((state) => state.tripType)
 
-	const initialDepartureDate = parseDate(departureDateParam)
-	const initialReturnDate = parseDate(returnDateParam)
+	const initialDepartureDate = parseDate(storeDepartureDate)
+	const initialReturnDate = parseDate(storeReturnDate)
 
 	const today = new Date()
 	const initialVisibleDate = initialDepartureDate ?? today
@@ -105,31 +98,37 @@ export default function DateSelectionScreen() {
 	const handleDateSelect = (date: Date) => {
 		if (activeField === "departure") {
 			setDepartureDate(date)
-
 			if (returnDate && date > returnDate) {
 				setReturnDate(null)
 			}
-
-			setActiveField("return")
+			if (tripType === "round") {
+				setActiveField("return")
+			}
 			return
 		}
 
-		setReturnDate(date)
+		if (activeField === "return") {
+			if (!departureDate || date < departureDate) {
+				setDepartureDate(date)
+				setReturnDate(null)
+				setActiveField(tripType === "round" ? "return" : "departure")
+				return
+			}
+			setReturnDate(date)
+		}
+
+		return
 	}
 
 	const handleSelect = () => {
 		if (!departureDate) return
 
-		router.replace({
-			pathname: "/",
-			params: {
-				tripType,
-				departureDate: formatDate(departureDate),
-				returnDate: returnDate ? formatDate(returnDate) : "",
-				fromAirport,
-				toAirport,
-			},
-		})
+		setDates(
+			formatDate(departureDate),
+			tripType === "round" && returnDate ? formatDate(returnDate) : undefined,
+		)
+
+		router.back()
 	}
 
 	const nextMonthIndex = (visibleMonth.getMonth() + 1) % 12
