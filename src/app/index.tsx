@@ -1,7 +1,6 @@
 import { Feather, FontAwesome6, MaterialIcons, Octicons } from "@expo/vector-icons"
 import clsx from "clsx"
 import { router, useLocalSearchParams } from "expo-router"
-import { useState } from "react"
 import { Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
@@ -14,12 +13,42 @@ const TRIP_OPTIONS: { value: TripType; label: string }[] = [
 ]
 
 export default function Index() {
-	const { departureDate, returnDate } = useLocalSearchParams<{
+	const {
+		tripType: tripTypeParam,
+		departureDate,
+		returnDate,
+	} = useLocalSearchParams<{
+		tripType?: TripType
 		departureDate?: string
 		returnDate?: string
 	}>()
 
-	const [tripType, setTripType] = useState<TripType>("one-way")
+	const tripType = tripTypeParam ?? "one-way"
+
+	const handleTripTypeChange = (type: TripType) => {
+		router.setParams({
+			tripType: type,
+			returnDate: type === "one-way" ? "" : (returnDate ?? ""),
+		})
+	}
+
+	const handleSelectFlightDates = () => {
+		router.push({
+			pathname: "/flight-dates",
+			params: {
+				tripType,
+				departureDate,
+				returnDate,
+			},
+		})
+	}
+
+	const canSearch =
+		tripType === "one-way"
+			? !!departureDate
+			: tripType === "round"
+				? !!departureDate && !!returnDate
+				: false
 
 	return (
 		<SafeAreaView className="flex-1 bg-background">
@@ -44,7 +73,7 @@ export default function Index() {
 					{TRIP_OPTIONS.map((trip) => (
 						<TouchableOpacity
 							key={trip.value}
-							onPress={() => setTripType(trip.value)}
+							onPress={() => handleTripTypeChange(trip.value)}
 							className={clsx(
 								"flex-1 py-2.5 rounded-full items-center",
 								tripType === trip.value && "bg-primary",
@@ -63,132 +92,161 @@ export default function Index() {
 				</View>
 
 				{/* Booking Form */}
-				<View className="bg-white rounded-2xl px-4 py-6 gap-2 shadow">
-					{/* Location */}
-					<View className="relative mb-4">
-						{/* From */}
-						<View className="border border-border rounded-xl p-3 mb-6">
-							<Text className="absolute -top-2.5 left-4 bg-white px-1 text-xs font-inter-light text-gray-200">
-								From
-							</Text>
+				{tripType !== "multi-city" ? (
+					<View className="bg-white rounded-2xl px-4 py-6 gap-2 shadow">
+						{/* Location */}
+						<View className="relative mb-4">
+							{/* From */}
+							<View className="border border-border rounded-xl p-3 mb-6">
+								<Text className="absolute -top-2.5 left-4 bg-white px-1 text-xs font-inter-light text-gray-200">
+									From
+								</Text>
 
-							<View className="flex-row items-center mt-1 gap-3">
-								<FontAwesome6 name="plane-departure" size={16} color="#555" />
-								<View className="flex-1">
-									<View className="flex-row items-baseline gap-2">
-										<Text className="font-inter-semibold text-base text-black">Delhi</Text>
-										<Text className="font-inter text-xs text-gray-200">DEL</Text>
+								<View className="flex-row items-center mt-1 gap-3">
+									<FontAwesome6 name="plane-departure" size={16} color="#555" />
+									<View className="flex-1">
+										<View className="flex-row items-baseline gap-2">
+											<Text className="font-inter-semibold text-base text-black">Delhi</Text>
+											<Text className="font-inter text-xs text-gray-200">DEL</Text>
+										</View>
+										<Text
+											className="font-inter-light text-xs text-gray-100 mt-0.5"
+											numberOfLines={1}
+										>
+											Indira Gandhi International Airport
+										</Text>
 									</View>
-									<Text className="font-inter-light text-xs text-gray-100 mt-0.5" numberOfLines={1}>
-										Indira Gandhi International Airport
-									</Text>
+								</View>
+							</View>
+
+							<Pressable className="absolute right-6 top-[50px] z-10 bg-white border border-border p-2 rounded-full">
+								<Octicons
+									name={tripType === "round" ? "arrow-switch" : "arrow-down"}
+									size={24}
+									color="#555"
+									style={{ transform: [{ rotate: tripType === "round" ? "90deg" : "0deg" }] }}
+								/>
+							</Pressable>
+
+							{/* To */}
+							<View className="border border-border rounded-xl p-3 mb-2">
+								<Text className="absolute -top-2.5 left-4 bg-white px-1 text-xs font-inter-light text-gray-200">
+									To
+								</Text>
+
+								<View className="flex-row items-center mt-1 gap-3">
+									<FontAwesome6 name="plane-arrival" size={16} color="#555" />
+									<View className="flex-1">
+										<View className="flex-row items-baseline gap-2">
+											<Text className="font-inter-semibold text-base text-black">Kolkata</Text>
+											<Text className="font-inter text-xs text-gray-200">CCU</Text>
+										</View>
+										<Text
+											className="font-inter-light text-xs text-gray-100 mt-0.5"
+											numberOfLines={1}
+										>
+											Subhash Chandra International Airport
+										</Text>
+									</View>
 								</View>
 							</View>
 						</View>
 
-						<Pressable className="absolute right-6 top-[50px] z-10 bg-white border border-border p-2 rounded-full">
-							<Octicons
-								name="arrow-switch"
-								size={24}
-								color="#555"
-								style={{ transform: [{ rotate: "90deg" }] }}
-							/>
-						</Pressable>
+						{/* Date */}
+						<View className="flex-row gap-3 mb-4">
+							{/* Departure */}
+							<Pressable
+								onPress={handleSelectFlightDates}
+								className={clsx(
+									"border border-border rounded-xl p-3 relative",
+									tripType === "one-way" ? "flex-1" : "flex-1 w-1/2 ",
+								)}
+							>
+								<Text className="absolute -top-2.5 left-4 bg-white px-1 text-xs font-inter-light text-gray-200">
+									Departure
+								</Text>
 
-						{/* To */}
-						<View className="border border-border rounded-xl p-3 mb-2">
-							<Text className="absolute -top-2.5 left-4 bg-white px-1 text-xs font-inter-light text-gray-200">
-								To
-							</Text>
-
-							<View className="flex-row items-center mt-1 gap-3">
-								<FontAwesome6 name="plane-arrival" size={16} color="#555" />
-								<View className="flex-1">
-									<View className="flex-row items-baseline gap-2">
-										<Text className="font-inter-semibold text-base text-black">Kolkata</Text>
-										<Text className="font-inter text-xs text-gray-200">CCU</Text>
-									</View>
-									<Text className="font-inter-light text-xs text-gray-100 mt-0.5" numberOfLines={1}>
-										Subhash Chandra International Airport
+								<View className="flex-row items-center mt-1 gap-3">
+									<Feather name={departureDate ? "calendar" : "plus"} size={16} color="#555" />
+									<Text
+										className={clsx(
+											"font-inter-medium text-sm",
+											departureDate ? "text-black" : "text-gray-200",
+										)}
+									>
+										{departureDate || "Add Departure Date"}
 									</Text>
+								</View>
+							</Pressable>
+
+							{/* Return */}
+							{tripType === "round" && (
+								<Pressable
+									onPress={handleSelectFlightDates}
+									className="flex w-1/2 border border-border rounded-xl p-3 relative"
+								>
+									<Text className="absolute -top-2.5 left-4 bg-white px-1 text-xs font-inter-light text-gray-200">
+										Return
+									</Text>
+
+									<View className="flex-row items-center mt-1 gap-3">
+										<Feather name={returnDate ? "calendar" : "plus"} size={16} color="#555" />
+										<Text
+											className={clsx(
+												"font-inter-medium text-sm",
+												returnDate ? "text-black" : "text-gray-200",
+											)}
+										>
+											{returnDate || "Add Return Date"}
+										</Text>
+									</View>
+								</Pressable>
+							)}
+						</View>
+
+						{/* Metadata (Passenger & Cabin Class) */}
+						<View className="flex-row gap-3 mb-6">
+							<View className="flex-1 w-1/2 border border-border rounded-xl p-3 relative">
+								<Text className="absolute -top-2.5 left-4 bg-white px-1 text-xs font-inter-light text-gray-200">
+									Traveller
+								</Text>
+
+								<View className="flex-row items-center mt-1">
+									<Text className="font-inter-medium text-sm text-black">1 Adult</Text>
+								</View>
+							</View>
+
+							<View className="flex w-1/2 border border-border rounded-xl p-3 relative">
+								<Text className="absolute -top-2.5 left-4 bg-white px-1 text-xs font-inter-light text-gray-200">
+									Class
+								</Text>
+
+								<View className="flex-row items-center mt-1 gap-3">
+									<Text className="font-inter-medium text-sm text-black">Economy</Text>
 								</View>
 							</View>
 						</View>
-					</View>
 
-					{/* Date */}
-					<View className="flex-row gap-3 mb-4">
-						<Pressable
-							onPress={() => router.push("/flight-dates")}
-							className="flex-1 w-1/2 border border-border rounded-xl p-3 relative"
+						{/* Submit */}
+						<TouchableOpacity
+							disabled={!canSearch}
+							className={clsx(
+								"w-full py-4 rounded-xl items-center",
+								canSearch ? "bg-primary active:opacity-90" : "bg-gray-300",
+							)}
 						>
-							<Text className="absolute -top-2.5 left-4 bg-white px-1 text-xs font-inter-light text-gray-200">
-								Departure
-							</Text>
-
-							<View className="flex-row items-center mt-1 gap-3">
-								<Feather name={departureDate ? "calendar" : "plus"} size={16} color="#555" />
-								<Text
-									className={clsx(
-										"font-inter-medium text-sm",
-										departureDate ? "text-black" : "text-gray-200",
-									)}
-								>
-									{departureDate ?? "Add Departure Date"}
-								</Text>
-							</View>
-						</Pressable>
-
-						<Pressable
-							onPress={() => router.push("/flight-dates")}
-							className="flex w-1/2 border border-border rounded-xl p-3 relative"
-						>
-							<Text className="absolute -top-2.5 left-4 bg-white px-1 text-xs font-inter-light text-gray-200">
-								Return
-							</Text>
-
-							<View className="flex-row items-center mt-1 gap-3">
-								<Feather name={returnDate ? "calendar" : "plus"} size={16} color="#555" />
-								<Text
-									className={clsx(
-										"font-inter-medium text-sm",
-										returnDate ? "text-black" : "text-gray-200",
-									)}
-								>
-									{returnDate ?? "Add Return Date"}
-								</Text>
-							</View>
-						</Pressable>
+							<Text className="text-white font-inter-medium text-lg">Search</Text>
+						</TouchableOpacity>
 					</View>
+				) : (
+					<View className="bg-white rounded-2xl px-5 py-6 shadow">
+						<Text className="font-inter-semibold text-base text-black">Multi City</Text>
 
-					{/* Metadata (Passenger & Cabin Class) */}
-					<View className="flex-row gap-3 mb-6">
-						<View className="flex-1 w-1/2 border border-border rounded-xl p-3 relative">
-							<Text className="absolute -top-2.5 left-4 bg-white px-1 text-xs font-inter-light text-gray-200">
-								Traveller
-							</Text>
-
-							<View className="flex-row items-center mt-1">
-								<Text className="font-inter-medium text-sm text-black">1 Adult</Text>
-							</View>
-						</View>
-
-						<View className="flex w-1/2 border border-border rounded-xl p-3 relative">
-							<Text className="absolute -top-2.5 left-4 bg-white px-1 text-xs font-inter-light text-gray-200">
-								Class
-							</Text>
-
-							<View className="flex-row items-center mt-1 gap-3">
-								<Text className="font-inter-medium text-sm text-black">Economy</Text>
-							</View>
-						</View>
+						<Text className="font-inter text-sm text-gray-200 mt-2">
+							Multi-city flight planning will be implemented next.
+						</Text>
 					</View>
-
-					{/* Submit */}
-					<TouchableOpacity className="bg-primary w-full py-4 rounded-xl items-center">
-						<Text className="text-white font-inter-medium text-lg">Search</Text>
-					</TouchableOpacity>
-				</View>
+				)}
 
 				{/* Separator */}
 				<View className="border-hairline border-border" />

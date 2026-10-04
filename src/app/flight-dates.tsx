@@ -1,10 +1,12 @@
 import { MonthGrid } from "@/components/month-grid"
-import { Feather, Ionicons } from "@expo/vector-icons"
+import { Feather,Ionicons } from "@expo/vector-icons"
 import clsx from "clsx"
-import { router } from "expo-router"
-import { useMemo, useState } from "react"
-import { Pressable, ScrollView, Text, View } from "react-native"
+import { router,useLocalSearchParams } from "expo-router"
+import { useMemo,useState } from "react"
+import { Pressable,ScrollView,Text,View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
+
+type TripType = "one-way" | "round" | "multi-city"
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
@@ -61,16 +63,42 @@ function getCalendarDays(year: number, month: number) {
 	return days
 }
 
+function parseDate(value?: string) {
+	if (!value) return null
+
+	const [day, month, year] = value.split("/").map(Number)
+
+	if (!day || !month || !year) return null
+
+	return new Date(year, month - 1, day)
+}
+
 export default function FlightDatesScreen() {
+	const {
+		tripType,
+		departureDate: departureDateParam,
+		returnDate: returnDateParam,
+	} = useLocalSearchParams<{
+		tripType?: TripType
+		departureDate?: string
+		returnDate?: string
+	}>()
+
+	const initialDepartureDate = parseDate(departureDateParam)
+	const initialReturnDate = parseDate(returnDateParam)
+
 	const today = new Date()
+	const initialVisibleDate = initialDepartureDate ?? today
 
 	const [visibleMonth, setVisibleMonth] = useState(
-		new Date(today.getFullYear(), today.getMonth(), 1),
+		new Date(initialVisibleDate.getFullYear(), initialVisibleDate.getMonth(), 1),
 	)
 
-	const [departureDate, setDepartureDate] = useState<Date | null>(null)
-	const [returnDate, setReturnDate] = useState<Date | null>(null)
-	const [activeField, setActiveField] = useState<"departure" | "return">("departure")
+	const [departureDate, setDepartureDate] = useState<Date | null>(initialDepartureDate)
+	const [returnDate, setReturnDate] = useState<Date | null>(initialReturnDate)
+	const [activeField, setActiveField] = useState<"departure" | "return">(
+		initialDepartureDate && !initialReturnDate ? "return" : "departure",
+	)
 
 	const calendarDaysForCurrentMonth = useMemo(
 		() => getCalendarDays(visibleMonth.getFullYear(), visibleMonth.getMonth()),
@@ -109,6 +137,7 @@ export default function FlightDatesScreen() {
 		router.replace({
 			pathname: "/",
 			params: {
+				tripType,
 				departureDate: formatDate(departureDate),
 				returnDate: returnDate ? formatDate(returnDate) : "",
 			},
