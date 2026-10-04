@@ -1,45 +1,71 @@
-import { Feather, FontAwesome6, MaterialIcons, Octicons } from "@expo/vector-icons"
+import { tripOptions } from "@/constants"
+import { airports } from "@/lib/data"
+import { Feather, FontAwesome5, MaterialIcons, Octicons } from "@expo/vector-icons"
 import clsx from "clsx"
 import { router, useLocalSearchParams } from "expo-router"
 import { Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
-
-type TripType = "one-way" | "round" | "multi-city"
-
-const TRIP_OPTIONS: { value: TripType; label: string }[] = [
-	{ value: "one-way", label: "One Way" },
-	{ value: "round", label: "Round" },
-	{ value: "multi-city", label: "Multi City" },
-]
 
 export default function Index() {
 	const {
 		tripType: tripTypeParam,
 		departureDate,
 		returnDate,
+		fromAirport,
+		toAirport,
 	} = useLocalSearchParams<{
-		tripType?: TripType
+		tripType?: AppConfig.TripType
 		departureDate?: string
 		returnDate?: string
+		fromAirport?: string
+		toAirport?: string
 	}>()
 
 	const tripType = tripTypeParam ?? "one-way"
 
-	const handleTripTypeChange = (type: TripType) => {
+	const selectedFromAirport = airports.find((airport) => airport.code === fromAirport)
+	const selectedToAirport = airports.find((airport) => airport.code === toAirport)
+
+	const handleTripTypeChange = (type: AppConfig.TripType) => {
 		router.setParams({
 			tripType: type,
 			returnDate: type === "one-way" ? "" : (returnDate ?? ""),
 		})
 	}
 
-	const handleSelectFlightDates = () => {
+	const handleSelectAirport = (field: AppConfig.AirportField) => {
 		router.push({
-			pathname: "/flight-dates",
+			pathname: "/airport-selection",
+			params: {
+				field,
+				tripType,
+				departureDate,
+				returnDate,
+				fromAirport,
+				toAirport,
+			},
+		})
+	}
+
+	const handleSelectDate = () => {
+		router.push({
+			pathname: "/date-selection",
 			params: {
 				tripType,
 				departureDate,
 				returnDate,
+				fromAirport,
+				toAirport,
 			},
+		})
+	}
+
+	const handleSwapAirports = () => {
+		if (!fromAirport || !toAirport) return
+
+		router.setParams({
+			fromAirport: toAirport,
+			toAirport: fromAirport,
 		})
 	}
 
@@ -70,7 +96,7 @@ export default function Index() {
 			>
 				{/* Trip Type */}
 				<View className="flex-row bg-white rounded-full mx-4 p-1 shadow">
-					{TRIP_OPTIONS.map((trip) => (
+					{tripOptions.map((trip) => (
 						<TouchableOpacity
 							key={trip.value}
 							onPress={() => handleTripTypeChange(trip.value)}
@@ -94,69 +120,90 @@ export default function Index() {
 				{/* Booking Form */}
 				{tripType !== "multi-city" ? (
 					<View className="bg-white rounded-2xl px-4 py-6 gap-2 shadow">
-						{/* Location */}
+						{/* Airport */}
 						<View className="relative mb-4">
 							{/* From */}
-							<View className="border border-border rounded-xl p-3 mb-6">
+							<Pressable
+								onPress={() => handleSelectAirport("from")}
+								className="border border-border rounded-xl p-3 mb-6"
+							>
 								<Text className="absolute -top-2.5 left-4 bg-white px-1 text-xs font-inter-light text-gray-200">
 									From
 								</Text>
 
 								<View className="flex-row items-center mt-1 gap-3">
-									<FontAwesome6 name="plane-departure" size={16} color="#555" />
+									<FontAwesome5 name="plane-departure" size={16} color="#555" />
 									<View className="flex-1">
 										<View className="flex-row items-baseline gap-2">
-											<Text className="font-inter-semibold text-base text-black">Delhi</Text>
-											<Text className="font-inter text-xs text-gray-200">DEL</Text>
+											<Text className="font-inter-semibold text-base text-black">
+												{selectedFromAirport?.city}
+											</Text>
+											<Text className="font-inter text-xs text-gray-200">
+												{selectedFromAirport?.code}
+											</Text>
 										</View>
 										<Text
 											className="font-inter-light text-xs text-gray-100 mt-0.5"
 											numberOfLines={1}
 										>
-											Indira Gandhi International Airport
+											{selectedFromAirport?.name}
 										</Text>
 									</View>
 								</View>
-							</View>
+							</Pressable>
 
-							<Pressable className="absolute right-6 top-[50px] z-10 bg-white border border-border p-2 rounded-full">
+							<Pressable
+								disabled={!fromAirport || !toAirport}
+								onPress={handleSwapAirports}
+								className={clsx(
+									"absolute right-6 top-[50px] z-10 bg-white border border-border p-2 rounded-full",
+									(!fromAirport || !toAirport) && "opacity-40",
+								)}
+							>
 								<Octicons
-									name={tripType === "round" ? "arrow-switch" : "arrow-down"}
+									name="arrow-switch"
 									size={24}
 									color="#555"
-									style={{ transform: [{ rotate: tripType === "round" ? "90deg" : "0deg" }] }}
+									style={{ transform: [{ rotate: "90deg" }] }}
 								/>
 							</Pressable>
 
 							{/* To */}
-							<View className="border border-border rounded-xl p-3 mb-2">
+							<Pressable
+								onPress={() => handleSelectAirport("to")}
+								className="border border-border rounded-xl p-3 mb-2"
+							>
 								<Text className="absolute -top-2.5 left-4 bg-white px-1 text-xs font-inter-light text-gray-200">
 									To
 								</Text>
 
 								<View className="flex-row items-center mt-1 gap-3">
-									<FontAwesome6 name="plane-arrival" size={16} color="#555" />
+									<FontAwesome5 name="plane-arrival" size={16} color="#555" />
 									<View className="flex-1">
 										<View className="flex-row items-baseline gap-2">
-											<Text className="font-inter-semibold text-base text-black">Kolkata</Text>
-											<Text className="font-inter text-xs text-gray-200">CCU</Text>
+											<Text className="font-inter-semibold text-base text-black">
+												{selectedToAirport?.city}
+											</Text>
+											<Text className="font-inter text-xs text-gray-200">
+												{selectedToAirport?.code}
+											</Text>
 										</View>
 										<Text
 											className="font-inter-light text-xs text-gray-100 mt-0.5"
 											numberOfLines={1}
 										>
-											Subhash Chandra International Airport
+											{selectedToAirport?.name}
 										</Text>
 									</View>
 								</View>
-							</View>
+							</Pressable>
 						</View>
 
 						{/* Date */}
 						<View className="flex-row gap-3 mb-4">
 							{/* Departure */}
 							<Pressable
-								onPress={handleSelectFlightDates}
+								onPress={handleSelectDate}
 								className={clsx(
 									"border border-border rounded-xl p-3 relative",
 									tripType === "one-way" ? "flex-1" : "flex-1 w-1/2 ",
@@ -182,7 +229,7 @@ export default function Index() {
 							{/* Return */}
 							{tripType === "round" && (
 								<Pressable
-									onPress={handleSelectFlightDates}
+									onPress={handleSelectDate}
 									className="flex w-1/2 border border-border rounded-xl p-3 relative"
 								>
 									<Text className="absolute -top-2.5 left-4 bg-white px-1 text-xs font-inter-light text-gray-200">

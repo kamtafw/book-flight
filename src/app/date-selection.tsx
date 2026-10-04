@@ -1,29 +1,11 @@
 import { MonthGrid } from "@/components/month-grid"
-import { Feather,Ionicons } from "@expo/vector-icons"
+import { months, weekdays } from "@/constants"
+import { Feather, Ionicons } from "@expo/vector-icons"
 import clsx from "clsx"
-import { router,useLocalSearchParams } from "expo-router"
-import { useMemo,useState } from "react"
-import { Pressable,ScrollView,Text,View } from "react-native"
+import { router, useLocalSearchParams } from "expo-router"
+import { useMemo, useState } from "react"
+import { Pressable, ScrollView, Text, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
-
-type TripType = "one-way" | "round" | "multi-city"
-
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-
-const MONTHS = [
-	"January",
-	"February",
-	"March",
-	"April",
-	"May",
-	"June",
-	"July",
-	"August",
-	"September",
-	"October",
-	"November",
-	"December",
-]
 
 function formatDate(date: Date) {
 	const day = String(date.getDate()).padStart(2, "0")
@@ -73,15 +55,19 @@ function parseDate(value?: string) {
 	return new Date(year, month - 1, day)
 }
 
-export default function FlightDatesScreen() {
+export default function DateSelectionScreen() {
 	const {
 		tripType,
 		departureDate: departureDateParam,
 		returnDate: returnDateParam,
+		fromAirport,
+		toAirport,
 	} = useLocalSearchParams<{
-		tripType?: TripType
+		tripType?: AppConfig.TripType
 		departureDate?: string
 		returnDate?: string
+		fromAirport?: string
+		toAirport?: string
 	}>()
 
 	const initialDepartureDate = parseDate(departureDateParam)
@@ -140,6 +126,8 @@ export default function FlightDatesScreen() {
 				tripType,
 				departureDate: formatDate(departureDate),
 				returnDate: returnDate ? formatDate(returnDate) : "",
+				fromAirport,
+				toAirport,
 			},
 		})
 	}
@@ -223,7 +211,7 @@ export default function FlightDatesScreen() {
 
 			{/* Weekdays Header */}
 			<View className="flex-row bg-gray-400/40 py-3 px-4 justify-between">
-				{WEEKDAYS.map((day) => (
+				{weekdays.map((day) => (
 					<Text
 						key={day}
 						style={{ width: `${100 / 7}%` }}
@@ -243,7 +231,7 @@ export default function FlightDatesScreen() {
 				{/* Current Month */}
 				<MonthGrid
 					days={calendarDaysForCurrentMonth}
-					monthName={MONTHS[visibleMonth.getMonth()]}
+					monthName={months[visibleMonth.getMonth()]}
 					year={visibleMonth.getFullYear()}
 					targetMonthIndex={visibleMonth.getMonth()}
 					startDate={departureDate}
@@ -255,7 +243,7 @@ export default function FlightDatesScreen() {
 				{/* Next Month */}
 				<MonthGrid
 					days={calendarDaysForNextMonth}
-					monthName={MONTHS[nextMonthIndex]}
+					monthName={months[nextMonthIndex]}
 					year={nextMonthYear}
 					targetMonthIndex={nextMonthIndex}
 					startDate={departureDate}

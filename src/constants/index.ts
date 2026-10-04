@@ -33,6 +33,29 @@ import ticket from "@/assets/icons/ticket.png"
 import travel from "@/assets/icons/travel.png"
 import user from "@/assets/icons/user.png"
 
+export const tripOptions: { value: AppConfig.TripType; label: string }[] = [
+	{ value: "one-way", label: "One Way" },
+	{ value: "round", label: "Round" },
+	{ value: "multi-city", label: "Multi City" },
+]
+
+export const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
+export const months = [
+	"January",
+	"February",
+	"March",
+	"April",
+	"May",
+	"June",
+	"July",
+	"August",
+	"September",
+	"October",
+	"November",
+	"December",
+]
+
 export const images = {
 	address,
 	airplaneInFlight,
