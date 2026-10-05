@@ -63,3 +63,26 @@ export const mockFlights: AppConfig.Flight[] = [
 		currency: "$",
 	},
 ]
+
+const reservedSeats = new Set(["1A", "1D", "2C", "4B", "7A", "9D"])
+
+const emergencyRows = new Set([5, 6])
+
+export const seats: AppConfig.Seat[] = Array.from({ length: 12 }, (_, index) => {
+	const row = index + 1
+
+	return ["A", "B", "C", "D"].map((column) => {
+		const id = `${row}${column}`
+
+		return {
+			id,
+			row,
+			column: column as AppConfig.Seat["column"],
+			status: (reservedSeats.has(id)
+				? "reserved"
+				: emergencyRows.has(row)
+					? "emergency"
+					: "available") as AppConfig.SeatStatus,
+		}
+	})
+}).flat()

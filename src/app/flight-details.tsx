@@ -1,8 +1,8 @@
-import { airports, mockFlights } from "@/lib/data"
+import { airports,mockFlights } from "@/lib/data"
 import { useFlightSearchStore } from "@/store/flight-search.store"
-import { Feather, FontAwesome5 } from "@expo/vector-icons"
-import { router, useLocalSearchParams } from "expo-router"
-import { Pressable, ScrollView, Text, View } from "react-native"
+import { Feather,FontAwesome5 } from "@expo/vector-icons"
+import { router,useLocalSearchParams } from "expo-router"
+import { Pressable,ScrollView,Text,View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
 export default function FlightDetails() {
@@ -57,7 +57,11 @@ export default function FlightDetails() {
 				</Text>
 			</View>
 
-			<ScrollView className="px-6 pt-12 pb-8">
+			<ScrollView
+				className="flex-1"
+				showsVerticalScrollIndicator={false}
+				contentContainerClassName="px-6 pt-12 pb-8"
+			>
 				{/* Details Card */}
 				<View className="overflow-hidden bg-white rounded-2xl shadow">
 					{/* Airline */}

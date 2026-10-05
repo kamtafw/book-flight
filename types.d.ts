@@ -30,4 +30,13 @@ declare namespace AppConfig {
 		price: number
 		currency: string
 	}
+
+	type SeatStatus = "available" | "reserved" | "emergency"
+
+	interface Seat {
+		id: string
+		row: number
+		column: "A" | "B" | "C" | "D"
+		status: SeatStatus
+	}
 }
