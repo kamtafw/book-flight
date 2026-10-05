@@ -35,6 +35,15 @@ export default function Index() {
 
 	const [preference, setPreference] = useState<"travellers" | "class" | null>(null)
 
+	const canSearch =
+		!!fromAirport &&
+		!!toAirport &&
+		(tripType === "one-way"
+			? !!departureDate
+			: tripType === "round"
+				? !!departureDate && !!returnDate
+				: false)
+
 	const handleTripTypeChange = (type: AppConfig.TripType) => {
 		setTripType(type)
 	}
@@ -56,14 +65,11 @@ export default function Index() {
 		setAirports(toAirport, fromAirport)
 	}
 
-	const canSearch =
-		!!fromAirport &&
-		!!toAirport &&
-		(tripType === "one-way"
-			? !!departureDate
-			: tripType === "round"
-				? !!departureDate && !!returnDate
-				: false)
+	const handleSearch = () => {
+		if (!canSearch) return
+
+		router.push("/flight-results")
+	}
 
 	return (
 		<SafeAreaView className="flex-1 bg-background">
@@ -272,6 +278,7 @@ export default function Index() {
 						{/* Submit */}
 						<TouchableOpacity
 							disabled={!canSearch}
+							onPress={handleSearch}
 							className={clsx(
 								"w-full py-4 rounded-xl items-center",
 								canSearch ? "bg-primary active:opacity-90" : "bg-gray-300",

@@ -19,4 +19,15 @@ declare namespace AppConfig {
 		children: number
 		infants: number
 	}
+
+	interface Flight {
+		id: string
+		airline: string
+		flightNumber: string
+		departureTime: string
+		arrivalTime: string
+		duration: string
+		price: number
+		currency: string
+	}
 }
