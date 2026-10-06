@@ -56,7 +56,7 @@ export default function ChooseSeat2Screen() {
 	const handleConfirm = () => {
 		if (!canConfirm) return
 
-		// router.push("/personal-information")
+		router.push("/personal-information-2")
 	}
 
 	return (

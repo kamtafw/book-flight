@@ -39,4 +39,18 @@ declare namespace AppConfig {
 		column: "A" | "B" | "C" | "D"
 		status: SeatStatus
 	}
+
+	interface PassengerInformation {
+		name: string
+		address: string
+		passport: string
+		dateOfBirth: string
+		country: string
+	}
+
+	interface Country {
+		code: string
+		name: string
+		flag: string
+	}
 }

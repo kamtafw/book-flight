@@ -62,7 +62,11 @@ export const cabinOptions: { value: AppConfig.CabinClass; label: string; descrip
 	},
 ]
 
-export const passengerRows: { type: AppConfig.PassengerType; label: string; description: string }[] = [
+export const passengerRows: {
+	type: AppConfig.PassengerType
+	label: string
+	description: string
+}[] = [
 	{
 		type: "adults",
 		label: "Adults",
@@ -96,6 +100,33 @@ export const months = [
 	"November",
 	"December",
 ]
+
+export const countries: AppConfig.Country[] = [
+	{ code: "AU", name: "Australia", flag: "🇦🇺" },
+	{ code: "BR", name: "Brazil", flag: "🇧🇷" },
+	{ code: "CA", name: "Canada", flag: "🇨🇦" },
+	{ code: "CN", name: "China", flag: "🇨🇳" },
+	{ code: "EG", name: "Egypt", flag: "🇪🇬" },
+	{ code: "FR", name: "France", flag: "🇫🇷" },
+	{ code: "DE", name: "Germany", flag: "🇩🇪" },
+	{ code: "GH", name: "Ghana", flag: "🇬🇭" },
+	{ code: "IN", name: "India", flag: "🇮🇳" },
+	{ code: "IE", name: "Ireland", flag: "🇮🇪" },
+	{ code: "IT", name: "Italy", flag: "🇮🇹" },
+	{ code: "JP", name: "Japan", flag: "🇯🇵" },
+	{ code: "KE", name: "Kenya", flag: "🇰🇪" },
+	{ code: "NL", name: "Netherlands", flag: "🇳🇱" },
+	{ code: "NG", name: "Nigeria", flag: "🇳🇬" },
+	{ code: "ZA", name: "South Africa", flag: "🇿🇦" },
+	{ code: "ES", name: "Spain", flag: "🇪🇸" },
+	{ code: "AE", name: "United Arab Emirates", flag: "🇦🇪" },
+	{ code: "GB", name: "United Kingdom", flag: "🇬🇧" },
+	{ code: "US", name: "United States", flag: "🇺🇸" },
+].sort((a, b) => a.name.localeCompare(b.name))
+
+export const defaultAvatar = { uri: "https://i.pravatar.cc/256?img=12" }
+
+export const defaultPickerDate = new Date(2000, 0, 1)
 
 export const images = {
 	address,
