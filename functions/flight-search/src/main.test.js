@@ -29,6 +29,11 @@ test("rejects children counts or invalid adult counts", () => {
   assert.match(validateRequest({ ...validRequest, adults: 1.5 }), /1 and 9 adult/)
 })
 
+test("rejects child and infant passenger requests", () => {
+  assert.match(validateRequest({ ...validRequest, children: 1 }), /adult travellers only/)
+  assert.match(validateRequest({ ...validRequest, infants: 1 }), /adult travellers only/)
+})
+
 test("rejects unsupported cabin classes", () => {
   assert.match(validateRequest({ ...validRequest, cabinClass: "premium-economy" }), /cabin class/)
 })
