@@ -73,7 +73,7 @@ export async function searchFlights(
           destination: request.destination,
           departureDate: toIsoDate(request.departureDate),
           adults: request.adults,
-          cabinClass: request.cabinClass,
+          cabinClass: request.cabinClass === "premium-economy" ? "premium_economy" : request.cabinClass,
         }),
       }),
     },
