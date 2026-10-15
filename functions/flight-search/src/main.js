@@ -89,6 +89,9 @@ function validateRequest(body) {
   if (!isRecord(body)) return "Provide a valid flight-search request."
 
   const { origin, destination, departureDate, adults, cabinClass } = body
+  if ((body.children !== undefined && body.children !== 0) || (body.infants !== undefined && body.infants !== 0)) {
+    return "This version supports adult travellers only. Remove children and infants from the search."
+  }
   if (typeof origin !== "string" || !/^[A-Z]{3}$/.test(origin)) {
     return "Origin must be a three-letter IATA airport code."
   }
