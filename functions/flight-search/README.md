@@ -11,6 +11,7 @@ Create an Appwrite Function with these settings:
 - **Runtime:** Node.js 22 (or the newest Node runtime supported by the Appwrite project)
 - **Entrypoint:** `src/main.js`
 - **Root directory:** `functions/flight-search`
+- **Execution timeout:** configure at least 60 seconds, where supported by the project plan. Duffel supplier search can take several seconds.
 - **Build command:** no dependency installation is required; this function uses Node's built-in `fetch`
 
 Add a function environment variable named `DUFFEL_ACCESS_TOKEN`, paste the Duffel token as its value, and mark it **Secret**. Do not add this token to Expo's `EXPO_PUBLIC_*` variables. Redeploy the function after adding or changing the secret.
