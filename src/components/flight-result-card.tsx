@@ -46,11 +46,11 @@ export default function FlightResultCard({
           <Text className="font-inter text-sm text-gray-200">{flight.duration}</Text>
         </View>
 
-        {flight.operatingCarrierNames.length > 0 && (
-          <Text className="mt-3 font-inter-medium text-xs text-black">
-            Operated by {flight.operatingCarrierNames.join(", ")}
+        {flight.slices[0]?.segments.map((segment) => (
+          <Text key={segment.id} className="mt-2 font-inter-medium text-xs text-black">
+            {segment.flightNumber}: operated by {segment.operatingCarrierName}
           </Text>
-        )}
+        ))}
       </View>
 
       <View className="flex-row items-center px-5 py-5">
