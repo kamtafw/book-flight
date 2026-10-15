@@ -200,3 +200,5 @@ export default async function ({ req, res, log, error }) {
     clearTimeout(timeout)
   }
 }
+
+export { formatDuration, mapOffer, validateRequest }
