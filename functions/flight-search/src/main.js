@@ -110,7 +110,7 @@ function validateRequest(body) {
   if (origin === destination) return "Origin and destination must be different."
   if (
     typeof departureDate !== "string" ||
-    !/^\\d{4}-\\d{2}-\\d{2}$/.test(departureDate) ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(departureDate) ||
     Number.isNaN(Date.parse(departureDate + "T00:00:00Z")) ||
     new Date(departureDate + "T00:00:00Z").toISOString().slice(0, 10) !== departureDate
   ) {
