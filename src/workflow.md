@@ -54,6 +54,23 @@ It also provides predictable scenarios for things like:
 - map Duffel offers to **Book Flight** flight result model
 - replace mock results
 
+I've been able to integrate the Duffel flight API to the app through Appwrite Functions.
+The app is able to collect user flight search data and get real search results back which is displayed on the flight-search results screen.
+
+Here's the current working flow:
+
+```mermaid
+graph TD
+       A[\User enter flight details/] --> B(Frontend validates search inputs)
+       B --> C(Frontend calls Appwrite Function)
+       C --> D(Appwrite validates the request)
+       D --> E(Appwrite sends request to Duffel)
+       E --> F(Duffel returns flight offers)
+       F --> G(Appwrite normalizes the response)
+       G --> H(Frontend displays flight results)
+       H --> I(User selects an offer to view details)
+```
+
 #### 2. Real selected flight
 
 - persist selected offer

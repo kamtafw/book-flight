@@ -22,19 +22,26 @@ The function accepts a JSON POST body:
 
 ```json
 {
-  "origin": "LOS",
-  "destination": "ABV",
-  "departureDate": "2027-05-21",
-  "adults": 1,
-  "cabinClass": "economy"
+	"origin": "LOS",
+	"destination": "ABV",
+	"departureDate": "2027-05-21",
+	"adults": 1,
+	"childAges": [7],
+	"infantAges": [1],
+	"cabinClass": "economy"
 }
 ```
 
 - `origin` and `destination` are three-letter IATA airport codes.
 - `departureDate` must be `YYYY-MM-DD`.
 - `adults` must be an integer from 1 through 9.
+- `childAges` is an optional array of ages from 2 through 11; each array entry represents one child.
+- `infantAges` is an optional array of ages 0 or 1; each array entry represents one infant. Infants cannot outnumber adults.
+- The total number of travellers cannot exceed 9.
+- Adults are sent to Duffel as `{ "type": "adult" }`; each child and infant is sent as `{ "age": n }` so Duffel can apply its passenger-type rules.
+- Legacy `children` or `infants` count fields are rejected rather than silently ignored; callers must supply the corresponding age arrays.
 - `cabinClass` must be one of `economy`, `premium_economy`, `business`, or `first`.
-- Only one-way adult searches are supported in this slice. Child and infant counts are deliberately not accepted by the client contract.
+- Live search still supports one-way trips only.
 
 The response is `{ "offers": [...] }`. Offers are normalized by this function and include the Duffel offer ID, total fare and currency, expiry, itinerary segments, and each segment's operating-carrier name. The raw Duffel response is not passed through to the app.
 
