@@ -47,12 +47,36 @@ function toIsoDate(value: string): string {
   return [year, String(month).padStart(2, "0"), String(day).padStart(2, "0")].join("-")
 }
 
+function validatePassengers(request: FlightSearchRequest) {
+  if (!Number.isInteger(request.adults) || request.adults < 1 || request.adults > 9) {
+    throw new FlightSearchError("Choose between 1 and 9 adult travellers.", "INVALID_PASSENGERS")
+  }
+
+  if (!Array.isArray(request.childAges) || request.childAges.some(
+    (age) => !Number.isInteger(age) || age < 2 || age > 11,
+  )) {
+    throw new FlightSearchError("Each child must have an age from 2 through 11.", "INVALID_PASSENGERS")
+  }
+
+  if (!Array.isArray(request.infantAges) || request.infantAges.some(
+    (age) => !Number.isInteger(age) || age < 0 || age > 1,
+  )) {
+    throw new FlightSearchError("Each infant must have an age of 0 or 1.", "INVALID_PASSENGERS")
+  }
+
+  if (request.infantAges.length > request.adults) {
+    throw new FlightSearchError("Each infant must be accompanied by an adult.", "INVALID_PASSENGERS")
+  }
+
+  if (request.adults + request.childAges.length + request.infantAges.length > 9) {
+    throw new FlightSearchError("A search can include at most 9 travellers.", "INVALID_PASSENGERS")
+  }
+}
+
 export async function searchFlights(
   request: FlightSearchRequest,
 ): Promise<FlightSearchResponse> {
-  if (request.adults < 1 || !Number.isInteger(request.adults)) {
-    throw new FlightSearchError("At least one adult traveller is required.", "INVALID_PASSENGERS")
-  }
+  validatePassengers(request)
 
   const { endpoint, projectId, functionId } = getConfig()
   const response = await fetch(
@@ -73,6 +97,8 @@ export async function searchFlights(
           destination: request.destination,
           departureDate: toIsoDate(request.departureDate),
           adults: request.adults,
+          childAges: request.childAges,
+          infantAges: request.infantAges,
           cabinClass: request.cabinClass === "premium-economy" ? "premium_economy" : request.cabinClass,
         }),
       }),
