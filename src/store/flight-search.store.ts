@@ -52,8 +52,10 @@ export const useFlightSearchStore = create<FlightSearchState>((set) => ({
 			if (passengerType === "adults") {
 				const maximum = Math.max(1, 9 - current.children - current.infants)
 				const adults = Math.min(maximum, Math.max(1, requested))
+				const infants = Math.min(current.infants, adults)
 				return {
-					passengers: { ...current, adults, infants: Math.min(current.infants, adults) },
+					passengers: { ...current, adults, infants },
+					infantAges: resizeAges(state.infantAges, infants, 1),
 				}
 			}
 
