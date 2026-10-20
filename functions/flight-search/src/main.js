@@ -89,8 +89,8 @@ function validateRequest(body) {
   if (!isRecord(body)) return "Provide a valid flight-search request."
 
   const { origin, destination, departureDate, adults, cabinClass } = body
-  const childAges = body.childAges ?? []
-  const infantAges = body.infantAges ?? []
+  const childAges = body.childAges === undefined ? [] : body.childAges
+  const infantAges = body.infantAges === undefined ? [] : body.infantAges
 
   if (body.children !== undefined || body.infants !== undefined) {
     return "Provide childAges and infantAges arrays instead of child or infant counts."
