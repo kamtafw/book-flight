@@ -3,6 +3,8 @@ export interface FlightSearchRequest {
   destination: string
   departureDate: string
   adults: number
+  childAges: number[]
+  infantAges: number[]
   cabinClass: AppConfig.CabinClass
 }
 
