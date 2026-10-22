@@ -103,4 +103,6 @@ export interface SeatMapResponse {
 export interface SelectedSeatService extends SeatMapService {
 	segmentId: string
 	seatDesignator: string
+	seatName: string
+	disclosures: string[]
 }
