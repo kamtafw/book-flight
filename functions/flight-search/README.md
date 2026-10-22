@@ -43,7 +43,22 @@ The function accepts a JSON POST body:
 - `cabinClass` must be one of `economy`, `premium_economy`, `business`, or `first`.
 - Live search still supports one-way trips only.
 
-The response is `{ "offers": [...] }`. Offers are normalized by this function and include the Duffel offer ID, total fare and currency, expiry, itinerary segments, and each segment's operating-carrier name. The raw Duffel response is not passed through to the app.
+The normal search response is `{ "offers": [...] }`. Offers are normalized by this function and include the Duffel offer ID, total fare and currency, expiry, itinerary segments, and each segment's operating-carrier name. The raw Duffel response is not passed through to the app.
+
+## Seat-map request contract
+
+The same function accepts a seat-map action, keeping the Duffel credential server-side:
+
+```json
+{
+  "action": "seat-map",
+  "offerId": "off_exampleOfferId"
+}
+```
+
+The function calls Duffel's `GET /air/seat_maps?offer_id=...` endpoint and returns `{ "seatMaps": [...] }`. The normalized response preserves each seat map's segment/slice IDs, cabins, rows, sections, element types/designators, disclosures, and passenger-specific available services (service ID, passenger ID, amount, and currency). These service IDs are needed for a future order request; the app must not treat a selected seat as booked.
+
+An empty `seatMaps` array is a valid response and means seat selection is unavailable for that offer. Seat maps are provider-dependent and may be returned per itinerary segment. The client should allow travellers to continue without choosing a seat. A seat is selectable for a given traveller only when its `availableServices` contains a service for that passenger ID. Prices and service IDs must come from the current seat-map response.
 
 ## App configuration
 
