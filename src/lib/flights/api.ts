@@ -3,6 +3,7 @@ import {
 	type FlightOffer,
 	type FlightSearchRequest,
 	type FlightSearchResponse,
+	type SeatMapResponse,
 } from "@/lib/flights/types"
 
 function getConfig() {
@@ -157,7 +158,7 @@ export async function searchFlights(request: FlightSearchRequest): Promise<Fligh
 	return { offers: result.offers as FlightOffer[] }
 }
 
-export async function getSeatMaps(offerId: string): Promise<import("@/lib/flights/types").SeatMapResponse> {
+export async function getSeatMaps(offerId: string): Promise<SeatMapResponse> {
 	if (!/^off_[A-Za-z0-9]+$/.test(offerId)) {
 		throw new FlightSearchError("Choose a valid flight offer before requesting seat maps.", "INVALID_OFFER_ID")
 	}
@@ -196,7 +197,7 @@ export async function getSeatMaps(offerId: string): Promise<import("@/lib/flight
 		status?: string
 	}
 
-	let result: import("@/lib/flights/types").SeatMapResponse & { error?: string; code?: string }
+	let result: SeatMapResponse & { error?: string; code?: string }
 	try {
 		result = JSON.parse(execution.responseBody ?? "") as typeof result
 	} catch {
