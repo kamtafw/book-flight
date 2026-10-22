@@ -55,12 +55,14 @@ function SeatElement({
 	segmentId,
 	activePassengerId,
 	selected,
+	occupiedByOtherPassenger,
 	onPress,
 }: {
 	element: SeatMapElement
 	segmentId: string
 	activePassengerId: string
 	selected: boolean
+	occupiedByOtherPassenger: boolean
 	onPress: (element: SeatMapElement, segmentId: string, passengerId: string) => void
 }) {
 	if (element.type !== "seat" || !element.designator) {
@@ -80,7 +82,7 @@ function SeatElement({
 	}
 
 	const service = element.availableServices.find((item) => item.passengerId === activePassengerId)
-	const unavailable = !service
+	const unavailable = !service || occupiedByOtherPassenger
 	return (
 		<Pressable
 			disabled={unavailable}
@@ -262,6 +264,9 @@ export default function ChooseSeatScreen() {
 																		const selected = Boolean(service && selectedSeats.some(
 																			(item) => item.segmentId === seatMap.segmentId && item.passengerId === activePassengerId && item.id === service.id,
 																		))
+																		const occupiedByOtherPassenger = Boolean(element.designator && selectedSeats.some(
+																			(item) => item.segmentId === seatMap.segmentId && item.seatDesignator === element.designator && item.passengerId !== activePassengerId,
+																		))
 																		return (
 																			<SeatElement
 																				key={element.designator ?? `${element.type}-${row.index}-${sectionIndex}-${elementIndex}`}
@@ -269,6 +274,7 @@ export default function ChooseSeatScreen() {
 																				segmentId={seatMap.segmentId}
 																				activePassengerId={activePassengerId ?? ""}
 																				selected={selected}
+																				occupiedByOtherPassenger={occupiedByOtherPassenger}
 																				onPress={handleSeatPress}
 																			/>
 																		)
