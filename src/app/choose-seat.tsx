@@ -25,6 +25,22 @@ function formatSeatPrice(amount: string, currency: string) {
 	}
 }
 
+function formatSeatPriceCompact(amount: string, currency: string) {
+	const value = Number(amount)
+	if (!Number.isFinite(value) || !currency) return "—"
+	if (value === 0) return "Free"
+	try {
+		return new Intl.NumberFormat(undefined, {
+			style: "currency",
+			currency,
+			currencyDisplay: "narrowSymbol",
+			maximumFractionDigits: 0,
+		}).format(value)
+	} catch {
+		return `${currency} ${Math.round(value)}`
+	}
+}
+
 function segmentTitle(flight: FlightOffer | undefined, segmentId: string, index: number) {
 	const segment = flight?.slices.flatMap((slice) => slice.segments).find((item) => item.id === segmentId)
 	return segment
@@ -94,13 +110,18 @@ function SeatElement({
 					: `Seat ${element.designator}, ${formatSeatPrice(service.totalAmount, service.totalCurrency)}`
 			}
 			className={[
-				"m-0.5 h-10 w-10 items-center justify-center rounded-md border",
+				"m-0.5 h-12 w-12 items-center justify-center rounded-md border",
 				selected ? "border-primary bg-primary" : unavailable ? "border-gray-200 bg-gray-200" : "border-gray-300 bg-white",
 			].join(" ")}
 		>
-			<Text className={["font-inter-semibold text-xs", selected ? "text-white" : unavailable ? "text-gray-400" : "text-black"].join(" ")}>
+			<Text className={["font-inter-semibold text-[10px]", selected ? "text-white" : unavailable ? "text-gray-400" : "text-black"].join(" ")}>
 				{element.designator}
 			</Text>
+			{service && !unavailable && (
+				<Text numberOfLines={1} className={["mt-0.5 font-inter text-[8px]", selected ? "text-white" : "text-gray-200"].join(" ")}>
+					{formatSeatPriceCompact(service.totalAmount, service.totalCurrency)}
+				</Text>
+			)}
 		</Pressable>
 	)
 }
@@ -174,6 +195,8 @@ export default function ChooseSeatScreen() {
 			...service,
 			segmentId,
 			seatDesignator: element.designator,
+			seatName: element.name,
+			disclosures: element.disclosures,
 		})
 	}
 
@@ -308,6 +331,11 @@ export default function ChooseSeatScreen() {
 										{passengerLabels.find((passenger) => passenger.id === seat.passengerId)?.label ?? "Traveller"} · {segmentTitle(flight, seat.segmentId, 0)} · {seat.seatDesignator}
 									</Text>
 									<Text className="font-inter-medium text-sm text-black">{formatSeatPrice(seat.totalAmount, seat.totalCurrency)}</Text>
+									{seat.disclosures.length > 0 && (
+										<Text className="mt-1 font-inter text-xs leading-4 text-gray-200">
+											{seat.disclosures.join(" · ")}
+										</Text>
+									)}
 								</View>
 							))}
 						</View>
