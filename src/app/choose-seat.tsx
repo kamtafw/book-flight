@@ -326,11 +326,13 @@ export default function ChooseSeatScreen() {
 						<View className="rounded-xl border border-border bg-white p-4">
 							<Text className="font-inter-semibold text-base text-black">Selected seats</Text>
 							{selectedSeats.map((seat) => (
-								<View key={seat.id} className="mt-2 flex-row items-center justify-between gap-3">
-									<Text className="flex-1 font-inter text-sm text-black">
-										{passengerLabels.find((passenger) => passenger.id === seat.passengerId)?.label ?? "Traveller"} · {segmentTitle(flight, seat.segmentId, 0)} · {seat.seatDesignator}
-									</Text>
-									<Text className="font-inter-medium text-sm text-black">{formatSeatPrice(seat.totalAmount, seat.totalCurrency)}</Text>
+								<View key={seat.id} className="mt-3">
+									<View className="flex-row items-center justify-between gap-3">
+										<Text className="flex-1 font-inter text-sm text-black">
+											{passengerLabels.find((passenger) => passenger.id === seat.passengerId)?.label ?? "Traveller"} · {segmentTitle(flight, seat.segmentId, 0)} · {seat.seatDesignator}
+										</Text>
+										<Text className="font-inter-medium text-sm text-black">{formatSeatPrice(seat.totalAmount, seat.totalCurrency)}</Text>
+									</View>
 									{seat.disclosures.length > 0 && (
 										<Text className="mt-1 font-inter text-xs leading-4 text-gray-200">
 											{seat.disclosures.join(" · ")}
