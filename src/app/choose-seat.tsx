@@ -105,9 +105,9 @@ function SeatElement({
 			onPress={() => onPress(element, segmentId, activePassengerId)}
 			accessibilityRole="button"
 			accessibilityLabel={
-				unavailable
-					? `Seat ${element.designator} unavailable for this traveller`
-					: `Seat ${element.designator}, ${formatSeatPrice(service.totalAmount, service.totalCurrency)}`
+				service && !unavailable
+					? `Seat ${element.designator}, ${formatSeatPrice(service.totalAmount, service.totalCurrency)}`
+					: `Seat ${element.designator} unavailable for this traveller`
 			}
 			className={[
 				"m-0.5 h-12 w-12 items-center justify-center rounded-md border",
