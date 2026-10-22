@@ -220,6 +220,13 @@ export default function ChooseSeatScreen() {
 							<Text className="mb-3 text-center font-inter text-sm leading-5 text-gray-200">
 								Choose a traveller, then select an available seat. Seat selection is optional and may have an additional cost.
 							</Text>
+							{passengerLabels.length === 0 && (
+								<View className="mb-4 rounded-lg bg-gray-100 p-3">
+									<Text className="font-inter text-sm leading-5 text-gray-200">
+										The airline supplied a cabin layout but no selectable seat services for this offer. You can continue without choosing seats.
+									</Text>
+								</View>
+							)}
 							{passengerLabels.length > 0 && (
 								<ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-5">
 									<View className="flex-row gap-2">
@@ -297,7 +304,9 @@ export default function ChooseSeatScreen() {
 							<Text className="font-inter-semibold text-base text-black">Selected seats</Text>
 							{selectedSeats.map((seat) => (
 								<View key={seat.id} className="mt-2 flex-row items-center justify-between gap-3">
-									<Text className="flex-1 font-inter text-sm text-black">{segmentTitle(flight, seat.segmentId, 0)} · {seat.seatDesignator}</Text>
+									<Text className="flex-1 font-inter text-sm text-black">
+										{passengerLabels.find((passenger) => passenger.id === seat.passengerId)?.label ?? "Traveller"} · {segmentTitle(flight, seat.segmentId, 0)} · {seat.seatDesignator}
+									</Text>
 									<Text className="font-inter-medium text-sm text-black">{formatSeatPrice(seat.totalAmount, seat.totalCurrency)}</Text>
 								</View>
 							))}
