@@ -251,32 +251,34 @@ export default function ChooseSeatScreen() {
 												{seatMap.cabins.length > 1 ? `Cabin ${cabinIndex + 1}` : "Aircraft cabin"}
 												{cabin.deck > 0 ? ` · Deck ${cabin.deck + 1}` : ""}
 											</Text>
-											<View className="gap-2">
-												{cabin.rows.map((row) => (
-													<View key={row.index} className="flex-row items-center justify-center gap-2">
-														{row.sections.map((section, sectionIndex) => (
-															<View key={sectionIndex} className="flex-1 flex-row items-center justify-center">
-																{section.elements.map((element, elementIndex) => {
-																	const service = element.availableServices.find((item) => item.passengerId === activePassengerId)
-																	const selected = Boolean(service && selectedSeats.some(
-																		(item) => item.segmentId === seatMap.segmentId && item.passengerId === activePassengerId && item.id === service.id,
-																	))
-																	return (
-																		<SeatElement
-																			key={element.designator ?? `${element.type}-${row.index}-${sectionIndex}-${elementIndex}`}
-																			element={element}
-																			segmentId={seatMap.segmentId}
-																			activePassengerId={activePassengerId ?? ""}
-																			selected={selected}
-																			onPress={handleSeatPress}
-																		/>
-																	)
-																})}
-															</View>
-														))}
-													</View>
-												))}
-											</View>
+											<ScrollView horizontal showsHorizontalScrollIndicator={false}>
+												<View className="gap-2 px-1">
+													{cabin.rows.map((row) => (
+														<View key={row.index} className="flex-row items-center gap-3">
+															{row.sections.map((section, sectionIndex) => (
+																<View key={sectionIndex} className="flex-row items-center gap-0.5">
+																	{section.elements.map((element, elementIndex) => {
+																		const service = element.availableServices.find((item) => item.passengerId === activePassengerId)
+																		const selected = Boolean(service && selectedSeats.some(
+																			(item) => item.segmentId === seatMap.segmentId && item.passengerId === activePassengerId && item.id === service.id,
+																		))
+																		return (
+																			<SeatElement
+																				key={element.designator ?? `${element.type}-${row.index}-${sectionIndex}-${elementIndex}`}
+																				element={element}
+																				segmentId={seatMap.segmentId}
+																				activePassengerId={activePassengerId ?? ""}
+																				selected={selected}
+																				onPress={handleSeatPress}
+																			/>
+																		)
+																	})}
+																</View>
+															))}
+														</View>
+													))}
+												</View>
+											</ScrollView>
 										</View>
 									))}
 								</View>
