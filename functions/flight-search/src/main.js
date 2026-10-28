@@ -129,9 +129,9 @@ function mapSeatMaps(seatMaps) {
 										passengerId:
 											typeof service.passenger_id === "string" ? service.passenger_id : "",
 										totalAmount:
-											typeof service.total_amount === "string" ? service.total_amount : "0",
+											typeof service.total_amount === "string" ? service.total_amount : "",
 										totalCurrency:
-											typeof service.total_currency === "string" ? service.total_currency : "0",
+											typeof service.total_currency === "string" ? service.total_currency : "",
 									}))
 									.filter((service) => service.id && service.passengerId),
 							})),
