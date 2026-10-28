@@ -324,6 +324,7 @@ export default function ChooseSeatScreen() {
 		if (!service || !element.designator) return
 		selectSeat({
 			...service,
+			offerId: flightId,
 			segmentId,
 			seatDesignator: element.designator,
 			seatName: element.name,
