@@ -170,6 +170,37 @@ test("normalizes provider seat maps and preserves passenger-specific service IDs
 	assert.equal(maps[0].cabins[0].rows[0].sections[0].elements[1].type, "exit_row")
 })
 
+test("does not invent a free price when a seat service omits price fields", () => {
+	const maps = mapSeatMaps([
+		{
+			id: "sea_price",
+			segment_id: "seg_price",
+			cabins: [
+				{
+					rows: [
+						{
+							sections: [
+								{
+									elements: [
+										{
+											type: "seat",
+											designator: "1A",
+											available_services: [{ id: "ase_price", passenger_id: "pas_price" }],
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+			],
+		},
+	])
+	assert.deepEqual(maps[0].cabins[0].rows[0].sections[0].elements[0].availableServices, [
+		{ id: "ase_price", passengerId: "pas_price", totalAmount: "", totalCurrency: "" },
+	])
+})
+
 test("normalizes unavailable seat maps to an empty list", () => {
 	assert.deepEqual(mapSeatMaps([]), [])
 	assert.deepEqual(mapSeatMaps(null), [])
