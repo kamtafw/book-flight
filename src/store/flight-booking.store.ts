@@ -48,7 +48,19 @@ export const useFlightBookingStore = create<FlightBookingState>((set) => ({
 	},
 
 	selectOutboundSeatService: (selection) =>
-		set((state) => {
+			set((state) => {
+			if (
+				!selection.id ||
+				!selection.passengerId ||
+				!selection.segmentId ||
+				!selection.seatDesignator ||
+				!selection.totalCurrency ||
+				!Number.isFinite(Number(selection.totalAmount)) ||
+				Number(selection.totalAmount) < 0
+			) {
+				return state
+			}
+
 			const existing = state.selectedOutboundSeatServices.find(
 				(item) =>
 					item.segmentId === selection.segmentId && item.passengerId === selection.passengerId,
@@ -63,6 +75,14 @@ export const useFlightBookingStore = create<FlightBookingState>((set) => ({
 					selectedOutboundSeats: [...new Set(remaining.map((item) => item.seatDesignator))],
 				}
 			}
+			const seatAlreadyAssigned = state.selectedOutboundSeatServices.some(
+				(item) =>
+					item.segmentId === selection.segmentId &&
+					item.seatDesignator === selection.seatDesignator &&
+					item.passengerId !== selection.passengerId,
+			)
+			if (seatAlreadyAssigned) return state
+
 			const next = [
 				...state.selectedOutboundSeatServices.filter(
 					(item) =>
