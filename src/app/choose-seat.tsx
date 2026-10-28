@@ -22,6 +22,7 @@ const MUTED = "#737373"
 const BORDER = "#E7E5E4"
 
 function formatSeatPrice(amount: string, currency: string) {
+	if (!amount.trim() || !/^[A-Z]{3}$/.test(currency)) return "Price unavailable"
 	const value = Number(amount)
 	if (!Number.isFinite(value) || !currency) return "Price unavailable"
 	if (value === 0) return "Included"
@@ -37,6 +38,7 @@ function formatSeatPrice(amount: string, currency: string) {
 }
 
 function formatSeatPriceCompact(amount: string, currency: string) {
+	if (!amount.trim() || !/^[A-Z]{3}$/.test(currency)) return "—"
 	const value = Number(amount)
 	if (!Number.isFinite(value) || !currency) return "—"
 	if (value === 0) return "Free"
