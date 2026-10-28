@@ -51,6 +51,7 @@ export const useFlightBookingStore = create<FlightBookingState>((set) => ({
 			set((state) => {
 			if (
 				!selection.id ||
+				!selection.offerId ||
 				!selection.passengerId ||
 				!selection.segmentId ||
 				!selection.seatDesignator ||
