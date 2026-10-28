@@ -80,6 +80,10 @@ test("maps the offer id, fare, segments, and operating carriers", () => {
 		total_currency: "USD",
 		expires_at: "2099-05-20T12:00:00Z",
 		owner: { name: "Example Airways" },
+		passengers: [
+			{ id: "pas_adult", type: "adult" },
+			{ id: "pas_child", age: 7 },
+		],
 		slices: [
 			{
 				duration: "PT1H15M",
@@ -105,6 +109,10 @@ test("maps the offer id, fare, segments, and operating carriers", () => {
 	assert.equal(offer.id, "off_test123")
 	assert.equal(offer.price, 125.5)
 	assert.equal(offer.currency, "USD")
+	assert.deepEqual(offer.passengers, [
+		{ id: "pas_adult", type: "adult", age: null },
+		{ id: "pas_child", type: null, age: 7 },
+	])
 	assert.equal(offer.departureTime, "08:30")
 	assert.equal(offer.arrivalTime, "09:45")
 	assert.deepEqual(offer.operatingCarrierNames, ["Regional Partner"])
