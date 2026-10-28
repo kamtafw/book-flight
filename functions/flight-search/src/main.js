@@ -84,6 +84,13 @@ function mapOffer(offer) {
 		currency: offer.total_currency,
 		expiresAt: offer.expires_at ?? null,
 		operatingCarrierNames,
+		passengers: (Array.isArray(offer.passengers) ? offer.passengers : [])
+			.filter((passenger) => isRecord(passenger) && typeof passenger.id === "string")
+			.map((passenger) => ({
+				id: passenger.id,
+				type: typeof passenger.type === "string" ? passenger.type : null,
+				age: Number.isInteger(passenger.age) ? passenger.age : null,
+			})),
 		slices,
 	}
 }
