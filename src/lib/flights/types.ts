@@ -31,6 +31,12 @@ export interface FlightSlice {
 	segments: FlightSegment[]
 }
 
+export interface FlightOfferPassenger {
+	id: string
+	type: string | null
+	age: number | null
+}
+
 export interface FlightOffer {
 	id: string
 	airline: string
@@ -42,6 +48,7 @@ export interface FlightOffer {
 	currency: string
 	expiresAt: string | null
 	operatingCarrierNames: string[]
+	passengers?: FlightOfferPassenger[]
 	slices: FlightSlice[]
 }
 
@@ -101,6 +108,7 @@ export interface SeatMapResponse {
 }
 
 export interface SelectedSeatService extends SeatMapService {
+	offerId: string
 	segmentId: string
 	seatDesignator: string
 	seatName: string
