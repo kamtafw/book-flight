@@ -55,7 +55,8 @@ export const useFlightBookingStore = create<FlightBookingState>((set) => ({
 				!selection.passengerId ||
 				!selection.segmentId ||
 				!selection.seatDesignator ||
-				!selection.totalCurrency ||
+				!/^[A-Z]{3}$/.test(selection.totalCurrency) ||
+				!selection.totalAmount.trim() ||
 				!Number.isFinite(Number(selection.totalAmount)) ||
 				Number(selection.totalAmount) < 0
 			) {
