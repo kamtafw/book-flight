@@ -320,11 +320,12 @@ export default function ChooseSeatScreen() {
 	}, [selectedSeats])
 
 	const handleSeatPress = (element: SeatMapElement, segmentId: string, passengerId: string) => {
+		if (!flightId || !flight) return
 		const service = element.availableServices.find((item) => item.passengerId === passengerId)
 		if (!service || !element.designator) return
 		selectSeat({
 			...service,
-			offerId: flightId,
+			offerId: flight.id,
 			segmentId,
 			seatDesignator: element.designator,
 			seatName: element.name,
