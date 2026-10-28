@@ -58,3 +58,51 @@ export class FlightSearchError extends Error {
 		this.name = "FlightSearchError"
 	}
 }
+
+export interface SeatMapService {
+	id: string
+	passengerId: string
+	totalAmount: string
+	totalCurrency: string
+}
+
+export interface SeatMapElement {
+	type: string
+	designator: string | null
+	name: string
+	disclosures: string[]
+	availableServices: SeatMapService[]
+}
+
+export interface SeatMapSection {
+	elements: SeatMapElement[]
+}
+
+export interface SeatMapRow {
+	index: number
+	sections: SeatMapSection[]
+}
+
+export interface SeatMapCabin {
+	id: string
+	deck: number
+	rows: SeatMapRow[]
+}
+
+export interface FlightSeatMap {
+	id: string
+	segmentId: string
+	sliceId: string
+	cabins: SeatMapCabin[]
+}
+
+export interface SeatMapResponse {
+	seatMaps: FlightSeatMap[]
+}
+
+export interface SelectedSeatService extends SeatMapService {
+	segmentId: string
+	seatDesignator: string
+	seatName: string
+	disclosures: string[]
+}

@@ -3,6 +3,7 @@ import {
 	type FlightOffer,
 	type FlightSearchRequest,
 	type FlightSearchResponse,
+	type SeatMapResponse,
 } from "@/lib/flights/types"
 
 function getConfig() {
@@ -155,4 +156,67 @@ export async function searchFlights(request: FlightSearchRequest): Promise<Fligh
 	}
 
 	return { offers: result.offers as FlightOffer[] }
+}
+
+export async function getSeatMaps(offerId: string): Promise<SeatMapResponse> {
+	if (!/^off_[A-Za-z0-9]+$/.test(offerId)) {
+		throw new FlightSearchError(
+			"Choose a valid flight offer before requesting seat maps.",
+			"INVALID_OFFER_ID",
+		)
+	}
+
+	const { endpoint, projectId, functionId } = getConfig()
+	const response = await fetch(
+		`${endpoint}/functions/${encodeURIComponent(functionId)}/executions`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"X-Appwrite-Project": projectId,
+			},
+			body: JSON.stringify({
+				async: false,
+				method: "POST",
+				path: "/",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ action: "seat-map", offerId }),
+			}),
+		},
+	)
+
+	if (!response.ok) {
+		throw new FlightSearchError(
+			response.status === 401 || response.status === 403
+				? "Appwrite rejected the seat-map request. Check the function's execution permissions."
+				: "We couldn't reach seat maps. Please try again.",
+			"APPWRITE_EXECUTION_FAILED",
+		)
+	}
+
+	const execution = (await response.json()) as {
+		responseBody?: string
+		responseStatusCode?: number
+		status?: string
+	}
+
+	let result: SeatMapResponse & { error?: string; code?: string }
+	try {
+		result = JSON.parse(execution.responseBody ?? "") as typeof result
+	} catch {
+		throw new FlightSearchError("Seat maps returned an unreadable response.", "INVALID_RESPONSE")
+	}
+
+	if ((execution.responseStatusCode ?? 200) >= 400 || result.error) {
+		throw new FlightSearchError(
+			result.error ?? "Seat-map retrieval failed. Please try again.",
+			result.code ?? "SEAT_MAP_FAILED",
+		)
+	}
+
+	if (!Array.isArray(result.seatMaps)) {
+		throw new FlightSearchError("Seat maps returned an unexpected response.", "INVALID_RESPONSE")
+	}
+
+	return result
 }

@@ -1,4 +1,5 @@
 const DUFFEL_API_URL = "https://api.duffel.com/air/offer_requests"
+const DUFFEL_BASE_URL = "https://api.duffel.com"
 
 const CABIN_CLASSES = new Set(["economy", "premium_economy", "business", "first"])
 
@@ -87,6 +88,105 @@ function mapOffer(offer) {
 	}
 }
 
+function mapSeatMaps(seatMaps) {
+	if (!Array.isArray(seatMaps)) return []
+
+	return seatMaps.filter(isRecord).map((seatMap) => ({
+		id: typeof seatMap.id === "string" ? seatMap.id : "",
+		segmentId: typeof seatMap.segment_id === "string" ? seatMap.segment_id : "",
+		sliceId: typeof seatMap.slice_id === "string" ? seatMap.slice_id : "",
+		cabins: (Array.isArray(seatMap.cabins) ? seatMap.cabins : []).filter(isRecord).map((cabin) => ({
+			id: typeof cabin.id === "string" ? cabin.id : "",
+			deck: Number.isInteger(cabin.deck) ? cabin.deck : 0,
+			rows: (Array.isArray(cabin.rows) ? cabin.rows : []).filter(isRecord).map((row, rowIndex) => ({
+				index: rowIndex,
+				sections: (Array.isArray(row.sections) ? row.sections : [])
+					.filter(isRecord)
+					.map((section) => ({
+						elements: (Array.isArray(section.elements) ? section.elements : [])
+							.filter(isRecord)
+							.map((element) => ({
+								type: typeof element.type === "string" ? element.type : "unknown",
+								designator: typeof element.designator === "string" ? element.designator : null,
+								name: typeof element.name === "string" ? element.name : "",
+								disclosures: Array.isArray(element.disclosures)
+									? element.disclosures.filter((item) => typeof item === "string")
+									: [],
+								availableServices: (Array.isArray(element.available_services)
+									? element.available_services
+									: []
+								)
+									.filter(isRecord)
+									.map((service) => ({
+										id: typeof service.id === "string" ? service.id : "",
+										passengerId:
+											typeof service.passenger_id === "string" ? service.passenger_id : "",
+										totalAmount:
+											typeof service.total_amount === "string" ? service.total_amount : "0",
+										totalCurrency:
+											typeof service.total_currency === "string" ? service.total_currency : "0",
+									}))
+									.filter((service) => service.id && service.passengerId),
+							})),
+					})),
+			})),
+		})),
+	}))
+}
+
+async function getSeatMaps(offerId, token, res, log, error) {
+	const controller = new AbortController()
+	const timeout = setTimeout(() => controller.abort(), 25000)
+
+	try {
+		const url = new URL(`${DUFFEL_BASE_URL}/air/seat_maps`)
+		url.searchParams.set("offer_id", offerId)
+		const response = await fetch(url, {
+			method: "GET",
+			signal: controller.signal,
+			headers: {
+				Authorization: `Bearer ${token}`,
+				Accept: "application/json",
+				"Duffel-Version": "v2",
+			},
+		})
+		const payload = await response.json().catch(() => null)
+
+		if (!response.ok) {
+			const message =
+				typeof payload?.errors?.[0]?.message === "string"
+					? payload.errors[0].message
+					: "Duffel could not retrieve seat maps for this offer."
+			log(`Duffel seat-map request failed with HTTP ${response.status}.`)
+			return jsonError(res, 502, "DUFFEL_SEAT_MAP_FAILED", message)
+		}
+
+		if (!Array.isArray(payload?.data)) {
+			error("Duffel returned a seat-map response without a data array.")
+			return jsonError(
+				res,
+				502,
+				"DUFFEL_INVALID_SEAT_MAP_RESPONSE",
+				"The flight provider returned an unexpected seat-map response.",
+			)
+		}
+
+		return res.json({ seatMaps: mapSeatMaps(payload.data) })
+	} catch (cause) {
+		error(cause instanceof Error ? cause.message : "Unknown seat-map error.")
+		return jsonError(
+			res,
+			502,
+			"DUFFEL_SEAT_MAP_UNAVAILABLE",
+			cause?.name === "AbortError"
+				? "Retrieving seat maps took too long. Please try again."
+				: "We couldn't reach the flight provider for seat maps.",
+		)
+	} finally {
+		clearTimeout(timeout)
+	}
+}
+
 function validateRequest(body) {
 	if (!isRecord(body)) return "Provide a valid flight-search request."
 
@@ -101,7 +201,7 @@ function validateRequest(body) {
 		!Array.isArray(childAges) ||
 		childAges.some((age) => !Number.isInteger(age) || age < 2 || age > 11)
 	) {
-		return "Each child must have an age from 2 through to 11."
+		return "Each child must have an age from 2 through 11."
 	}
 	if (
 		!Array.isArray(infantAges) ||
@@ -157,6 +257,24 @@ export default async function ({ req, res, log, error }) {
 	}
 
 	const body = req.bodyJson
+
+	if (isRecord(body) && body.action === "seat-map") {
+		if (typeof body.offerId !== "string" || !/^off_[A-Za-z0-9]+$/.test(body.offerId)) {
+			return jsonError(res, 400, "INVALID_SEAT_MAP_REQUEST", "Provide a valid Duffel offer ID.")
+		}
+		const token = process.env.DUFFEL_ACCESS_TOKEN
+		if (!token) {
+			error("DUFFEL_ACCESS_TOKEN is not configured for the flight search function.")
+			return jsonError(
+				res,
+				503,
+				"FLIGHT_SEARCH_NOT_CONFIGURED",
+				"Flight search is not configured yet.",
+			)
+		}
+		return getSeatMaps(body.offerId, token, res, log, error)
+	}
+
 	const validationError = validateRequest(body)
 	if (validationError) {
 		return jsonError(res, 400, "INVALID_SEARCH_REQUEST", validationError)
@@ -248,4 +366,4 @@ export default async function ({ req, res, log, error }) {
 	}
 }
 
-export { formatDuration, mapOffer, mapPassengers, validateRequest }
+export { formatDuration, mapOffer, mapPassengers, mapSeatMaps, validateRequest }

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { formatDuration,mapOffer,mapPassengers,validateRequest } from "./main.js"
+import { formatDuration, mapOffer, mapPassengers, mapSeatMaps, validateRequest } from "./main.js"
 
 const validRequest = {
 	origin: "LOS",
@@ -110,4 +110,59 @@ test("maps the offer id, fare, segments, and operating carriers", () => {
 	assert.deepEqual(offer.operatingCarrierNames, ["Regional Partner"])
 	assert.equal(offer.slices[0].segments[0].operatingCarrierName, "Regional Partner")
 	assert.equal(offer.slices[0].segments[0].flightNumber, "EA 123")
+})
+
+test("normalizes provider seat maps and preserves passenger-specific service IDs", () => {
+	const maps = mapSeatMaps([
+		{
+			id: "sea_test",
+			segment_id: "seg_test",
+			slice_id: "sli_test",
+			cabins: [
+				{
+					id: "cab_test",
+					deck: 0,
+					rows: [
+						{
+							sections: [
+								{
+									elements: [
+										{
+											type: "seat",
+											designator: "1A",
+											name: "Window",
+											disclosures: ["Extra legroom"],
+											available_services: [
+												{
+													id: "ase_test",
+													passenger_id: "pas_test",
+													total_amount: "12.00",
+													total_currency: "USD",
+												},
+											],
+										},
+										{ type: "exit_row" },
+									],
+								},
+							],
+						},
+					],
+				},
+			],
+		},
+	])
+
+	assert.equal(maps.length, 1)
+	assert.equal(maps[0].segmentId, "seg_test")
+	assert.equal(maps[0].cabins[0].rows[0].index, 0)
+	assert.equal(maps[0].cabins[0].rows[0].sections[0].elements[0].designator, "1A")
+	assert.deepEqual(maps[0].cabins[0].rows[0].sections[0].elements[0].availableServices, [
+		{ id: "ase_test", passengerId: "pas_test", totalAmount: "12.00", totalCurrency: "USD" },
+	])
+	assert.equal(maps[0].cabins[0].rows[0].sections[0].elements[1].type, "exit_row")
+})
+
+test("normalizes unavailable seat maps to an empty list", () => {
+	assert.deepEqual(mapSeatMaps([]), [])
+	assert.deepEqual(mapSeatMaps(null), [])
 })
