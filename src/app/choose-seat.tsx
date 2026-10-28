@@ -156,7 +156,14 @@ function SeatElement({
 	}
 
 	const service = element.availableServices.find((item) => item.passengerId === activePassengerId)
-	const unavailable = !service || occupiedByOtherPassenger || adultRestricted
+	const serviceHasValidPrice = Boolean(
+		service &&
+		/^[A-Z]{3}$/.test(service.totalCurrency) &&
+		service.totalAmount.trim() &&
+		Number.isFinite(Number(service.totalAmount)) &&
+		Number(service.totalAmount) >= 0,
+	)
+	const unavailable = !service || !serviceHasValidPrice || occupiedByOtherPassenger || adultRestricted
 
 	return (
 		<Pressable
@@ -169,7 +176,9 @@ function SeatElement({
 					? `Seat ${element.designator}, ${formatSeatPrice(service.totalAmount, service.totalCurrency)}${selected ? ", selected" : ""}`
 					: adultRestricted
 					? `Seat ${element.designator} is restricted to adult passengers`
-					: `Seat ${element.designator} unavailable for this traveller`
+					: !serviceHasValidPrice
+						? `Seat ${element.designator} has no valid price available`
+						: `Seat ${element.designator} unavailable for this traveller`
 			}
 			className={[
 				"h-[46px] w-[42px] items-center justify-center rounded-[10px] border",
