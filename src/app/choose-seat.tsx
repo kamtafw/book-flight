@@ -20,7 +20,6 @@ const BRAND = "#EC441E"
 const INK = "#191919"
 const MUTED = "#737373"
 const BORDER = "#E7E5E4"
-const UNAVAILABLE = "#575757"
 
 function formatSeatPrice(amount: string, currency: string) {
 	const value = Number(amount)
@@ -58,6 +57,12 @@ function segmentTitle(flight: FlightOffer | undefined, segmentId: string, index:
 	return segment
 		? `${segment.departureAirportCode} → ${segment.arrivalAirportCode}`
 		: `Flight segment ${index + 1}`
+}
+
+function requiresAdult(disclosures: string[]) {
+	return disclosures.some((disclosure) =>
+		/\b(passenger|traveller|traveler)s? must be an adult\b|\badults only\b|\badult passengers only\b/i.test(disclosure),
+	)
 }
 
 function collectPassengerIds(seatMaps: FlightSeatMap[]) {
@@ -112,6 +117,7 @@ function SeatElement({
 	activePassengerId,
 	selected,
 	occupiedByOtherPassenger,
+	adultRestricted,
 	onPress,
 }: {
 	element: SeatMapElement
@@ -119,6 +125,7 @@ function SeatElement({
 	activePassengerId: string
 	selected: boolean
 	occupiedByOtherPassenger: boolean
+	adultRestricted: boolean
 	onPress: (element: SeatMapElement, segmentId: string, passengerId: string) => void
 }) {
 	if (element.type !== "seat" || !element.designator) {
@@ -147,7 +154,7 @@ function SeatElement({
 	}
 
 	const service = element.availableServices.find((item) => item.passengerId === activePassengerId)
-	const unavailable = !service || occupiedByOtherPassenger
+	const unavailable = !service || occupiedByOtherPassenger || adultRestricted
 
 	return (
 		<Pressable
@@ -158,6 +165,8 @@ function SeatElement({
 			accessibilityLabel={
 				service && !unavailable
 					? `Seat ${element.designator}, ${formatSeatPrice(service.totalAmount, service.totalCurrency)}${selected ? ", selected" : ""}`
+					: adultRestricted
+					? `Seat ${element.designator} is restricted to adult passengers`
 					: `Seat ${element.designator} unavailable for this traveller`
 			}
 			className={[
@@ -271,14 +280,26 @@ export default function ChooseSeatScreen() {
 	const passengerIds = useMemo(() => collectPassengerIds(seatMaps), [seatMaps])
 	const passengerLabels = useMemo(() => {
 		const labels = [
-			...Array.from({ length: passengers.adults }, (_, index) => `Adult ${index + 1}`),
-			...Array.from({ length: passengers.children }, (_, index) => `Child ${index + 1}`),
-			...Array.from({ length: passengers.infants }, (_, index) => `Infant ${index + 1}`),
+			...Array.from({ length: passengers.adults }, (_, index) => ({
+				label: `Adult ${index + 1}`,
+				isAdult: true,
+			})),
+			...Array.from({ length: passengers.children }, (_, index) => ({
+				label: `Child ${index + 1}`,
+				isAdult: false,
+			})),
+			...Array.from({ length: passengers.infants }, (_, index) => ({
+				label: `Infant ${index + 1}`,
+				isAdult: false,
+			})),
 		]
-		return passengerIds.map((id, index) => ({ id, label: labels[index] ?? `Traveller ${index + 1}` }))
+		return passengerIds.map((id, index) => ({
+			id,
+			label: labels[index]?.label ?? `Traveller ${index + 1}`,
+			isAdult: labels[index]?.isAdult ?? false,
+		}))
 	}, [passengerIds, passengers.adults, passengers.children, passengers.infants])
 
-	const activePassenger = passengerLabels.find((passenger) => passenger.id === activePassengerId)
 	const selectedTotal = useMemo(() => {
 		if (selectedSeats.length === 0) return null
 		const currencies = new Set(selectedSeats.map((seat) => seat.totalCurrency))
@@ -527,6 +548,7 @@ export default function ChooseSeatScreen() {
 																					activePassengerId={activePassengerId ?? ""}
 																					selected={selected}
 																					occupiedByOtherPassenger={occupiedByOtherPassenger}
+																					adultRestricted={Boolean(activePassengerId && !passengerLabels.find((passenger) => passenger.id === activePassengerId)?.isAdult && requiresAdult(element.disclosures))}
 																					onPress={handleSeatPress}
 																				/>
 																			)
