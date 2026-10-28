@@ -277,7 +277,10 @@ export default function ChooseSeatScreen() {
 		}
 	}, [flightId, flight?.id, clearSeats])
 
-	const passengerIds = useMemo(() => collectPassengerIds(seatMaps), [seatMaps])
+	const passengerIds = useMemo(
+		() => (flight?.passengers?.length ? flight.passengers.map((passenger) => passenger.id) : collectPassengerIds(seatMaps)),
+		[flight?.passengers, seatMaps],
+	)
 	const passengerLabels = useMemo(() => {
 		const labels = [
 			...Array.from({ length: passengers.adults }, (_, index) => ({
@@ -293,12 +296,19 @@ export default function ChooseSeatScreen() {
 				isAdult: false,
 			})),
 		]
-		return passengerIds.map((id, index) => ({
-			id,
-			label: labels[index]?.label ?? `Traveller ${index + 1}`,
-			isAdult: labels[index]?.isAdult ?? false,
-		}))
-	}, [passengerIds, passengers.adults, passengers.children, passengers.infants])
+		return passengerIds.map((id, index) => {
+			const providerPassenger = flight?.passengers?.find((passenger) => passenger.id === id)
+			const isAdult = providerPassenger?.age != null
+				? providerPassenger.age >= 12
+				: providerPassenger?.type === "adult"
+			return {
+				id,
+				label: labels[index]?.label ?? `Traveller ${index + 1}`,
+				// Unknown provider identity must not bypass an explicit adult-only disclosure.
+				isAdult: providerPassenger ? isAdult : false,
+			}
+		})
+	}, [flight?.passengers, passengerIds, passengers.adults, passengers.children, passengers.infants])
 
 	const selectedTotal = useMemo(() => {
 		if (selectedSeats.length === 0) return null
