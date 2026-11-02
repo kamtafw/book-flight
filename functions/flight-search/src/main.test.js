@@ -80,6 +80,10 @@ test("maps the offer id, fare, segments, and operating carriers", () => {
 		total_currency: "USD",
 		expires_at: "2099-05-20T12:00:00Z",
 		owner: { name: "Example Airways" },
+		passengers: [
+			{ id: "pas_adult", type: "adult" },
+			{ id: "pas_child", age: 7 },
+		],
 		slices: [
 			{
 				duration: "PT1H15M",
@@ -105,6 +109,10 @@ test("maps the offer id, fare, segments, and operating carriers", () => {
 	assert.equal(offer.id, "off_test123")
 	assert.equal(offer.price, 125.5)
 	assert.equal(offer.currency, "USD")
+	assert.deepEqual(offer.passengers, [
+		{ id: "pas_adult", type: "adult", age: null },
+		{ id: "pas_child", type: null, age: 7 },
+	])
 	assert.equal(offer.departureTime, "08:30")
 	assert.equal(offer.arrivalTime, "09:45")
 	assert.deepEqual(offer.operatingCarrierNames, ["Regional Partner"])
@@ -160,6 +168,37 @@ test("normalizes provider seat maps and preserves passenger-specific service IDs
 		{ id: "ase_test", passengerId: "pas_test", totalAmount: "12.00", totalCurrency: "USD" },
 	])
 	assert.equal(maps[0].cabins[0].rows[0].sections[0].elements[1].type, "exit_row")
+})
+
+test("does not invent a free price when a seat service omits price fields", () => {
+	const maps = mapSeatMaps([
+		{
+			id: "sea_price",
+			segment_id: "seg_price",
+			cabins: [
+				{
+					rows: [
+						{
+							sections: [
+								{
+									elements: [
+										{
+											type: "seat",
+											designator: "1A",
+											available_services: [{ id: "ase_price", passenger_id: "pas_price" }],
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+			],
+		},
+	])
+	assert.deepEqual(maps[0].cabins[0].rows[0].sections[0].elements[0].availableServices, [
+		{ id: "ase_price", passengerId: "pas_price", totalAmount: "", totalCurrency: "" },
+	])
 })
 
 test("normalizes unavailable seat maps to an empty list", () => {

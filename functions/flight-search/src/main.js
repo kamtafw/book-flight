@@ -84,6 +84,13 @@ function mapOffer(offer) {
 		currency: offer.total_currency,
 		expiresAt: offer.expires_at ?? null,
 		operatingCarrierNames,
+		passengers: (Array.isArray(offer.passengers) ? offer.passengers : [])
+			.filter((passenger) => isRecord(passenger) && typeof passenger.id === "string")
+			.map((passenger) => ({
+				id: passenger.id,
+				type: typeof passenger.type === "string" ? passenger.type : null,
+				age: Number.isInteger(passenger.age) ? passenger.age : null,
+			})),
 		slices,
 	}
 }
@@ -122,9 +129,9 @@ function mapSeatMaps(seatMaps) {
 										passengerId:
 											typeof service.passenger_id === "string" ? service.passenger_id : "",
 										totalAmount:
-											typeof service.total_amount === "string" ? service.total_amount : "0",
+											typeof service.total_amount === "string" ? service.total_amount : "",
 										totalCurrency:
-											typeof service.total_currency === "string" ? service.total_currency : "0",
+											typeof service.total_currency === "string" ? service.total_currency : "",
 									}))
 									.filter((service) => service.id && service.passengerId),
 							})),
