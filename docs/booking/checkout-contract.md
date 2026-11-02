@@ -1,6 +1,6 @@
 # Booking Checkout Contract (BR-01)
 
-**Status:** Proposed contract for review  
+**Status:** Accepted product/technical contract (2026-11-02)  
 **Scope:** One-way Duffel flight booking, including optional selected seats  
 **Implementation status:** Documentation only. No booking, payment, or order-creation code is implemented by this checkpoint.
 
@@ -22,7 +22,7 @@ The current app already has:
 - One shared `passengerInformation` object, which is not sufficient for multiple travellers.
 - A placeholder payment screen. There is no implemented order-creation/booking-confirmation flow.
 
-Seat selection is a user preference only. It does not reserve a seat or guarantee that the selected service remains available.
+Seat selection is a user preference only. It does not reserve a seat or guarantee that the selected service remains available. The UI must state this clearly at the point of selection and/or review: choosing a seat does not reserve it, and the seat may become unavailable before booking is completed. If fresh validation fails, explain the issue and let the traveller continue without that seat or choose another available option.
 
 ## 3. Proposed checkout input contract
 
