@@ -45,7 +45,6 @@ The function accepts a JSON POST body:
 
 The normal search response is `{ "offers": [...] }`. Offers are normalized by this function and include the Duffel offer ID, total fare and currency, expiry, itinerary segments, and each segment's operating-carrier name. The raw Duffel response is not passed through to the app.
 
-
 ## Offer-refresh request contract
 
 The same function accepts an offer-refresh action before checkout:

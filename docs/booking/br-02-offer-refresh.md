@@ -1,6 +1,6 @@
 # BR-02: Offer Refresh and Validation
 
-**Status:** Closeout implementation on `feat/booking-br-02-offer-refresh`; awaiting local verification; not merged.  
+**Status:** Closeout implementation on `feat/booking-br-02-offer-refresh`; awaiting local verification; not merged.
 **Depends on:** Accepted BR-01 contract in `docs/booking/checkout-contract.md`.
 
 ## Purpose
@@ -13,23 +13,27 @@ The Appwrite `flight-search` function accepts:
 
 ```json
 {
-  "action": "refresh-offer",
-  "offerId": "off_exampleOfferId",
-  "expectedOffer": {
-    "id": "off_exampleOfferId",
-    "totalAmount": "125.50",
-    "totalCurrency": "USD",
-    "passengers": [{ "id": "pas_example" }],
-    "slices": [{
-      "originCode": "LOS",
-      "destinationCode": "ABV",
-      "segments": [{
-        "id": "seg_example",
-        "departureAt": "2027-05-21T08:30:00",
-        "arrivalAt": "2027-05-21T09:45:00"
-      }]
-    }]
-  }
+ "action": "refresh-offer",
+ "offerId": "off_exampleOfferId",
+ "expectedOffer": {
+  "id": "off_exampleOfferId",
+  "totalAmount": "125.50",
+  "totalCurrency": "USD",
+  "passengers": [{ "id": "pas_example" }],
+  "slices": [
+   {
+    "originCode": "LOS",
+    "destinationCode": "ABV",
+    "segments": [
+     {
+      "id": "seg_example",
+      "departureAt": "2027-05-21T08:30:00",
+      "arrivalAt": "2027-05-21T09:45:00"
+     }
+    ]
+   }
+  ]
+ }
 }
 ```
 

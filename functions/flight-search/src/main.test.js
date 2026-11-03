@@ -1,8 +1,6 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import flightSearchHandler from "./main.js"
-
-import {
+import flightSearchHandler, {
 	compareOfferItinerary,
 	formatDuration,
 	mapOffer,
@@ -217,50 +215,66 @@ test("normalizes unavailable seat maps to an empty list", () => {
 	assert.deepEqual(mapSeatMaps(null), [])
 })
 
-
 const expectedOfferSnapshot = {
 	id: "off_refresh123",
 	totalAmount: "125.50",
 	totalCurrency: "USD",
 	passengers: [{ id: "pas_adult" }],
-	slices: [{
-		originCode: "LOS",
-		destinationCode: "ABV",
-		segments: [{ id: "seg_1", departureAt: "2099-05-21T08:30:00", arrivalAt: "2099-05-21T09:45:00" }],
-	}],
+	slices: [
+		{
+			originCode: "LOS",
+			destinationCode: "ABV",
+			segments: [
+				{ id: "seg_1", departureAt: "2099-05-21T08:30:00", arrivalAt: "2099-05-21T09:45:00" },
+			],
+		},
+	],
 }
 
 const refreshedOfferSnapshot = {
 	passengers: [{ id: "pas_adult", type: "adult", age: null }],
-	slices: [{
-		originCode: "LOS",
-		destinationCode: "ABV",
-		segments: [{
-			id: "seg_1",
-			departureAt: "2099-05-21T08:30:00",
-			arrivalAt: "2099-05-21T09:45:00",
-		}],
-	}],
+	slices: [
+		{
+			originCode: "LOS",
+			destinationCode: "ABV",
+			segments: [
+				{
+					id: "seg_1",
+					departureAt: "2099-05-21T08:30:00",
+					arrivalAt: "2099-05-21T09:45:00",
+				},
+			],
+		},
+	],
 }
 
 test("validates a refresh request with the selected offer snapshot", () => {
-	assert.equal(validateRefreshRequest({
-		action: "refresh-offer",
-		offerId: "off_refresh123",
-		expectedOffer: expectedOfferSnapshot,
-	}), null)
+	assert.equal(
+		validateRefreshRequest({
+			action: "refresh-offer",
+			offerId: "off_refresh123",
+			expectedOffer: expectedOfferSnapshot,
+		}),
+		null,
+	)
 })
 
 test("rejects refresh requests without a complete comparable snapshot", () => {
 	assert.match(validateRefreshRequest({ offerId: "off_refresh123" }), /selected offer snapshot/)
-	assert.match(validateRefreshRequest({
-		offerId: "off_refresh123",
-		expectedOffer: { ...expectedOfferSnapshot, totalAmount: "NaN" },
-	}), /amount and currency/)
-	assert.match(validateRefreshRequest({
-		offerId: "off_refresh123",
-		expectedOffer: { ...expectedOfferSnapshot, id: "off_other" },
-	}), /selected offer snapshot/)
+	assert.match(
+		validateRefreshRequest({
+			offerId: "off_refresh123",
+			expectedOffer: { ...expectedOfferSnapshot, totalAmount: "NaN" },
+		}),
+		/amount and currency/,
+	)
+	assert.match(
+		validateRefreshRequest({
+			offerId: "off_refresh123",
+			expectedOffer: { ...expectedOfferSnapshot, id: "off_other" },
+		}),
+		/selected offer snapshot/,
+	)
 })
 
 test("compares decimal prices without floating-point conversion", () => {
@@ -272,13 +286,17 @@ test("compares decimal prices without floating-point conversion", () => {
 test("treats changed carrier display metadata as non-material", () => {
 	const current = {
 		...refreshedOfferSnapshot,
-		slices: [{
-			...refreshedOfferSnapshot.slices[0],
-			segments: [{
-				...refreshedOfferSnapshot.slices[0].segments[0],
-				marketingCarrierName: "A different display name",
-			}],
-		}],
+		slices: [
+			{
+				...refreshedOfferSnapshot.slices[0],
+				segments: [
+					{
+						...refreshedOfferSnapshot.slices[0].segments[0],
+						marketingCarrierName: "A different display name",
+					},
+				],
+			},
+		],
 	}
 	assert.deepEqual(compareOfferItinerary(expectedOfferSnapshot, current), [])
 })
@@ -286,15 +304,19 @@ test("treats changed carrier display metadata as non-material", () => {
 test("detects material route, segment, schedule, and passenger identity changes", () => {
 	const changed = {
 		passengers: [{ id: "pas_replaced", type: "adult", age: null }],
-		slices: [{
-			originCode: "LOS",
-			destinationCode: "KAN",
-			segments: [{
-				id: "seg_changed",
-				departureAt: "2099-05-21T09:30:00",
-				arrivalAt: "2099-05-21T10:45:00",
-			}],
-		}],
+		slices: [
+			{
+				originCode: "LOS",
+				destinationCode: "KAN",
+				segments: [
+					{
+						id: "seg_changed",
+						departureAt: "2099-05-21T09:30:00",
+						arrivalAt: "2099-05-21T10:45:00",
+					},
+				],
+			},
+		],
 	}
 	assert.deepEqual(compareOfferItinerary(expectedOfferSnapshot, changed), [
 		"passenger_identity",
@@ -306,50 +328,69 @@ test("detects material route, segment, schedule, and passenger identity changes"
 test("detects changes in slice and segment counts", () => {
 	const changed = {
 		...refreshedOfferSnapshot,
-		slices: [...refreshedOfferSnapshot.slices, {
-			originCode: "ABV",
-			destinationCode: "LOS",
-			segments: [],
-		}],
+		slices: [
+			...refreshedOfferSnapshot.slices,
+			{
+				originCode: "ABV",
+				destinationCode: "LOS",
+				segments: [],
+			},
+		],
 	}
 	assert.deepEqual(compareOfferItinerary(expectedOfferSnapshot, changed), ["slice_count"])
 })
 
-
 test("rejects refresh snapshots with invalid route codes or timestamps", () => {
-	assert.match(validateRefreshRequest({
-		offerId: expectedOfferSnapshot.id,
-		expectedOffer: {
-			...expectedOfferSnapshot,
-			slices: [{ ...expectedOfferSnapshot.slices[0], originCode: "" }],
-		},
-	}), /invalid passenger or itinerary/)
-	assert.match(validateRefreshRequest({
-		offerId: expectedOfferSnapshot.id,
-		expectedOffer: {
-			...expectedOfferSnapshot,
-			slices: [{
-				...expectedOfferSnapshot.slices[0],
-				segments: [{
-					...expectedOfferSnapshot.slices[0].segments[0],
-					departureAt: "not-a-date",
-				}],
-			}],
-		},
-	}), /invalid passenger or itinerary/)
-	assert.match(validateRefreshRequest({
-		offerId: expectedOfferSnapshot.id,
-		expectedOffer: {
-			...expectedOfferSnapshot,
-			slices: [{
-				...expectedOfferSnapshot.slices[0],
-				segments: [{
-					...expectedOfferSnapshot.slices[0].segments[0],
-					id: " ",
-				}],
-			}],
-		},
-	}), /invalid passenger or itinerary/)
+	assert.match(
+		validateRefreshRequest({
+			offerId: expectedOfferSnapshot.id,
+			expectedOffer: {
+				...expectedOfferSnapshot,
+				slices: [{ ...expectedOfferSnapshot.slices[0], originCode: "" }],
+			},
+		}),
+		/invalid passenger or itinerary/,
+	)
+	assert.match(
+		validateRefreshRequest({
+			offerId: expectedOfferSnapshot.id,
+			expectedOffer: {
+				...expectedOfferSnapshot,
+				slices: [
+					{
+						...expectedOfferSnapshot.slices[0],
+						segments: [
+							{
+								...expectedOfferSnapshot.slices[0].segments[0],
+								departureAt: "not-a-date",
+							},
+						],
+					},
+				],
+			},
+		}),
+		/invalid passenger or itinerary/,
+	)
+	assert.match(
+		validateRefreshRequest({
+			offerId: expectedOfferSnapshot.id,
+			expectedOffer: {
+				...expectedOfferSnapshot,
+				slices: [
+					{
+						...expectedOfferSnapshot.slices[0],
+						segments: [
+							{
+								...expectedOfferSnapshot.slices[0].segments[0],
+								id: " ",
+							},
+						],
+					},
+				],
+			},
+		}),
+		/invalid passenger or itinerary/,
+	)
 })
 
 const providerOffer = {
@@ -359,23 +400,32 @@ const providerOffer = {
 	expires_at: "2099-05-20T12:00:00Z",
 	owner: { name: "Example Airways" },
 	passengers: [{ id: "pas_adult", type: "adult" }],
-	slices: [{
-		origin: { iata_code: "LOS" },
-		destination: { iata_code: "ABV" },
-		segments: [{
-			id: "seg_1",
-			origin: { iata_code: "LOS", name: "Lagos" },
-			destination: { iata_code: "ABV", name: "Abuja" },
-			departing_at: "2099-05-21T08:30:00",
-			arriving_at: "2099-05-21T09:45:00",
-			marketing_carrier: { name: "Example Airways", iata_code: "EA" },
-			operating_carrier: { name: "Example Airways", iata_code: "EA" },
-			marketing_carrier_flight_number: "123",
-		}],
-	}],
+	slices: [
+		{
+			origin: { iata_code: "LOS" },
+			destination: { iata_code: "ABV" },
+			segments: [
+				{
+					id: "seg_1",
+					origin: { iata_code: "LOS", name: "Lagos" },
+					destination: { iata_code: "ABV", name: "Abuja" },
+					departing_at: "2099-05-21T08:30:00",
+					arriving_at: "2099-05-21T09:45:00",
+					marketing_carrier: { name: "Example Airways", iata_code: "EA" },
+					operating_carrier: { name: "Example Airways", iata_code: "EA" },
+					marketing_carrier_flight_number: "123",
+				},
+			],
+		},
+	],
 }
 
-async function invokeRefresh({ status = 200, payload = { data: providerOffer }, fetchError, inspectRequest } = {}) {
+async function invokeRefresh({
+	status = 200,
+	payload = { data: providerOffer },
+	fetchError,
+	inspectRequest,
+} = {}) {
 	const previousToken = process.env.DUFFEL_ACCESS_TOKEN
 	const previousFetch = globalThis.fetch
 	process.env.DUFFEL_ACCESS_TOKEN = "test-duffel-token"
@@ -504,7 +554,6 @@ test("refresh handler rejects malformed or mismatched provider offer identities"
 	assert.equal(calls.body.code, "DUFFEL_INVALID_OFFER_RESPONSE")
 })
 
-
 test("refresh handler requires explicit acceptance when the fare amount changes", async () => {
 	const calls = await invokeRefresh({
 		payload: { data: { ...providerOffer, total_amount: "126.00" } },
@@ -518,10 +567,12 @@ test("refresh handler requires explicit acceptance when the fare amount changes"
 test("refresh handler blocks material itinerary changes", async () => {
 	const changedOffer = {
 		...providerOffer,
-		slices: [{
-			...providerOffer.slices[0],
-			destination: { iata_code: "KAN" },
-		}],
+		slices: [
+			{
+				...providerOffer.slices[0],
+				destination: { iata_code: "KAN" },
+			},
+		],
 	}
 	const calls = await invokeRefresh({ payload: { data: changedOffer } })
 	assert.equal(calls.status, 200)

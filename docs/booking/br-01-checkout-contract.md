@@ -32,38 +32,38 @@ Conceptual request (field names are illustrative until the implementation task d
 
 ```ts
 interface BookingIntent {
-	offerId: string
-	passengers: PassengerDetails[]
-	selectedSeats: SelectedSeatIntent[]
-	contact: BookingContact
-	expectedOfferPrice?: {
-		amount: string
-		currency: string
-	}
+ offerId: string
+ passengers: PassengerDetails[]
+ selectedSeats: SelectedSeatIntent[]
+ contact: BookingContact
+ expectedOfferPrice?: {
+  amount: string
+  currency: string
+ }
 }
 
 interface PassengerDetails {
-	offerPassengerId: string
-	givenName: string
-	familyName: string
-	bornOn: string // YYYY-MM-DD
-	title?: string
-	gender?: string
-	email?: string
-	phoneNumber?: string
-	// Additional fields only when required by Duffel/the validating airline.
+ offerPassengerId: string
+ givenName: string
+ familyName: string
+ bornOn: string // YYYY-MM-DD
+ title?: string
+ gender?: string
+ email?: string
+ phoneNumber?: string
+ // Additional fields only when required by Duffel/the validating airline.
 }
 
 interface SelectedSeatIntent {
-	serviceId: string
-	offerPassengerId: string
-	segmentId: string
-	seatDesignator: string
+ serviceId: string
+ offerPassengerId: string
+ segmentId: string
+ seatDesignator: string
 }
 
 interface BookingContact {
-	email: string
-	phoneNumber?: string
+ email: string
+ phoneNumber?: string
 }
 ```
 
@@ -175,4 +175,3 @@ These are conceptual product states, not a required literal enum. In particular,
 - Duffel, [Adding seats](https://duffel.com/docs/guides/adding-seats): use current passenger-specific seat service IDs and quantity `1`; the payment amount must account for selected services.
 
 These provider references should be rechecked when implementing BR-02 onward because API requirements can change.
-
