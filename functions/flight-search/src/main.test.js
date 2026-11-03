@@ -811,3 +811,19 @@ test("seat validation treats provider failures as technical errors, not seat una
 	assert.equal(network.status, 502)
 	assert.equal(network.body.code, "DUFFEL_SEAT_VALIDATION_UNAVAILABLE")
 })
+
+
+test("treats an empty fresh seat-map list as changed selections, not a provider failure", async () => {
+	const calls = await invokeSeatValidation({ payload: { data: [] } })
+	assert.equal(calls.status, 200)
+	assert.equal(calls.body.status, "selection_changed")
+	assert.equal(calls.body.selections[0].reason, "segment_unavailable")
+})
+
+test("rejects malformed provider seat-map structures as technical errors", async () => {
+	const calls = await invokeSeatValidation({
+		payload: { data: [{ segment_id: "seg_1" }] },
+	})
+	assert.equal(calls.status, 502)
+	assert.equal(calls.body.code, "DUFFEL_INVALID_SEAT_VALIDATION_RESPONSE")
+})
