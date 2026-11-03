@@ -99,6 +99,44 @@ The function calls Duffel's `GET /air/seat_maps?offer_id=...` endpoint and retur
 
 An empty `seatMaps` array is a valid response and means seat selection is unavailable for that offer. Seat maps are provider-dependent and may be returned per itinerary segment. The client should allow travellers to continue without choosing a seat. A seat is selectable for a given traveller only when its `availableServices` contains a service for that passenger ID. Prices and service IDs must come from the current seat-map response.
 
+## Seat-service validation request contract
+
+Before checkout, the same function accepts a fresh seat-service validation action:
+
+```json
+{
+  "action": "validate-seat-services",
+  "offerId": "off_exampleOfferId",
+  "selectedSeats": [
+    {
+      "serviceId": "ase_exampleServiceId",
+      "passengerId": "pas_examplePassengerId",
+      "segmentId": "seg_exampleSegmentId",
+      "seatDesignator": "12A",
+      "expectedAmount": "25.00",
+      "expectedCurrency": "USD",
+      "expectedSeatName": "Window",
+      "expectedDisclosures": []
+    }
+  ]
+}
+```
+
+Each selection is untrusted comparison input. The function calls Duffel's `GET /air/seat_maps?offer_id=...` endpoint again and resolves the selected service against the current seat map using the segment ID, seat designator, service ID, and provider passenger ID. It never trusts client-supplied service availability or price as current provider data.
+
+The response contains a result for every submitted selection:
+
+- `{ "status": "valid", "selections": [...] }`: every service is still available for the same passenger and segment, with the same reviewed price and disclosures.
+- `{ "status": "price_changed", "selections": [...] }`: one or more services remain available but their amount or currency changed. The affected selection has `status: "price_changed"` and fresh details in `current`; the client must obtain explicit acceptance.
+- `{ "status": "selection_changed", "selections": [...] }`: one or more services or seats are no longer available, or seat disclosures changed. The affected selection identifies the reason and has `current: null` when unavailable. The client must require review/reselection; do not silently drop unavailable seats or proceed with only the remaining selections.
+- `{ "status": "not_selected", "selections": [] }`: no seats were submitted. The function skips the Duffel request entirely.
+
+Each selection result includes its own `status`, so a mixed response preserves the outcome for every seat. A top-level `selection_changed` takes precedence over `price_changed`; clients should inspect all per-selection results and block the selected-seat checkout path until the traveller resolves every change. Price comparison uses decimal strings, not floating-point arithmetic. Disclosure comparison is order-insensitive; changed disclosures require review. The current seat name is returned as display metadata and is not independently treated as a material change.
+
+Invalid requests (including duplicate seat assignment on a segment or multiple seats for one passenger on a segment) return HTTP 400. Duffel HTTP, network, timeout, and malformed-response failures return technical errors; they are not classified as unavailable seats. An empty seat-map list after seats were selected is a selection change.
+
+This is a point-in-time availability check, not a reservation. Seat selection remains optional, and no seat is guaranteed until the provider accepts the eventual order. This action does not create an order, charge a payment method, or confirm a booking. Seat validation remains separate from BR-02 offer refresh; callers should run both validations before any future order-creation flow.
+
 ## App configuration
 
 Set these values in the app's local `.env.local` file once the Appwrite project and function exist:
