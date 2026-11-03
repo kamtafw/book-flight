@@ -172,19 +172,26 @@ function validateRefreshRequest(body) {
 		return "The selected offer snapshot must include passengers and itinerary slices."
 	}
 	if (
-		expected.passengers.some((passenger) => !isRecord(passenger) || typeof passenger.id !== "string" || !passenger.id) ||
+		expected.passengers.some((passenger) => !isRecord(passenger) || typeof passenger.id !== "string" || !passenger.id.trim()) ||
 		new Set(expected.passengers.map((passenger) => passenger?.id)).size !== expected.passengers.length ||
 		expected.slices.some((slice) =>
 			!isRecord(slice) ||
 			typeof slice.originCode !== "string" ||
+			!/^[A-Z]{3}$/.test(slice.originCode) ||
 			typeof slice.destinationCode !== "string" ||
+			!/^[A-Z]{3}$/.test(slice.destinationCode) ||
 			!Array.isArray(slice.segments) ||
 			slice.segments.length === 0 ||
 			slice.segments.some((segment) =>
 				!isRecord(segment) ||
 				typeof segment.id !== "string" ||
+				!segment.id.trim() ||
 				typeof segment.departureAt !== "string" ||
-				typeof segment.arrivalAt !== "string",
+				!segment.departureAt.trim() ||
+				!Number.isFinite(Date.parse(segment.departureAt)) ||
+				typeof segment.arrivalAt !== "string" ||
+				!segment.arrivalAt.trim() ||
+				!Number.isFinite(Date.parse(segment.arrivalAt)),
 			),
 		)
 	) {
@@ -286,12 +293,15 @@ async function refreshOffer(offerId, expectedOffer, token, res, log, error) {
 			error("Duffel returned offer data without complete passenger or itinerary identities.")
 			return jsonError(res, 502, "DUFFEL_INVALID_OFFER_RESPONSE", "The flight provider returned incomplete passenger or itinerary details.")
 		}
-		if (rawOffer.expires_at !== undefined && rawOffer.expires_at !== null &&
-			(typeof rawOffer.expires_at !== "string" || !Number.isFinite(Date.parse(rawOffer.expires_at)))) {
-			error("Duffel returned an offer with an invalid expiry timestamp.")
-			return jsonError(res, 502, "DUFFEL_INVALID_OFFER_RESPONSE", "The flight provider returned an invalid offer expiry.")
+		if (
+			typeof rawOffer.expires_at !== "string" ||
+			!rawOffer.expires_at.trim() ||
+			!Number.isFinite(Date.parse(rawOffer.expires_at))
+		) {
+			error("Duffel returned an offer without a valid expiry timestamp.")
+			return jsonError(res, 502, "DUFFEL_INVALID_OFFER_RESPONSE", "The flight provider returned an invalid or missing offer expiry.")
 		}
-		if (rawOffer.expires_at && Date.parse(rawOffer.expires_at) <= Date.now()) {
+		if (Date.parse(rawOffer.expires_at) <= Date.now()) {
 			return res.json({
 				status: "unavailable",
 				code: "OFFER_EXPIRED",
