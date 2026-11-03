@@ -1,7 +1,6 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-
-import {
+import flightSearchHandler, {
 	compareOfferItinerary,
 	formatDuration,
 	mapOffer,
@@ -339,4 +338,244 @@ test("detects changes in slice and segment counts", () => {
 		],
 	}
 	assert.deepEqual(compareOfferItinerary(expectedOfferSnapshot, changed), ["slice_count"])
+})
+
+test("rejects refresh snapshots with invalid route codes or timestamps", () => {
+	assert.match(
+		validateRefreshRequest({
+			offerId: expectedOfferSnapshot.id,
+			expectedOffer: {
+				...expectedOfferSnapshot,
+				slices: [{ ...expectedOfferSnapshot.slices[0], originCode: "" }],
+			},
+		}),
+		/invalid passenger or itinerary/,
+	)
+	assert.match(
+		validateRefreshRequest({
+			offerId: expectedOfferSnapshot.id,
+			expectedOffer: {
+				...expectedOfferSnapshot,
+				slices: [
+					{
+						...expectedOfferSnapshot.slices[0],
+						segments: [
+							{
+								...expectedOfferSnapshot.slices[0].segments[0],
+								departureAt: "not-a-date",
+							},
+						],
+					},
+				],
+			},
+		}),
+		/invalid passenger or itinerary/,
+	)
+	assert.match(
+		validateRefreshRequest({
+			offerId: expectedOfferSnapshot.id,
+			expectedOffer: {
+				...expectedOfferSnapshot,
+				slices: [
+					{
+						...expectedOfferSnapshot.slices[0],
+						segments: [
+							{
+								...expectedOfferSnapshot.slices[0].segments[0],
+								id: " ",
+							},
+						],
+					},
+				],
+			},
+		}),
+		/invalid passenger or itinerary/,
+	)
+})
+
+const providerOffer = {
+	id: expectedOfferSnapshot.id,
+	total_amount: "125.50",
+	total_currency: "USD",
+	expires_at: "2099-05-20T12:00:00Z",
+	owner: { name: "Example Airways" },
+	passengers: [{ id: "pas_adult", type: "adult" }],
+	slices: [
+		{
+			origin: { iata_code: "LOS" },
+			destination: { iata_code: "ABV" },
+			segments: [
+				{
+					id: "seg_1",
+					origin: { iata_code: "LOS", name: "Lagos" },
+					destination: { iata_code: "ABV", name: "Abuja" },
+					departing_at: "2099-05-21T08:30:00",
+					arriving_at: "2099-05-21T09:45:00",
+					marketing_carrier: { name: "Example Airways", iata_code: "EA" },
+					operating_carrier: { name: "Example Airways", iata_code: "EA" },
+					marketing_carrier_flight_number: "123",
+				},
+			],
+		},
+	],
+}
+
+async function invokeRefresh({
+	status = 200,
+	payload = { data: providerOffer },
+	fetchError,
+	inspectRequest,
+} = {}) {
+	const previousToken = process.env.DUFFEL_ACCESS_TOKEN
+	const previousFetch = globalThis.fetch
+	process.env.DUFFEL_ACCESS_TOKEN = "test-duffel-token"
+	globalThis.fetch = async (url, options) => {
+		inspectRequest?.(url, options)
+		if (fetchError) throw fetchError
+		return {
+			ok: status >= 200 && status < 300,
+			status,
+			json: async () => payload,
+		}
+	}
+	const calls = { body: null, status: 200, errors: [], logs: [] }
+	const res = {
+		json(body, responseStatus = 200) {
+			calls.body = body
+			calls.status = responseStatus
+			return body
+		},
+	}
+	try {
+		await flightSearchHandler({
+			req: {
+				method: "POST",
+				bodyJson: {
+					action: "refresh-offer",
+					offerId: expectedOfferSnapshot.id,
+					expectedOffer: expectedOfferSnapshot,
+				},
+			},
+			res,
+			log: (message) => calls.logs.push(message),
+			error: (message) => calls.errors.push(message),
+		})
+		return calls
+	} finally {
+		globalThis.fetch = previousFetch
+		if (previousToken === undefined) delete process.env.DUFFEL_ACCESS_TOKEN
+		else process.env.DUFFEL_ACCESS_TOKEN = previousToken
+	}
+}
+
+test("refresh handler calls the Duffel offer endpoint with server credentials and returns valid", async () => {
+	const calls = await invokeRefresh({
+		inspectRequest(url, options) {
+			assert.equal(url, `https://api.duffel.com/air/offers/${expectedOfferSnapshot.id}`)
+			assert.equal(options.method, "GET")
+			assert.equal(options.headers.Authorization, "Bearer test-duffel-token")
+			assert.equal(options.headers.Accept, "application/json")
+			assert.equal(options.headers["Duffel-Version"], "v2")
+		},
+	})
+	assert.equal(calls.status, 200)
+	assert.equal(calls.body.status, "valid")
+	assert.equal(calls.body.offer.priceAmount, "125.50")
+})
+
+test("refresh handler requires explicit acceptance when currency changes", async () => {
+	const calls = await invokeRefresh({
+		payload: { data: { ...providerOffer, total_currency: "EUR" } },
+	})
+	assert.equal(calls.status, 200)
+	assert.equal(calls.body.status, "price_changed")
+	assert.equal(calls.body.previousPrice.currency, "USD")
+	assert.equal(calls.body.currentPrice.currency, "EUR")
+})
+
+test("refresh handler returns unavailable for Duffel offer_no_longer_available", async () => {
+	const calls = await invokeRefresh({
+		status: 422,
+		payload: { errors: [{ code: "offer_no_longer_available", message: "Offer expired" }] },
+	})
+	assert.equal(calls.status, 200)
+	assert.equal(calls.body.status, "unavailable")
+	assert.equal(calls.body.code, "OFFER_NO_LONGER_AVAILABLE")
+})
+
+test("refresh handler keeps provider failures distinct from unavailable offers", async () => {
+	const calls = await invokeRefresh({
+		status: 500,
+		payload: { errors: [{ code: "internal_error" }] },
+	})
+	assert.equal(calls.status, 502)
+	assert.equal(calls.body.code, "DUFFEL_OFFER_REFRESH_FAILED")
+	assert.notEqual(calls.body.status, "unavailable")
+})
+
+test("refresh handler reports network and timeout failures as verification errors", async () => {
+	const network = await invokeRefresh({ fetchError: new Error("connection reset") })
+	assert.equal(network.status, 502)
+	assert.equal(network.body.code, "DUFFEL_OFFER_REFRESH_UNAVAILABLE")
+	assert.notEqual(network.body.status, "unavailable")
+
+	const timeoutError = new Error("aborted")
+	timeoutError.name = "AbortError"
+	const timeout = await invokeRefresh({ fetchError: timeoutError })
+	assert.equal(timeout.status, 502)
+	assert.match(timeout.body.error, /took too long/)
+})
+
+test("refresh handler rejects missing, null, and malformed provider expiry timestamps", async () => {
+	for (const expiry of [undefined, null, "not-a-date"]) {
+		const offer = { ...providerOffer }
+		if (expiry === undefined) delete offer.expires_at
+		else offer.expires_at = expiry
+		const calls = await invokeRefresh({ payload: { data: offer } })
+		assert.equal(calls.status, 502)
+		assert.equal(calls.body.code, "DUFFEL_INVALID_OFFER_RESPONSE")
+	}
+})
+
+test("refresh handler marks an expired provider offer unavailable", async () => {
+	const calls = await invokeRefresh({
+		payload: { data: { ...providerOffer, expires_at: "2000-01-01T00:00:00Z" } },
+	})
+	assert.equal(calls.status, 200)
+	assert.equal(calls.body.status, "unavailable")
+	assert.equal(calls.body.code, "OFFER_EXPIRED")
+})
+
+test("refresh handler rejects malformed or mismatched provider offer identities", async () => {
+	const calls = await invokeRefresh({
+		payload: { data: { ...providerOffer, id: "off_another" } },
+	})
+	assert.equal(calls.status, 502)
+	assert.equal(calls.body.code, "DUFFEL_INVALID_OFFER_RESPONSE")
+})
+
+test("refresh handler requires explicit acceptance when the fare amount changes", async () => {
+	const calls = await invokeRefresh({
+		payload: { data: { ...providerOffer, total_amount: "126.00" } },
+	})
+	assert.equal(calls.status, 200)
+	assert.equal(calls.body.status, "price_changed")
+	assert.equal(calls.body.previousPrice.amount, "125.50")
+	assert.equal(calls.body.currentPrice.amount, "126.00")
+})
+
+test("refresh handler blocks material itinerary changes", async () => {
+	const changedOffer = {
+		...providerOffer,
+		slices: [
+			{
+				...providerOffer.slices[0],
+				destination: { iata_code: "KAN" },
+			},
+		],
+	}
+	const calls = await invokeRefresh({ payload: { data: changedOffer } })
+	assert.equal(calls.status, 200)
+	assert.equal(calls.body.status, "itinerary_changed")
+	assert.deepEqual(calls.body.materialDifferences, ["slice_1_route"])
 })

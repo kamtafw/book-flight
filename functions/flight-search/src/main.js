@@ -177,7 +177,8 @@ function validateRefreshRequest(body) {
 	}
 	if (
 		expected.passengers.some(
-			(passenger) => !isRecord(passenger) || typeof passenger.id !== "string" || !passenger.id,
+			(passenger) =>
+				!isRecord(passenger) || typeof passenger.id !== "string" || !passenger.id.trim(),
 		) ||
 		new Set(expected.passengers.map((passenger) => passenger?.id)).size !==
 			expected.passengers.length ||
@@ -185,15 +186,22 @@ function validateRefreshRequest(body) {
 			(slice) =>
 				!isRecord(slice) ||
 				typeof slice.originCode !== "string" ||
+				!/^[A-Z]{3}$/.test(slice.originCode) ||
 				typeof slice.destinationCode !== "string" ||
+				!/^[A-Z]{3}$/.test(slice.destinationCode) ||
 				!Array.isArray(slice.segments) ||
 				slice.segments.length === 0 ||
 				slice.segments.some(
 					(segment) =>
 						!isRecord(segment) ||
+						!segment.id.trim() ||
 						typeof segment.id !== "string" ||
 						typeof segment.departureAt !== "string" ||
-						typeof segment.arrivalAt !== "string",
+						!segment.departureAt.trim() ||
+						!Number.isFinite(Date.parse(segment.departureAt)) ||
+						typeof segment.arrivalAt !== "string" ||
+						!segment.arrivalAt.trim() ||
+						!Number.isFinite(Date.parse(segment.arrivalAt)),
 				),
 		)
 	) {
@@ -328,19 +336,19 @@ async function refreshOffer(offerId, expectedOffer, token, res, log, error) {
 			)
 		}
 		if (
-			rawOffer.expires_at !== undefined &&
-			rawOffer.expires_at !== null &&
-			(typeof rawOffer.expires_at !== "string" || !Number.isFinite(Date.parse(rawOffer.expires_at)))
+			typeof rawOffer.expires_at !== "string" ||
+			!rawOffer.expires_at.trim() ||
+			!Number.isFinite(Date.parse(rawOffer.expires_at))
 		) {
-			error("Duffel returned an offer with an invalid expiry timestamp.")
+			error("Duffel returned an offer without a valid expiry timestamp.")
 			return jsonError(
 				res,
 				502,
 				"DUFFEL_INVALID_OFFER_RESPONSE",
-				"The flight provider returned an invalid offer expiry.",
+				"The flight provider returned an invalid or missing offer expiry.",
 			)
 		}
-		if (rawOffer.expires_at && Date.parse(rawOffer.expires_at) <= Date.now()) {
+		if (Date.parse(rawOffer.expires_at) <= Date.now()) {
 			return res.json({
 				status: "unavailable",
 				code: "OFFER_EXPIRED",

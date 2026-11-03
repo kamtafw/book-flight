@@ -73,7 +73,7 @@ The same function accepts an offer-refresh action before checkout:
 
 The `expectedOffer` is the snapshot the traveller reviewed. It is untrusted comparison input only; it is never used as current provider data or as a price to charge. Preserve the provider's decimal `priceAmount` string from search results rather than converting the numeric display price back to a string.
 
-The function calls Duffel's `GET /air/offers/{offer_id}` endpoint and normalizes the fresh response. It returns one of these business outcomes:
+The function calls Duffel's `GET /air/offers/{offer_id}` endpoint and normalizes the fresh response. A successful provider response must include a non-empty, parseable `expires_at` timestamp; a missing, null, or malformed expiry is rejected as an invalid provider response rather than treated as valid. The expected snapshot must contain three-letter uppercase route codes, non-empty segment IDs, and parseable departure/arrival timestamps. It returns one of these business outcomes:
 
 - `{ "status": "valid", "offer": ... }`: price, passenger identities, and material itinerary details still match. Updated non-material metadata (for example, carrier display names) is returned in the refreshed offer.
 - `{ "status": "price_changed", "previousPrice": ..., "currentPrice": ..., "offer": ... }`: the amount or currency changed. The client must show the new price and obtain explicit acceptance before proceeding.
@@ -121,4 +121,4 @@ From the repository root:
 node --test functions/flight-search/src/main.test.js
 ```
 
-These tests validate input handling and response mapping without making live Duffel requests.
+These tests validate input handling and response mapping without making live Duffel requests. Offer-refresh tests also invoke the handler with mocked `fetch` responses to verify the Duffel endpoint and authorization headers, valid and changed-price outcomes, unavailable-provider responses, provider/network/timeout failures, malformed provider data, and expiry handling. Offer-refresh tests also invoke the function handler with mocked `fetch` responses to verify the Duffel endpoint, server-side authorization headers, valid and changed-price outcomes, unavailable-provider responses, provider/network/timeout failures, malformed provider data, and expiry handling.
