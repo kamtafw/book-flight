@@ -425,7 +425,6 @@ function validateSeatServiceRequest(body) {
 			normalizeDecimal(selection.expectedAmount) === null ||
 			typeof selection.expectedCurrency !== "string" ||
 			!/^[A-Z]{3}$/.test(selection.expectedCurrency) ||
-			typeof selection.expectedSeatName !== "string" ||
 			!Array.isArray(selection.expectedDisclosures) ||
 			selection.expectedDisclosures.some((item) => typeof item !== "string")
 		) {
