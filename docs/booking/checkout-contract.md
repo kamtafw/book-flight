@@ -1,30 +1,30 @@
 # Booking Checkout Contract (BR-01)
 
-**Status:** Proposed contract for review
-**Scope:** One-way Duffel flight booking, including optional selected seats
-**Implementation status:** Documentation only. No booking, payment, or oder-creation code is implemented by this checkpoint.
+**Status:** Accepted product/technical contract (2026-11-02)  
+**Scope:** One-way Duffel flight booking, including optional selected seats  
+**Implementation status:** Documentation only. No booking, payment, or order-creation code is implemented by this checkpoint.
 
 ## 1. Purpose
 
 Define the data and validation boundary between the Book Flight app and its server-side Appwrite Function before implementing checkout.
 
-The mobile app must not call Duffel directly or hold the Duffel access token. Appwrite remains the trusted boundary for provider requests, validation, price calculation, order-creation, and provider error normalization.
+The mobile app must not call Duffel directly or hold the Duffel access token. Appwrite remains the trusted boundary for provider requests, validation, price calculation, order creation, and provider error normalization.
 
-This contract is for the current supported journey: one-way flight search with adults, children, and infants. It does not imply that round trips or multi-city booking are implemented.
+This contract is for the current supported journey: one-way flight search with adults, children, and infants. It does not imply that round trips or multi-city booking are supported.
 
 ## 2. Existing state and constraints
 
 The current app already has:
 
 - Duffel offers normalized into `FlightOffer`, including offer ID, total price/currency, expiry, slices/segments, and provider passenger IDs/types/ages.
-- Seat maps fetched for an offer through the existing `fight-search` Appwrite Function.
+- Seat maps fetched for an offer through the existing `flight-search` Appwrite Function.
 - Seat selections stored with the offer ID, service ID, passenger ID, segment ID, seat designator, displayed price/currency, and disclosures.
 - One shared `passengerInformation` object, which is not sufficient for multiple travellers.
 - A placeholder payment screen. There is no implemented order-creation/booking-confirmation flow.
 
-Seat selection is a user preference only. It does not reserve a seat or guarantee that the selected service remains available.
+Seat selection is a user preference only. It does not reserve a seat or guarantee that the selected service remains available. The UI must state this clearly at the point of selection and/or review: choosing a seat does not reserve it, and the seat may become unavailable before booking is completed. If fresh validation fails, explain the issue and let the traveller continue without that seat or choose another available option.
 
-## Proposed checkout input contract
+## 3. Proposed checkout input contract
 
 The client should submit a booking intent to Appwrite. The client must not submit provider credentials, decide the authoritative amount to charge, or send a provider order payload that the server blindly forwards.
 
@@ -71,12 +71,13 @@ interface BookingContact {
 
 - `offerId` must be a valid provider offer ID and must identify the selected offer.
 - `offerPassengerId` must match one of the passengers belonging to the refreshed offer. Array position is not an identity.
+- Passenger details must cover every passenger on the offer exactly once; no missing, duplicate, or foreign passenger IDs.
 - Passenger ages/types must remain consistent with the search request and offer passenger records. Date of birth is validated against the passenger's provider/search age category, with edge cases resolved using the airline/provider's requirements rather than assuming the UI category is authoritative.
 - `selectedSeats` may be empty because seat selection is optional. If present, every entry must be validated against the current seat-map response for the same offer, passenger, and segment.
 - Do not trust client-submitted seat prices, offer prices, currency, seat designators, or disclosures as authoritative booking data. They are useful for review/UI and mismatch detection only.
 - `expectedOfferPrice` is an optional comparison value, not an amount to charge. If the refreshed offer price differs, checkout must return a price-change state and require explicit traveller acceptance before proceeding.
 - Contact details are separate from passenger details. Do not assume the lead passenger is necessarily the booking contact.
-- Do not log names, date of birth, passport details, contact information, payment credentials, or full booking payloads.
+- Do not log names, dates of birth, passport details, contact information, payment credentials, or full booking payloads.
 
 This is a conceptual contract, not yet a committed application type or an exact provider payload.
 
@@ -85,19 +86,19 @@ This is a conceptual contract, not yet a committed application type or an exact 
 The booking-readiness path must execute in this order:
 
 1. **Validate request shape.** Reject malformed IDs, missing required fields, duplicate passenger IDs, invalid dates, and unsupported booking scope.
-2. **Retrieve the offer from Duffel.** Use the provider's single-offer endpoint to obtain the current offer data. The original search result and its `expiresAt` field are not sufficient evidence of current availability.
+2. **Retrieve the offer from Duffel.** Use the provider's single-offer endpoint to obtain current offer data. The original search result and its `expiresAt` field are not sufficient evidence of current availability.
 3. **Validate the refreshed offer.** Confirm the offer is still usable, contains the expected passenger identities and itinerary, and has a valid total amount/currency. Compare its price with the client review value and require explicit confirmation if it changed.
 4. **Refresh seat-map data when seats were selected.** Retrieve seat maps for the current offer and verify each requested service ID is still offered for the exact passenger and segment. Verify the current service price/currency and seat designator from provider data. Do not rely on the old client-side seat-map state.
-5. **Build a provider request from trusted data.** Use the refreshed offer and service IDs, validated passenger details, and server-calculated amount. Never copy a client-supplied total into a provider payment payload.
+5. **Build a provider request from trusted data.** Use the refreshed offer and service IDs, validated passenger details, and server-calculated amount. Never copy a client-supplied total into the provider payment payload.
 6. **Return a clear pre-booking result.** The client must be able to distinguish valid-to-continue, price-changed, seat-changed/unavailable, expired/unavailable offer, invalid passenger data, and provider/network failure.
 
-A successful refresh is not a guarantee that the offer or seats will remain available until the order creation. Duffel remains the final authority; order-creation errors must also be handled safely.
+A successful refresh is not a guarantee that the offer or seats will remain available until order creation. Duffel remains the final authority; order-creation errors must also be handled safely.
 
 ## 5. Seat services and totals
 
 For Duffel order creation, a selected seat is represented by its current service ID and quantity `1`. The service ID is passenger-specific, so it must be checked against the intended offer passenger. The UI's seat designator is for display and verification; it is not a substitute for the service ID.
 
-The total to show during review should be derived from the current provider data:
+The total to show during review should be derived from current provider data:
 
 - Current offer total, including its included flight price.
 - Plus each selected seat service's current total amount, where those services are priced separately.
@@ -107,7 +108,7 @@ The order response's final amount is authoritative. If the provider's pricing/pa
 
 Do not assume all offers treat seat services identically. Follow Duffel's current offer/service requirements, including any `intended_services` constraint returned by the provider.
 
-## Order creation and payment are a separate decision gate
+## 6. Order creation and payment are a separate decision gate
 
 BR-01 does **not** choose or implement the payment model.
 
