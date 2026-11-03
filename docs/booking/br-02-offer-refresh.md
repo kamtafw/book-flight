@@ -37,9 +37,9 @@ The snapshot is client-supplied and therefore untrusted. It is used only to comp
 
 ## Validation performed
 
-1. Require POST, a syntactically valid Duffel offer ID, and a complete expected snapshot whose ID matches the requested ID.
+1. Require POST, a syntactically valid Duffel offer ID, and a complete expected snapshot whose ID matches the requested ID. Snapshot route codes must be three-letter uppercase IATA codes; segment IDs must be non-empty; departure and arrival values must be non-empty and parseable timestamps.
 2. Call Duffel `GET /air/offers/{offer_id}` server-side using the secret Appwrite environment variable and Duffel API v2 headers.
-3. Validate the returned object, matching offer ID, decimal total, ISO currency, passenger identities, itinerary structure, and expiry timestamp.
+3. Validate the returned object, matching offer ID, decimal total, ISO currency, passenger identities, itinerary structure, and a mandatory non-empty, parseable `expires_at` timestamp. Missing, null, or malformed expiry data is rejected as an invalid provider response.
 4. Treat a provider 404 / recognized unavailable response, or an already-expired returned offer, as unavailable. Do not convert timeouts, provider 5xx, or malformed responses into an unavailable-flight result.
 5. Compare amount and currency using decimal strings. A changed amount **or currency** requires explicit traveller acceptance.
 6. Compare material itinerary fields. Descriptive provider metadata is allowed to change and is refreshed in the returned offer.
@@ -92,4 +92,4 @@ node --test functions/flight-search/src/main.test.js
 npx tsc --noEmit
 ```
 
-The Node tests cover refresh request validation, decimal comparison, harmless metadata changes, and material passenger/route/segment/schedule changes. Live Duffel behaviour and Appwrite deployment still require environment-backed verification.
+The Node tests cover refresh request validation, decimal comparison, harmless metadata changes, and material passenger/route/segment/schedule changes. Handler-level tests use mocked fetch responses to verify request URL, method and headers; valid refresh; currency changes; Duffel unavailable responses; provider, network and timeout failures; malformed provider data; and expiry handling. These tests do not make live Duffel requests. Live Duffel behaviour and Appwrite deployment still require environment-backed verification.
