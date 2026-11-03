@@ -11,7 +11,7 @@ This is a point-in-time availability check, not a reservation or guarantee that 
 
 ## Provider contract
 
-Duffel does not expose a separate seat-service validation endpoint. The supported mechanism is to retrieve the offer's seat maps again:
+The documented Duffel mechanism for checking current seat availability is to retrieve the offer's seat maps again:
 
 `GET https://api.duffel.com/air/seat_maps?offer_id={offer_id}`
 
