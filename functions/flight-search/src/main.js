@@ -141,6 +141,196 @@ function mapSeatMaps(seatMaps) {
 	}))
 }
 
+
+function normalizeDecimal(value) {
+	if (typeof value !== "string" || !/^\d+(?:\.\d+)?$/.test(value)) return null
+	const [whole, fraction = ""] = value.split(".")
+	const normalizedWhole = whole.replace(/^0+(?=\d)/, "")
+	const normalizedFraction = fraction.replace(/0+$/, "")
+	return normalizedFraction ? `${normalizedWhole}.${normalizedFraction}` : normalizedWhole
+}
+
+function validateRefreshRequest(body) {
+	if (!isRecord(body)) return "Provide a valid offer-refresh request."
+	if (typeof body.offerId !== "string" || !/^off_[A-Za-z0-9]+$/.test(body.offerId)) {
+		return "Provide a valid Duffel offer ID."
+	}
+	const expected = body.expectedOffer
+	if (!isRecord(expected) || expected.id !== body.offerId) {
+		return "Provide the selected offer snapshot for comparison."
+	}
+	if (
+		typeof expected.totalAmount !== "string" ||
+		normalizeDecimal(expected.totalAmount) === null ||
+		typeof expected.totalCurrency !== "string" ||
+		!/^[A-Z]{3}$/.test(expected.totalCurrency)
+	) {
+		return "Provide the selected offer's displayed amount and currency."
+	}
+	if (!Array.isArray(expected.passengers) || !Array.isArray(expected.slices)) {
+		return "The selected offer snapshot must include passengers and itinerary slices."
+	}
+	if (
+		expected.passengers.some((passenger) => !isRecord(passenger) || typeof passenger.id !== "string") ||
+		expected.slices.some((slice) =>
+			!isRecord(slice) ||
+			typeof slice.originCode !== "string" ||
+			typeof slice.destinationCode !== "string" ||
+			!Array.isArray(slice.segments) ||
+			slice.segments.some((segment) =>
+				!isRecord(segment) ||
+				typeof segment.id !== "string" ||
+				typeof segment.departureAt !== "string" ||
+				typeof segment.arrivalAt !== "string",
+			),
+		)
+	) {
+		return "The selected offer snapshot contains invalid passenger or itinerary data."
+	}
+	return null
+}
+
+function compareOfferItinerary(expected, current) {
+	const differences = []
+	const expectedPassengerIds = expected.passengers.map((passenger) => passenger.id).sort()
+	const currentPassengerIds = current.passengers.map((passenger) => passenger.id).sort()
+	if (JSON.stringify(expectedPassengerIds) !== JSON.stringify(currentPassengerIds)) {
+		differences.push("passenger_identity")
+	}
+	if (expected.slices.length !== current.slices.length) {
+		differences.push("slice_count")
+		return differences
+	}
+	for (let sliceIndex = 0; sliceIndex < expected.slices.length; sliceIndex += 1) {
+		const before = expected.slices[sliceIndex]
+		const after = current.slices[sliceIndex]
+		if (before.originCode !== after.originCode || before.destinationCode !== after.destinationCode) {
+			differences.push(`slice_${sliceIndex + 1}_route`)
+		}
+		if (before.segments.length !== after.segments.length) {
+			differences.push(`slice_${sliceIndex + 1}_segment_count`)
+			continue
+		}
+		for (let segmentIndex = 0; segmentIndex < before.segments.length; segmentIndex += 1) {
+			const oldSegment = before.segments[segmentIndex]
+			const newSegment = after.segments[segmentIndex]
+			if (
+				oldSegment.id !== newSegment.id ||
+				oldSegment.departureAt !== newSegment.departureAt ||
+				oldSegment.arrivalAt !== newSegment.arrivalAt
+			) {
+				differences.push(`slice_${sliceIndex + 1}_segment_${segmentIndex + 1}`)
+			}
+		}
+	}
+	return [...new Set(differences)]
+}
+
+async function refreshOffer(offerId, expectedOffer, token, res, log, error) {
+	const controller = new AbortController()
+	const timeout = setTimeout(() => controller.abort(), 25000)
+	try {
+		const response = await fetch(`${DUFFEL_BASE_URL}/air/offers/${encodeURIComponent(offerId)}`, {
+			method: "GET",
+			signal: controller.signal,
+			headers: {
+				Authorization: `Bearer ${token}`,
+				Accept: "application/json",
+				"Duffel-Version": "v2",
+			},
+		})
+		const payload = await response.json().catch(() => null)
+		if (!response.ok) {
+			const providerCode = payload?.errors?.[0]?.code
+			const unavailable = response.status === 404 ||
+				(typeof providerCode === "string" && /(offer.*(unavailable|expired|not_found)|not_found)/i.test(providerCode))
+			if (unavailable) {
+				return res.json({
+					status: "unavailable",
+					code: "OFFER_NO_LONGER_AVAILABLE",
+					message: "This flight offer is no longer available. Search again to find current options.",
+				})
+			}
+			log(`Duffel offer refresh failed with HTTP ${response.status}.`)
+			return jsonError(res, 502, "DUFFEL_OFFER_REFRESH_FAILED", "We couldn't verify this flight offer. Please try again.")
+		}
+
+		const rawOffer = payload?.data
+		if (
+			!isRecord(rawOffer) ||
+			rawOffer.id !== offerId ||
+			typeof rawOffer.total_amount !== "string" ||
+			normalizeDecimal(rawOffer.total_amount) === null ||
+			typeof rawOffer.total_currency !== "string" ||
+			!/^[A-Z]{3}$/.test(rawOffer.total_currency) ||
+			!Array.isArray(rawOffer.passengers) ||
+			!Array.isArray(rawOffer.slices)
+		) {
+			error("Duffel returned an incomplete or mismatched offer-refresh response.")
+			return jsonError(res, 502, "DUFFEL_INVALID_OFFER_RESPONSE", "The flight provider returned an unexpected offer response.")
+		}
+
+		const current = mapOffer(rawOffer)
+		if (
+			current.passengers.length !== rawOffer.passengers.length ||
+			current.slices.length !== rawOffer.slices.length ||
+			current.slices.some((slice) => !slice.originCode || !slice.destinationCode || !slice.segments.length ||
+				slice.segments.some((segment) => !segment.id || !segment.departureAt || !segment.arrivalAt))
+		) {
+			error("Duffel returned offer data without complete passenger or itinerary identities.")
+			return jsonError(res, 502, "DUFFEL_INVALID_OFFER_RESPONSE", "The flight provider returned incomplete passenger or itinerary details.")
+		}
+		if (rawOffer.expires_at && Date.parse(rawOffer.expires_at) <= Date.now()) {
+			return res.json({
+				status: "unavailable",
+				code: "OFFER_EXPIRED",
+				message: "This flight offer has expired. Search again to find current options.",
+			})
+		}
+
+		const materialDifferences = compareOfferItinerary(expectedOffer, current)
+		const priceChanged =
+			normalizeDecimal(expectedOffer.totalAmount) !== normalizeDecimal(rawOffer.total_amount) ||
+			expectedOffer.totalCurrency !== rawOffer.total_currency
+		const offer = {
+			...current,
+			priceAmount: rawOffer.total_amount,
+			price: Number(rawOffer.total_amount),
+		}
+		if (materialDifferences.length) {
+			return res.json({
+				status: "itinerary_changed",
+				materialDifferences,
+				priceChanged,
+				previousPrice: { amount: expectedOffer.totalAmount, currency: expectedOffer.totalCurrency },
+				currentPrice: { amount: rawOffer.total_amount, currency: rawOffer.total_currency },
+				offer,
+			})
+		}
+		if (priceChanged) {
+			return res.json({
+				status: "price_changed",
+				previousPrice: { amount: expectedOffer.totalAmount, currency: expectedOffer.totalCurrency },
+				currentPrice: { amount: rawOffer.total_amount, currency: rawOffer.total_currency },
+				offer,
+			})
+		}
+		return res.json({ status: "valid", offer })
+	} catch (cause) {
+		error(cause instanceof Error ? cause.message : "Unknown offer-refresh error.")
+		return jsonError(
+			res,
+			502,
+			"DUFFEL_OFFER_REFRESH_UNAVAILABLE",
+			cause?.name === "AbortError"
+				? "Verifying this flight offer took too long. Please try again."
+				: "We couldn't reach the flight provider to verify this offer.",
+		)
+	} finally {
+		clearTimeout(timeout)
+	}
+}
+
 async function getSeatMaps(offerId, token, res, log, error) {
 	const controller = new AbortController()
 	const timeout = setTimeout(() => controller.abort(), 25000)
@@ -265,6 +455,20 @@ export default async function ({ req, res, log, error }) {
 
 	const body = req.bodyJson
 
+
+	if (isRecord(body) && body.action === "refresh-offer") {
+		const validationError = validateRefreshRequest(body)
+		if (validationError) {
+			return jsonError(res, 400, "INVALID_OFFER_REFRESH_REQUEST", validationError)
+		}
+		const token = process.env.DUFFEL_ACCESS_TOKEN
+		if (!token) {
+			error("DUFFEL_ACCESS_TOKEN is not configured for the flight search function.")
+			return jsonError(res, 503, "FLIGHT_SEARCH_NOT_CONFIGURED", "Flight search is not configured yet.")
+		}
+		return refreshOffer(body.offerId, body.expectedOffer, token, res, log, error)
+	}
+
 	if (isRecord(body) && body.action === "seat-map") {
 		if (typeof body.offerId !== "string" || !/^off_[A-Za-z0-9]+$/.test(body.offerId)) {
 			return jsonError(res, 400, "INVALID_SEAT_MAP_REQUEST", "Provide a valid Duffel offer ID.")
@@ -373,4 +577,4 @@ export default async function ({ req, res, log, error }) {
 	}
 }
 
-export { formatDuration, mapOffer, mapPassengers, mapSeatMaps, validateRequest }
+export { compareOfferItinerary, formatDuration, mapOffer, mapPassengers, mapSeatMaps, normalizeDecimal, validateRefreshRequest, validateRequest }
