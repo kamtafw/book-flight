@@ -279,7 +279,6 @@ export async function validateSeatServices(
 						seatDesignator: seat.seatDesignator,
 						expectedAmount: seat.totalAmount,
 						expectedCurrency: seat.totalCurrency,
-						expectedSeatName: seat.seatName,
 						expectedDisclosures: seat.disclosures,
 					})),
 				}),
