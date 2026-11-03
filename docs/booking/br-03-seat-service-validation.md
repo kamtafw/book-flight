@@ -7,7 +7,7 @@
 
 Revalidate every selected seat service against fresh Duffel availability immediately before a future booking/order flow. Seat selection remains optional. If no seats were selected, validation returns `not_selected` without calling Duffel.
 
-This is a point-in-time availability check, not a reservation or guarantee that the airline will still accept the service when an order is created.
+This is a point-in-time availability check, not a reservation or guarantee that the airline will still accept the service when an order is created. The caller should complete BR-02 offer refresh first and only run BR-03 if the offer remains usable (or a changed fare has been explicitly accepted).
 
 ## Provider contract
 
@@ -17,7 +17,7 @@ Duffel does not expose a separate seat-service validation endpoint. The supporte
 
 The Appwrite `flight-search` function calls this endpoint using its server-side `DUFFEL_ACCESS_TOKEN` and `Duffel-Version: v2`. The response contains seat maps per segment. Seat elements contain `designator`, `disclosures`, and `available_services`; each available service contains its provider service ID, passenger ID, amount, and currency.
 
-Duffel documents that a seat is unavailable when its `available_services` list is empty, and that a passenger can select at most one seat per segment while two passengers cannot share the same seat on a segment.
+Duffel documents that a seat is unavailable when its `available_services` list is empty, and that a passenger can select at most one seat per segment while two passengers cannot share the same seat on a segment. See the [Duffel Seat Maps API documentation](https://duffel.com/docs/api/v2/seat-maps/get-seat-maps).
 
 ## Request
 
@@ -80,7 +80,7 @@ When a selected seat cannot be matched, its result has `current: null` and a rea
 
 ## Failure handling
 
-- Invalid IDs, incomplete comparison snapshots, duplicate seat assignment on a segment, or multiple seats for one passenger on a segment are rejected with HTTP 400.
+- Invalid IDs, incomplete comparison snapshots, duplicate seat assignment on a segment, multiple seats for one passenger on a segment, or more than 60 selected seats in one request are rejected with HTTP 400.
 - No selected seats returns `not_selected` before token lookup or provider fetch.
 - An empty seat-map list after selections were made is a `selection_changed` result for each affected selection.
 - Duffel HTTP failures, network errors, timeouts, and malformed provider responses are technical errors. They must not be presented as proof that seats are unavailable.
