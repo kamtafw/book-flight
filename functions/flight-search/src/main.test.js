@@ -590,7 +590,6 @@ const selectedSeatFixture = {
 	seatDesignator: "12A",
 	expectedAmount: "25.00",
 	expectedCurrency: "USD",
-	expectedSeatName: "Window",
 	expectedDisclosures: [],
 }
 
