@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import test from "node:test"
 import flightSearchHandler, {
 	compareOfferItinerary,
+	compareSeatSelections,
 	formatDuration,
 	mapOffer,
 	mapPassengers,
@@ -9,6 +10,7 @@ import flightSearchHandler, {
 	normalizeDecimal,
 	validateRefreshRequest,
 	validateRequest,
+	validateSeatServiceRequest,
 } from "./main.js"
 
 const validRequest = {
@@ -578,4 +580,234 @@ test("refresh handler blocks material itinerary changes", async () => {
 	assert.equal(calls.status, 200)
 	assert.equal(calls.body.status, "itinerary_changed")
 	assert.deepEqual(calls.body.materialDifferences, ["slice_1_route"])
+})
+
+
+const selectedSeatFixture = {
+	serviceId: "ase_seat1",
+	passengerId: "pas_adult",
+	segmentId: "seg_1",
+	seatDesignator: "12A",
+	expectedAmount: "25.00",
+	expectedCurrency: "USD",
+	expectedSeatName: "Window",
+	expectedDisclosures: [],
+}
+
+function seatMapFixture({ amount = "25.00", currency = "USD", disclosures = [], serviceId = "ase_seat1", passengerId = "pas_adult", designator = "12A" } = {}) {
+	return {
+		id: "sea_1",
+		segment_id: "seg_1",
+		slice_id: "sli_1",
+		cabins: [{
+			id: "cab_1",
+			rows: [{
+				sections: [{
+					elements: [{
+						type: "seat",
+						designator,
+						name: "Window",
+						disclosures,
+						available_services: [{
+							id: serviceId,
+							passenger_id: passengerId,
+							total_amount: amount,
+							total_currency: currency,
+						}],
+					}],
+				}],
+			}],
+		}],
+	}
+}
+
+test("validates selected-seat requests and rejects duplicate passenger or seat assignments", () => {
+	assert.equal(validateSeatServiceRequest({
+		action: "validate-seat-services",
+		offerId: "off_test123",
+		selectedSeats: [selectedSeatFixture],
+	}), null)
+	assert.match(validateSeatServiceRequest({
+		offerId: "off_test123",
+		selectedSeats: [{ ...selectedSeatFixture, passengerId: "invalid" }],
+	}), /provider identities/)
+	assert.match(validateSeatServiceRequest({
+		offerId: "off_test123",
+		selectedSeats: [selectedSeatFixture, { ...selectedSeatFixture, serviceId: "ase_seat2", seatDesignator: "12B" }],
+	}), /only one seat per segment/)
+	assert.match(validateSeatServiceRequest({
+		offerId: "off_test123",
+		selectedSeats: [selectedSeatFixture, { ...selectedSeatFixture, serviceId: "ase_seat2", passengerId: "pas_child" }],
+	}), /same seat on one segment/)
+})
+
+test("validates no-selection requests without requiring a provider lookup", () => {
+	assert.equal(validateSeatServiceRequest({
+		offerId: "off_test123",
+		selectedSeats: [],
+	}), null)
+})
+
+test("compares selected seats against fresh provider services by segment, seat, service and passenger", () => {
+	const valid = compareSeatSelections([selectedSeatFixture], [seatMapFixture()])
+	assert.equal(valid.status, "valid")
+	assert.equal(valid.selections[0].current.serviceId, "ase_seat1")
+	assert.equal(valid.selections[0].current.passengerId, "pas_adult")
+
+	const wrongPassenger = compareSeatSelections(
+		[selectedSeatFixture],
+		[seatMapFixture({ passengerId: "pas_child" })],
+	)
+	assert.equal(wrongPassenger.status, "selection_changed")
+	assert.equal(wrongPassenger.selections[0].reason, "service_unavailable")
+
+	const wrongService = compareSeatSelections(
+		[selectedSeatFixture],
+		[seatMapFixture({ serviceId: "ase_replaced" })],
+	)
+	assert.equal(wrongService.status, "selection_changed")
+})
+
+test("classifies seat price and currency changes without floating-point arithmetic", () => {
+	const price = compareSeatSelections(
+		[selectedSeatFixture],
+		[seatMapFixture({ amount: "25.50" })],
+	)
+	assert.equal(price.status, "price_changed")
+	assert.equal(price.selections[0].current.amount, "25.50")
+	assert.equal(price.selections[0].priceChanged, true)
+
+	const currency = compareSeatSelections(
+		[selectedSeatFixture],
+		[seatMapFixture({ currency: "GBP" })],
+	)
+	assert.equal(currency.status, "price_changed")
+	assert.equal(currency.selections[0].current.currency, "GBP")
+})
+
+test("requires review when seat disclosures change", () => {
+	const result = compareSeatSelections(
+		[selectedSeatFixture],
+		[seatMapFixture({ disclosures: ["Exit row seat"] })],
+	)
+	assert.equal(result.status, "selection_changed")
+	assert.equal(result.selections[0].reason, "seat_disclosures_changed")
+	assert.deepEqual(result.selections[0].current.disclosures, ["Exit row seat"])
+})
+
+test("returns every selected seat result when only some selections remain available", () => {
+	const second = {
+		...selectedSeatFixture,
+		serviceId: "ase_seat2",
+		passengerId: "pas_child",
+		seatDesignator: "12B",
+	}
+	const result = compareSeatSelections(
+		[selectedSeatFixture, second],
+		[seatMapFixture()],
+	)
+	assert.equal(result.status, "selection_changed")
+	assert.equal(result.selections.length, 2)
+	assert.equal(result.selections[0].status, "valid")
+	assert.equal(result.selections[1].status, "selection_changed")
+})
+
+async function invokeSeatValidation({
+	selectedSeats = [selectedSeatFixture],
+	status = 200,
+	payload = { data: [seatMapFixture()] },
+	fetchError,
+	inspectRequest,
+} = {}) {
+	const previousToken = process.env.DUFFEL_ACCESS_TOKEN
+	const previousFetch = globalThis.fetch
+	process.env.DUFFEL_ACCESS_TOKEN = "test-duffel-token"
+	globalThis.fetch = async (url, options) => {
+		inspectRequest?.(url, options)
+		if (fetchError) throw fetchError
+		return {
+			ok: status >= 200 && status < 300,
+			status,
+			json: async () => payload,
+		}
+	}
+	const calls = { body: null, status: 200, errors: [], logs: [], fetchCount: 0 }
+	const res = {
+		json(body, responseStatus = 200) {
+			calls.body = body
+			calls.status = responseStatus
+			return body
+		},
+	}
+	try {
+		await flightSearchHandler({
+			req: {
+				method: "POST",
+				bodyJson: {
+					action: "validate-seat-services",
+					offerId: "off_test123",
+					selectedSeats,
+				},
+			},
+			res,
+			log: (message) => calls.logs.push(message),
+			error: (message) => calls.errors.push(message),
+		})
+		return calls
+	} finally {
+		globalThis.fetch = previousFetch
+		if (previousToken === undefined) delete process.env.DUFFEL_ACCESS_TOKEN
+		else process.env.DUFFEL_ACCESS_TOKEN = previousToken
+	}
+}
+
+test("seat validation fetches fresh Duffel seat maps with server credentials", async () => {
+	const calls = await invokeSeatValidation({
+		inspectRequest(url, options) {
+			assert.equal(String(url), "https://api.duffel.com/air/seat_maps?offer_id=off_test123")
+			assert.equal(options.method, "GET")
+			assert.equal(options.headers.Authorization, "Bearer test-duffel-token")
+			assert.equal(options.headers.Accept, "application/json")
+			assert.equal(options.headers["Duffel-Version"], "v2")
+		},
+	})
+	assert.equal(calls.status, 200)
+	assert.equal(calls.body.status, "valid")
+	assert.equal(calls.body.selections[0].current.amount, "25.00")
+})
+
+test("seat validation skips Duffel entirely when no seats were selected", async () => {
+	const previousToken = process.env.DUFFEL_ACCESS_TOKEN
+	const previousFetch = globalThis.fetch
+	delete process.env.DUFFEL_ACCESS_TOKEN
+	let fetchCount = 0
+	globalThis.fetch = async () => {
+		fetchCount += 1
+		throw new Error("Should not fetch")
+	}
+	const calls = { body: null, status: 200 }
+	const res = { json(body, status = 200) { calls.body = body; calls.status = status; return body } }
+	try {
+		await flightSearchHandler({
+			req: { method: "POST", bodyJson: { action: "validate-seat-services", offerId: "off_test123", selectedSeats: [] } },
+			res,
+			log: () => {},
+			error: () => {},
+		})
+	} finally {
+		globalThis.fetch = previousFetch
+		if (previousToken !== undefined) process.env.DUFFEL_ACCESS_TOKEN = previousToken
+	}
+	assert.equal(fetchCount, 0)
+	assert.deepEqual(calls.body, { status: "not_selected", selections: [] })
+})
+
+test("seat validation treats provider failures as technical errors, not seat unavailability", async () => {
+	const failed = await invokeSeatValidation({ status: 503, payload: { errors: [{ message: "Unavailable" }] } })
+	assert.equal(failed.status, 502)
+	assert.equal(failed.body.code, "DUFFEL_SEAT_VALIDATION_FAILED")
+
+	const network = await invokeSeatValidation({ fetchError: new Error("network down") })
+	assert.equal(network.status, 502)
+	assert.equal(network.body.code, "DUFFEL_SEAT_VALIDATION_UNAVAILABLE")
 })
