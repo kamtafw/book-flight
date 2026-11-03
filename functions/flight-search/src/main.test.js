@@ -582,7 +582,6 @@ test("refresh handler blocks material itinerary changes", async () => {
 	assert.deepEqual(calls.body.materialDifferences, ["slice_1_route"])
 })
 
-
 const selectedSeatFixture = {
 	serviceId: "ase_seat1",
 	passengerId: "pas_adult",
@@ -593,58 +592,96 @@ const selectedSeatFixture = {
 	expectedDisclosures: [],
 }
 
-function seatMapFixture({ amount = "25.00", currency = "USD", disclosures = [], serviceId = "ase_seat1", passengerId = "pas_adult", designator = "12A" } = {}) {
+function seatMapFixture({
+	amount = "25.00",
+	currency = "USD",
+	disclosures = [],
+	serviceId = "ase_seat1",
+	passengerId = "pas_adult",
+	designator = "12A",
+} = {}) {
 	return {
 		id: "sea_1",
 		segment_id: "seg_1",
 		slice_id: "sli_1",
-		cabins: [{
-			id: "cab_1",
-			rows: [{
-				sections: [{
-					elements: [{
-						type: "seat",
-						designator,
-						name: "Window",
-						disclosures,
-						available_services: [{
-							id: serviceId,
-							passenger_id: passengerId,
-							total_amount: amount,
-							total_currency: currency,
-						}],
-					}],
-				}],
-			}],
-		}],
+		cabins: [
+			{
+				id: "cab_1",
+				rows: [
+					{
+						sections: [
+							{
+								elements: [
+									{
+										type: "seat",
+										designator,
+										name: "Window",
+										disclosures,
+										available_services: [
+											{
+												id: serviceId,
+												passenger_id: passengerId,
+												total_amount: amount,
+												total_currency: currency,
+											},
+										],
+									},
+								],
+							},
+						],
+					},
+				],
+			},
+		],
 	}
 }
 
 test("validates selected-seat requests and rejects duplicate passenger or seat assignments", () => {
-	assert.equal(validateSeatServiceRequest({
-		action: "validate-seat-services",
-		offerId: "off_test123",
-		selectedSeats: [selectedSeatFixture],
-	}), null)
-	assert.match(validateSeatServiceRequest({
-		offerId: "off_test123",
-		selectedSeats: [{ ...selectedSeatFixture, passengerId: "invalid" }],
-	}), /provider identities/)
-	assert.match(validateSeatServiceRequest({
-		offerId: "off_test123",
-		selectedSeats: [selectedSeatFixture, { ...selectedSeatFixture, serviceId: "ase_seat2", seatDesignator: "12B" }],
-	}), /only one seat per segment/)
-	assert.match(validateSeatServiceRequest({
-		offerId: "off_test123",
-		selectedSeats: [selectedSeatFixture, { ...selectedSeatFixture, serviceId: "ase_seat2", passengerId: "pas_child" }],
-	}), /same seat on one segment/)
+	assert.equal(
+		validateSeatServiceRequest({
+			action: "validate-seat-services",
+			offerId: "off_test123",
+			selectedSeats: [selectedSeatFixture],
+		}),
+		null,
+	)
+	assert.match(
+		validateSeatServiceRequest({
+			offerId: "off_test123",
+			selectedSeats: [{ ...selectedSeatFixture, passengerId: "invalid" }],
+		}),
+		/provider identities/,
+	)
+	assert.match(
+		validateSeatServiceRequest({
+			offerId: "off_test123",
+			selectedSeats: [
+				selectedSeatFixture,
+				{ ...selectedSeatFixture, serviceId: "ase_seat2", seatDesignator: "12B" },
+			],
+		}),
+		/only one seat per segment/,
+	)
+	assert.match(
+		validateSeatServiceRequest({
+			offerId: "off_test123",
+			selectedSeats: [
+				selectedSeatFixture,
+				{ ...selectedSeatFixture, serviceId: "ase_seat2", passengerId: "pas_child" },
+			],
+		}),
+		/same seat on one segment/,
+	)
 })
 
 test("validates no-selection requests without requiring a provider lookup", () => {
-	assert.equal(validateSeatServiceRequest({
-		offerId: "off_test123",
-		selectedSeats: [],
-	}), null)
+	assert.equal(
+		validateSeatServiceRequest({
+			offerId: "off_test123",
+			selectedSeats: [],
+		}),
+		null,
+	)
 })
 
 test("compares selected seats against fresh provider services by segment, seat, service and passenger", () => {
@@ -668,10 +705,7 @@ test("compares selected seats against fresh provider services by segment, seat, 
 })
 
 test("classifies seat price and currency changes without floating-point arithmetic", () => {
-	const price = compareSeatSelections(
-		[selectedSeatFixture],
-		[seatMapFixture({ amount: "25.50" })],
-	)
+	const price = compareSeatSelections([selectedSeatFixture], [seatMapFixture({ amount: "25.50" })])
 	assert.equal(price.status, "price_changed")
 	assert.equal(price.selections[0].current.amount, "25.50")
 	assert.equal(price.selections[0].priceChanged, true)
@@ -701,10 +735,7 @@ test("returns every selected seat result when only some selections remain availa
 		passengerId: "pas_child",
 		seatDesignator: "12B",
 	}
-	const result = compareSeatSelections(
-		[selectedSeatFixture, second],
-		[seatMapFixture()],
-	)
+	const result = compareSeatSelections([selectedSeatFixture, second], [seatMapFixture()])
 	assert.equal(result.status, "selection_changed")
 	assert.equal(result.selections.length, 2)
 	assert.equal(result.selections[0].status, "valid")
@@ -785,10 +816,19 @@ test("seat validation skips Duffel entirely when no seats were selected", async 
 		throw new Error("Should not fetch")
 	}
 	const calls = { body: null, status: 200 }
-	const res = { json(body, status = 200) { calls.body = body; calls.status = status; return body } }
+	const res = {
+		json(body, status = 200) {
+			calls.body = body
+			calls.status = status
+			return body
+		},
+	}
 	try {
 		await flightSearchHandler({
-			req: { method: "POST", bodyJson: { action: "validate-seat-services", offerId: "off_test123", selectedSeats: [] } },
+			req: {
+				method: "POST",
+				bodyJson: { action: "validate-seat-services", offerId: "off_test123", selectedSeats: [] },
+			},
 			res,
 			log: () => {},
 			error: () => {},
@@ -802,7 +842,10 @@ test("seat validation skips Duffel entirely when no seats were selected", async 
 })
 
 test("seat validation treats provider failures as technical errors, not seat unavailability", async () => {
-	const failed = await invokeSeatValidation({ status: 503, payload: { errors: [{ message: "Unavailable" }] } })
+	const failed = await invokeSeatValidation({
+		status: 503,
+		payload: { errors: [{ message: "Unavailable" }] },
+	})
 	assert.equal(failed.status, 502)
 	assert.equal(failed.body.code, "DUFFEL_SEAT_VALIDATION_FAILED")
 
@@ -810,7 +853,6 @@ test("seat validation treats provider failures as technical errors, not seat una
 	assert.equal(network.status, 502)
 	assert.equal(network.body.code, "DUFFEL_SEAT_VALIDATION_UNAVAILABLE")
 })
-
 
 test("treats an empty fresh seat-map list as changed selections, not a provider failure", async () => {
 	const calls = await invokeSeatValidation({ payload: { data: [] } })
@@ -826,7 +868,6 @@ test("rejects malformed provider seat-map structures as technical errors", async
 	assert.equal(calls.status, 502)
 	assert.equal(calls.body.code, "DUFFEL_INVALID_SEAT_VALIDATION_RESPONSE")
 })
-
 
 test("seat validation classifies provider timeouts as technical failures", async () => {
 	const timeout = new Error("request timed out")

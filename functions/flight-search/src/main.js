@@ -399,7 +399,6 @@ async function refreshOffer(offerId, expectedOffer, token, res, log, error) {
 	}
 }
 
-
 function validateSeatServiceRequest(body) {
 	if (!isRecord(body)) return "Provide a valid seat-service validation request."
 	if (typeof body.offerId !== "string" || !/^off_[A-Za-z0-9]+$/.test(body.offerId)) {
@@ -459,43 +458,51 @@ function collectSeatElements(seatMap) {
 }
 
 function isValidSeatMapPayload(seatMaps) {
-	return Array.isArray(seatMaps) && seatMaps.every((seatMap) =>
-		isRecord(seatMap) &&
-		typeof seatMap.segment_id === "string" &&
-		/^seg_[A-Za-z0-9]+$/.test(seatMap.segment_id) &&
-		Array.isArray(seatMap.cabins) &&
-		seatMap.cabins.every((cabin) =>
-			isRecord(cabin) &&
-			Array.isArray(cabin.rows) &&
-			cabin.rows.every((row) =>
-				isRecord(row) &&
-				Array.isArray(row.sections) &&
-				row.sections.every((section) =>
-					isRecord(section) &&
-					Array.isArray(section.elements) &&
-					section.elements.every((element) =>
-						isRecord(element) &&
-						typeof element.type === "string" &&
-						(element.type !== "seat" || (
-							typeof element.designator === "string" &&
-							Array.isArray(element.disclosures) &&
-							element.disclosures.every((item) => typeof item === "string") &&
-							Array.isArray(element.available_services) &&
-							element.available_services.every((service) =>
-								isRecord(service) &&
-								typeof service.id === "string" &&
-								/^ase_[A-Za-z0-9]+$/.test(service.id) &&
-								typeof service.passenger_id === "string" &&
-								/^pas_[A-Za-z0-9]+$/.test(service.passenger_id) &&
-								typeof service.total_amount === "string" &&
-								normalizeDecimal(service.total_amount) !== null &&
-								typeof service.total_currency === "string" &&
-								/^[A-Z]{3}$/.test(service.total_currency)
-							)
-						))
-					)
-				)
-			)
+	return (
+		Array.isArray(seatMaps) &&
+		seatMaps.every(
+			(seatMap) =>
+				isRecord(seatMap) &&
+				typeof seatMap.segment_id === "string" &&
+				/^seg_[A-Za-z0-9]+$/.test(seatMap.segment_id) &&
+				Array.isArray(seatMap.cabins) &&
+				seatMap.cabins.every(
+					(cabin) =>
+						isRecord(cabin) &&
+						Array.isArray(cabin.rows) &&
+						cabin.rows.every(
+							(row) =>
+								isRecord(row) &&
+								Array.isArray(row.sections) &&
+								row.sections.every(
+									(section) =>
+										isRecord(section) &&
+										Array.isArray(section.elements) &&
+										section.elements.every(
+											(element) =>
+												isRecord(element) &&
+												typeof element.type === "string" &&
+												(element.type !== "seat" ||
+													(typeof element.designator === "string" &&
+														Array.isArray(element.disclosures) &&
+														element.disclosures.every((item) => typeof item === "string") &&
+														Array.isArray(element.available_services) &&
+														element.available_services.every(
+															(service) =>
+																isRecord(service) &&
+																typeof service.id === "string" &&
+																/^ase_[A-Za-z0-9]+$/.test(service.id) &&
+																typeof service.passenger_id === "string" &&
+																/^pas_[A-Za-z0-9]+$/.test(service.passenger_id) &&
+																typeof service.total_amount === "string" &&
+																normalizeDecimal(service.total_amount) !== null &&
+																typeof service.total_currency === "string" &&
+																/^[A-Z]{3}$/.test(service.total_currency),
+														))),
+										),
+								),
+						),
+				),
 		)
 	)
 }
@@ -508,7 +515,8 @@ function compareSeatSelections(selectedSeats, seatMaps) {
 			: null
 		const service = Array.isArray(element?.available_services)
 			? element.available_services.find(
-					(item) => item?.id === selection.serviceId && item?.passenger_id === selection.passengerId,
+					(item) =>
+						item?.id === selection.serviceId && item?.passenger_id === selection.passengerId,
 				)
 			: null
 
@@ -516,7 +524,11 @@ function compareSeatSelections(selectedSeats, seatMaps) {
 			return {
 				...selection,
 				status: "selection_changed",
-				reason: !seatMap ? "segment_unavailable" : !element ? "seat_unavailable" : "service_unavailable",
+				reason: !seatMap
+					? "segment_unavailable"
+					: !element
+						? "seat_unavailable"
+						: "service_unavailable",
 				current: null,
 			}
 		}
@@ -529,7 +541,12 @@ function compareSeatSelections(selectedSeats, seatMaps) {
 			!Array.isArray(element.disclosures) ||
 			element.disclosures.some((item) => typeof item !== "string")
 		) {
-			return { ...selection, status: "provider_error", reason: "invalid_service_details", current: null }
+			return {
+				...selection,
+				status: "provider_error",
+				reason: "invalid_service_details",
+				current: null,
+			}
 		}
 
 		const disclosuresChanged =
@@ -610,7 +627,9 @@ async function validateSeatServices(offerId, selectedSeats, token, res, log, err
 
 		const comparison = compareSeatSelections(selectedSeats, payload.data)
 		if (comparison.status === "provider_error") {
-			error("Duffel returned incomplete service price or disclosure details during seat validation.")
+			error(
+				"Duffel returned incomplete service price or disclosure details during seat validation.",
+			)
 			return jsonError(
 				res,
 				502,
@@ -776,7 +795,6 @@ export default async function ({ req, res, log, error }) {
 		return refreshOffer(body.offerId, body.expectedOffer, token, res, log, error)
 	}
 
-
 	if (isRecord(body) && body.action === "validate-seat-services") {
 		const validationError = validateSeatServiceRequest(body)
 		if (validationError) {
@@ -908,6 +926,7 @@ export default async function ({ req, res, log, error }) {
 
 export {
 	compareOfferItinerary,
+	compareSeatSelections,
 	formatDuration,
 	mapOffer,
 	mapPassengers,
@@ -916,5 +935,4 @@ export {
 	validateRefreshRequest,
 	validateRequest,
 	validateSeatServiceRequest,
-	compareSeatSelections,
 }

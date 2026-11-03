@@ -25,19 +25,19 @@ The Appwrite function accepts:
 
 ```json
 {
-  "action": "validate-seat-services",
-  "offerId": "off_exampleOfferId",
-  "selectedSeats": [
-    {
-      "serviceId": "ase_exampleServiceId",
-      "passengerId": "pas_examplePassengerId",
-      "segmentId": "seg_exampleSegmentId",
-      "seatDesignator": "12A",
-      "expectedAmount": "25.00",
-      "expectedCurrency": "USD",
-      "expectedDisclosures": []
-    }
-  ]
+ "action": "validate-seat-services",
+ "offerId": "off_exampleOfferId",
+ "selectedSeats": [
+  {
+   "serviceId": "ase_exampleServiceId",
+   "passengerId": "pas_examplePassengerId",
+   "segmentId": "seg_exampleSegmentId",
+   "seatDesignator": "12A",
+   "expectedAmount": "25.00",
+   "expectedCurrency": "USD",
+   "expectedDisclosures": []
+  }
+ ]
 }
 ```
 
@@ -61,12 +61,12 @@ The identity relationship is `offer → segment → seat → service → passeng
 
 Each submitted selection receives its own result.
 
-| Outcome | Meaning | Client behaviour |
-|---|---|---|
-| `valid` | Same service remains available for the same passenger and segment, with unchanged price and disclosures | May continue to the next checkout validation |
-| `price_changed` | Service remains available, but amount or currency changed | Display fresh price and obtain explicit acceptance |
-| `selection_changed` | Segment, seat, or matching service is no longer available, or disclosures changed | Require review/reselection |
-| `not_selected` | No seats were submitted | Skip validation and continue |
+| Outcome             | Meaning                                                                                                 | Client behaviour                                   |
+| ------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `valid`             | Same service remains available for the same passenger and segment, with unchanged price and disclosures | May continue to the next checkout validation       |
+| `price_changed`     | Service remains available, but amount or currency changed                                               | Display fresh price and obtain explicit acceptance |
+| `selection_changed` | Segment, seat, or matching service is no longer available, or disclosures changed                       | Require review/reselection                         |
+| `not_selected`      | No seats were submitted                                                                                 | Skip validation and continue                       |
 
 Top-level status precedence is:
 
@@ -90,14 +90,18 @@ When a selected seat cannot be matched, its result has `current: null` and a rea
 ## Scope boundaries
 
 Included:
+
 - Server-side `validate-seat-services` action in the existing Appwrite function.
 - Client request/response types and `validateSeatServices` API helper.
 - Mocked provider tests and contract documentation.
 
 Not included:
+
 - Seat-selection UI redesign.
 - Automatic acceptance of changed prices or disclosures.
 - Payment, Duffel order creation, booking confirmation, or recovery.
+- A guarantee/reservation of a seat after validation.
+- Replacing BR-02 offer refresh. Offer validation and seat-service validation remain separate checks.
 - A guarantee/reservation of a seat after validation.
 - Replacing BR-02 offer refresh. Offer validation and seat-service validation remain separate checks.
 

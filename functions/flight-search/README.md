@@ -51,23 +51,27 @@ The same function accepts an offer-refresh action before checkout:
 
 ```json
 {
-  "action": "refresh-offer",
-  "offerId": "off_exampleOfferId",
-  "expectedOffer": {
-    "id": "off_exampleOfferId",
-    "totalAmount": "125.50",
-    "totalCurrency": "USD",
-    "passengers": [{ "id": "pas_example" }],
-    "slices": [{
-      "originCode": "LOS",
-      "destinationCode": "ABV",
-      "segments": [{
-        "id": "seg_example",
-        "departureAt": "2027-05-21T08:30:00",
-        "arrivalAt": "2027-05-21T09:45:00"
-      }]
-    }]
-  }
+ "action": "refresh-offer",
+ "offerId": "off_exampleOfferId",
+ "expectedOffer": {
+  "id": "off_exampleOfferId",
+  "totalAmount": "125.50",
+  "totalCurrency": "USD",
+  "passengers": [{ "id": "pas_example" }],
+  "slices": [
+   {
+    "originCode": "LOS",
+    "destinationCode": "ABV",
+    "segments": [
+     {
+      "id": "seg_example",
+      "departureAt": "2027-05-21T08:30:00",
+      "arrivalAt": "2027-05-21T09:45:00"
+     }
+    ]
+   }
+  ]
+ }
 }
 ```
 
@@ -105,19 +109,19 @@ Before checkout, the same function accepts a fresh seat-service validation actio
 
 ```json
 {
-  "action": "validate-seat-services",
-  "offerId": "off_exampleOfferId",
-  "selectedSeats": [
-    {
-      "serviceId": "ase_exampleServiceId",
-      "passengerId": "pas_examplePassengerId",
-      "segmentId": "seg_exampleSegmentId",
-      "seatDesignator": "12A",
-      "expectedAmount": "25.00",
-      "expectedCurrency": "USD",
-      "expectedDisclosures": []
-    }
-  ]
+ "action": "validate-seat-services",
+ "offerId": "off_exampleOfferId",
+ "selectedSeats": [
+  {
+   "serviceId": "ase_exampleServiceId",
+   "passengerId": "pas_examplePassengerId",
+   "segmentId": "seg_exampleSegmentId",
+   "seatDesignator": "12A",
+   "expectedAmount": "25.00",
+   "expectedCurrency": "USD",
+   "expectedDisclosures": []
+  }
+ ]
 }
 ```
 

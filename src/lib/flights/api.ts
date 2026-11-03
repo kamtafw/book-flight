@@ -223,7 +223,6 @@ export async function getSeatMaps(offerId: string): Promise<SeatMapResponse> {
 	return result
 }
 
-
 export async function validateSeatServices(
 	offerId: string,
 	selectedSeats: SelectedSeatService[],
