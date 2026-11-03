@@ -168,11 +168,12 @@ function validateRefreshRequest(body) {
 	) {
 		return "Provide the selected offer's displayed amount and currency."
 	}
-	if (!Array.isArray(expected.passengers) || !Array.isArray(expected.slices)) {
+	if (!Array.isArray(expected.passengers) || expected.passengers.length === 0 || !Array.isArray(expected.slices) || expected.slices.length === 0) {
 		return "The selected offer snapshot must include passengers and itinerary slices."
 	}
 	if (
 		expected.passengers.some((passenger) => !isRecord(passenger) || typeof passenger.id !== "string") ||
+		new Set(expected.passengers.map((passenger) => passenger?.id)).size !== expected.passengers.length ||
 		expected.slices.some((slice) =>
 			!isRecord(slice) ||
 			typeof slice.originCode !== "string" ||
@@ -274,12 +275,20 @@ async function refreshOffer(offerId, expectedOffer, token, res, log, error) {
 		const current = mapOffer(rawOffer)
 		if (
 			current.passengers.length !== rawOffer.passengers.length ||
+			new Set(current.passengers.map((passenger) => passenger.id)).size !== current.passengers.length ||
+			current.passengers.length === 0 ||
+			current.slices.length === 0 ||
 			current.slices.length !== rawOffer.slices.length ||
 			current.slices.some((slice) => !slice.originCode || !slice.destinationCode || !slice.segments.length ||
 				slice.segments.some((segment) => !segment.id || !segment.departureAt || !segment.arrivalAt))
 		) {
 			error("Duffel returned offer data without complete passenger or itinerary identities.")
 			return jsonError(res, 502, "DUFFEL_INVALID_OFFER_RESPONSE", "The flight provider returned incomplete passenger or itinerary details.")
+		}
+		if (rawOffer.expires_at !== undefined && rawOffer.expires_at !== null &&
+			(typeof rawOffer.expires_at !== "string" || !Number.isFinite(Date.parse(rawOffer.expires_at)))) {
+			error("Duffel returned an offer with an invalid expiry timestamp.")
+			return jsonError(res, 502, "DUFFEL_INVALID_OFFER_RESPONSE", "The flight provider returned an invalid offer expiry.")
 		}
 		if (rawOffer.expires_at && Date.parse(rawOffer.expires_at) <= Date.now()) {
 			return res.json({
