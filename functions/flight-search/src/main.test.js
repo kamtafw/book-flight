@@ -473,7 +473,7 @@ test("refresh handler reports network and timeout failures as verification error
 	timeoutError.name = "AbortError"
 	const timeout = await invokeRefresh({ fetchError: timeoutError })
 	assert.equal(timeout.status, 502)
-	assert.match(timeout.body.message, /took too long/)
+	assert.match(timeout.body.error, /took too long/)
 })
 
 test("refresh handler rejects missing, null, and malformed provider expiry timestamps", async () => {
