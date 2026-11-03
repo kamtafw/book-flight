@@ -45,6 +45,46 @@ The function accepts a JSON POST body:
 
 The normal search response is `{ "offers": [...] }`. Offers are normalized by this function and include the Duffel offer ID, total fare and currency, expiry, itinerary segments, and each segment's operating-carrier name. The raw Duffel response is not passed through to the app.
 
+
+## Offer-refresh request contract
+
+The same function accepts an offer-refresh action before checkout:
+
+```json
+{
+  "action": "refresh-offer",
+  "offerId": "off_exampleOfferId",
+  "expectedOffer": {
+    "id": "off_exampleOfferId",
+    "totalAmount": "125.50",
+    "totalCurrency": "USD",
+    "passengers": [{ "id": "pas_example" }],
+    "slices": [{
+      "originCode": "LOS",
+      "destinationCode": "ABV",
+      "segments": [{
+        "id": "seg_example",
+        "departureAt": "2027-05-21T08:30:00",
+        "arrivalAt": "2027-05-21T09:45:00"
+      }]
+    }]
+  }
+}
+```
+
+The `expectedOffer` is the snapshot the traveller reviewed. It is untrusted comparison input only; it is never used as current provider data or as a price to charge. Preserve the provider's decimal `priceAmount` string from search results rather than converting the numeric display price back to a string.
+
+The function calls Duffel's `GET /air/offers/{offer_id}` endpoint and normalizes the fresh response. It returns one of these business outcomes:
+
+- `{ "status": "valid", "offer": ... }`: price, passenger identities, and material itinerary details still match. Updated non-material metadata (for example, carrier display names) is returned in the refreshed offer.
+- `{ "status": "price_changed", "previousPrice": ..., "currentPrice": ..., "offer": ... }`: the amount or currency changed. The client must show the new price and obtain explicit acceptance before proceeding.
+- `{ "status": "itinerary_changed", "materialDifferences": [...], "priceChanged": ..., "offer": ... }`: passenger IDs, slice count/order, route, segment count/order/IDs, or scheduled departure/arrival timestamps changed. Do not silently continue with the changed itinerary; require the traveller to review and reselect/restart the journey.
+- `{ "status": "unavailable", "code": "OFFER_NO_LONGER_AVAILABLE" | "OFFER_EXPIRED", ... }`: Duffel reports the offer missing/unavailable, or the returned offer is already expired. The client must send the traveller back to search.
+
+Material itinerary changes block checkout. Non-material descriptive metadata changes do not: the refreshed metadata is returned for display. Price comparison uses decimal strings, not floating-point arithmetic. HTTP/provider/network failures are returned as errors (for example, `DUFFEL_OFFER_REFRESH_FAILED` or `DUFFEL_OFFER_REFRESH_UNAVAILABLE`) and must not be presented as an unavailable flight.
+
+This refresh is a point-in-time validation, not a reservation or guarantee that the offer remains available until order creation. Duffel's order response remains authoritative. No passenger personal details, payment data, or order is created by this action.
+
 ## Seat-map request contract
 
 The same function accepts a seat-map action, keeping the Duffel credential server-side:
