@@ -81,6 +81,7 @@ function mapOffer(offer) {
 		arrivalTime: localTime(last?.arrivalAt),
 		duration: formatDuration(slices[0]?.duration) ?? "Duration unavailable",
 		price: Number(offer.total_amount),
+		priceAmount: typeof offer.total_amount === "string" ? offer.total_amount : null,
 		currency: offer.total_currency,
 		expiresAt: offer.expires_at ?? null,
 		operatingCarrierNames,
