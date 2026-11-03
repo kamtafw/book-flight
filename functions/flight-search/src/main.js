@@ -172,13 +172,14 @@ function validateRefreshRequest(body) {
 		return "The selected offer snapshot must include passengers and itinerary slices."
 	}
 	if (
-		expected.passengers.some((passenger) => !isRecord(passenger) || typeof passenger.id !== "string") ||
+		expected.passengers.some((passenger) => !isRecord(passenger) || typeof passenger.id !== "string" || !passenger.id) ||
 		new Set(expected.passengers.map((passenger) => passenger?.id)).size !== expected.passengers.length ||
 		expected.slices.some((slice) =>
 			!isRecord(slice) ||
 			typeof slice.originCode !== "string" ||
 			typeof slice.destinationCode !== "string" ||
 			!Array.isArray(slice.segments) ||
+			slice.segments.length === 0 ||
 			slice.segments.some((segment) =>
 				!isRecord(segment) ||
 				typeof segment.id !== "string" ||
@@ -244,8 +245,8 @@ async function refreshOffer(offerId, expectedOffer, token, res, log, error) {
 		const payload = await response.json().catch(() => null)
 		if (!response.ok) {
 			const providerCode = payload?.errors?.[0]?.code
-			const unavailable = response.status === 404 ||
-				(typeof providerCode === "string" && /(offer.*(unavailable|expired|not_found)|not_found)/i.test(providerCode))
+			const unavailable = response.status === 404 || response.status === 410 ||
+				(typeof providerCode === "string" && /(offer.*(unavailable|no_longer_available|not[_ -]?available|expired|not[_ -]?found)|not[_ -]?found)/i.test(providerCode))
 			if (unavailable) {
 				return res.json({
 					status: "unavailable",
