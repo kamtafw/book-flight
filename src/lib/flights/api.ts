@@ -229,10 +229,16 @@ export async function validateSeatServices(
 	selectedSeats: SelectedSeatService[],
 ): Promise<SeatServiceValidationResponse> {
 	if (!/^off_[A-Za-z0-9]+$/.test(offerId)) {
-		throw new FlightSearchError("Choose a valid flight offer before validating seats.", "INVALID_OFFER_ID")
+		throw new FlightSearchError(
+			"Choose a valid flight offer before validating seats.",
+			"INVALID_OFFER_ID",
+		)
 	}
 	if (!Array.isArray(selectedSeats)) {
-		throw new FlightSearchError("Seat selections must be provided as an array.", "INVALID_SEAT_SELECTIONS")
+		throw new FlightSearchError(
+			"Seat selections must be provided as an array.",
+			"INVALID_SEAT_SELECTIONS",
+		)
 	}
 	if (selectedSeats.length === 0) {
 		return { status: "not_selected", selections: [] }
