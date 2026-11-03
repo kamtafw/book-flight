@@ -117,6 +117,7 @@ test("maps the offer id, fare, segments, and operating carriers", () => {
 
 	assert.equal(offer.id, "off_test123")
 	assert.equal(offer.price, 125.5)
+	assert.equal(offer.priceAmount, "125.50")
 	assert.equal(offer.currency, "USD")
 	assert.deepEqual(offer.passengers, [
 		{ id: "pas_adult", type: "adult", age: null },
