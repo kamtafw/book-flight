@@ -115,7 +115,6 @@ Before checkout, the same function accepts a fresh seat-service validation actio
       "seatDesignator": "12A",
       "expectedAmount": "25.00",
       "expectedCurrency": "USD",
-      "expectedSeatName": "Window",
       "expectedDisclosures": []
     }
   ]
