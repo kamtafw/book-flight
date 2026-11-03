@@ -1,7 +1,16 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { formatDuration, mapOffer, mapPassengers, mapSeatMaps, validateRequest } from "./main.js"
+import {
+	compareOfferItinerary,
+	formatDuration,
+	mapOffer,
+	mapPassengers,
+	mapSeatMaps,
+	normalizeDecimal,
+	validateRefreshRequest,
+	validateRequest,
+} from "./main.js"
 
 const validRequest = {
 	origin: "LOS",
@@ -108,6 +117,7 @@ test("maps the offer id, fare, segments, and operating carriers", () => {
 
 	assert.equal(offer.id, "off_test123")
 	assert.equal(offer.price, 125.5)
+	assert.equal(offer.priceAmount, "125.50")
 	assert.equal(offer.currency, "USD")
 	assert.deepEqual(offer.passengers, [
 		{ id: "pas_adult", type: "adult", age: null },
@@ -204,4 +214,129 @@ test("does not invent a free price when a seat service omits price fields", () =
 test("normalizes unavailable seat maps to an empty list", () => {
 	assert.deepEqual(mapSeatMaps([]), [])
 	assert.deepEqual(mapSeatMaps(null), [])
+})
+
+const expectedOfferSnapshot = {
+	id: "off_refresh123",
+	totalAmount: "125.50",
+	totalCurrency: "USD",
+	passengers: [{ id: "pas_adult" }],
+	slices: [
+		{
+			originCode: "LOS",
+			destinationCode: "ABV",
+			segments: [
+				{ id: "seg_1", departureAt: "2099-05-21T08:30:00", arrivalAt: "2099-05-21T09:45:00" },
+			],
+		},
+	],
+}
+
+const refreshedOfferSnapshot = {
+	passengers: [{ id: "pas_adult", type: "adult", age: null }],
+	slices: [
+		{
+			originCode: "LOS",
+			destinationCode: "ABV",
+			segments: [
+				{
+					id: "seg_1",
+					departureAt: "2099-05-21T08:30:00",
+					arrivalAt: "2099-05-21T09:45:00",
+				},
+			],
+		},
+	],
+}
+
+test("validates a refresh request with the selected offer snapshot", () => {
+	assert.equal(
+		validateRefreshRequest({
+			action: "refresh-offer",
+			offerId: "off_refresh123",
+			expectedOffer: expectedOfferSnapshot,
+		}),
+		null,
+	)
+})
+
+test("rejects refresh requests without a complete comparable snapshot", () => {
+	assert.match(validateRefreshRequest({ offerId: "off_refresh123" }), /selected offer snapshot/)
+	assert.match(
+		validateRefreshRequest({
+			offerId: "off_refresh123",
+			expectedOffer: { ...expectedOfferSnapshot, totalAmount: "NaN" },
+		}),
+		/amount and currency/,
+	)
+	assert.match(
+		validateRefreshRequest({
+			offerId: "off_refresh123",
+			expectedOffer: { ...expectedOfferSnapshot, id: "off_other" },
+		}),
+		/selected offer snapshot/,
+	)
+})
+
+test("compares decimal prices without floating-point conversion", () => {
+	assert.equal(normalizeDecimal("00125.5000"), "125.5")
+	assert.equal(normalizeDecimal("125.50"), normalizeDecimal("125.5"))
+	assert.equal(normalizeDecimal("invalid"), null)
+})
+
+test("treats changed carrier display metadata as non-material", () => {
+	const current = {
+		...refreshedOfferSnapshot,
+		slices: [
+			{
+				...refreshedOfferSnapshot.slices[0],
+				segments: [
+					{
+						...refreshedOfferSnapshot.slices[0].segments[0],
+						marketingCarrierName: "A different display name",
+					},
+				],
+			},
+		],
+	}
+	assert.deepEqual(compareOfferItinerary(expectedOfferSnapshot, current), [])
+})
+
+test("detects material route, segment, schedule, and passenger identity changes", () => {
+	const changed = {
+		passengers: [{ id: "pas_replaced", type: "adult", age: null }],
+		slices: [
+			{
+				originCode: "LOS",
+				destinationCode: "KAN",
+				segments: [
+					{
+						id: "seg_changed",
+						departureAt: "2099-05-21T09:30:00",
+						arrivalAt: "2099-05-21T10:45:00",
+					},
+				],
+			},
+		],
+	}
+	assert.deepEqual(compareOfferItinerary(expectedOfferSnapshot, changed), [
+		"passenger_identity",
+		"slice_1_route",
+		"slice_1_segment_1",
+	])
+})
+
+test("detects changes in slice and segment counts", () => {
+	const changed = {
+		...refreshedOfferSnapshot,
+		slices: [
+			...refreshedOfferSnapshot.slices,
+			{
+				originCode: "ABV",
+				destinationCode: "LOS",
+				segments: [],
+			},
+		],
+	}
+	assert.deepEqual(compareOfferItinerary(expectedOfferSnapshot, changed), ["slice_count"])
 })
