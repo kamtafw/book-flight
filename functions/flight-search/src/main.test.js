@@ -503,3 +503,28 @@ test("refresh handler rejects malformed or mismatched provider offer identities"
 	assert.equal(calls.status, 502)
 	assert.equal(calls.body.code, "DUFFEL_INVALID_OFFER_RESPONSE")
 })
+
+
+test("refresh handler requires explicit acceptance when the fare amount changes", async () => {
+	const calls = await invokeRefresh({
+		payload: { data: { ...providerOffer, total_amount: "126.00" } },
+	})
+	assert.equal(calls.status, 200)
+	assert.equal(calls.body.status, "price_changed")
+	assert.equal(calls.body.previousPrice.amount, "125.50")
+	assert.equal(calls.body.currentPrice.amount, "126.00")
+})
+
+test("refresh handler blocks material itinerary changes", async () => {
+	const changedOffer = {
+		...providerOffer,
+		slices: [{
+			...providerOffer.slices[0],
+			destination: { iata_code: "KAN" },
+		}],
+	}
+	const calls = await invokeRefresh({ payload: { data: changedOffer } })
+	assert.equal(calls.status, 200)
+	assert.equal(calls.body.status, "itinerary_changed")
+	assert.deepEqual(calls.body.materialDifferences, ["slice_1_route"])
+})
