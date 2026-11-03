@@ -826,3 +826,13 @@ test("rejects malformed provider seat-map structures as technical errors", async
 	assert.equal(calls.status, 502)
 	assert.equal(calls.body.code, "DUFFEL_INVALID_SEAT_VALIDATION_RESPONSE")
 })
+
+
+test("seat validation classifies provider timeouts as technical failures", async () => {
+	const timeout = new Error("request timed out")
+	timeout.name = "AbortError"
+	const calls = await invokeSeatValidation({ fetchError: timeout })
+	assert.equal(calls.status, 502)
+	assert.equal(calls.body.code, "DUFFEL_SEAT_VALIDATION_UNAVAILABLE")
+	assert.match(calls.body.error, /took too long/)
+})
