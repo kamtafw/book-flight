@@ -122,4 +122,4 @@ From the repository root:
 node --test functions/flight-search/src/main.test.js
 ```
 
-These tests validate input handling and response mapping without making live Duffel requests. Offer-refresh tests also invoke the function handler with mocked `fetch` responses to verify the Duffel endpoint, server-side authorization headers, valid and changed-price outcomes, unavailable-provider responses, provider/network/timeout failures, malformed provider data, and expiry handling.
+These tests validate input handling and response mapping without making live Duffel requests. Offer-refresh tests also invoke the handler with mocked `fetch` responses to verify the Duffel endpoint and authorization headers, valid and changed-price outcomes, unavailable-provider responses, provider/network/timeout failures, malformed provider data, and expiry handling. Offer-refresh tests also invoke the function handler with mocked `fetch` responses to verify the Duffel endpoint, server-side authorization headers, valid and changed-price outcomes, unavailable-provider responses, provider/network/timeout failures, malformed provider data, and expiry handling.
