@@ -1,6 +1,6 @@
 # BR-02: Offer Refresh and Validation
 
-**Status:** Implementation checkpoint on `feat/booking-br-02-offer-refresh`; not merged.  
+**Status:** Closeout implementation on `feat/booking-br-02-offer-refresh`; awaiting local verification; not merged.  
 **Depends on:** Accepted BR-01 contract in `docs/booking/checkout-contract.md`.
 
 ## Purpose
