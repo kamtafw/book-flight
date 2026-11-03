@@ -316,6 +316,12 @@ export async function validateSeatServices(
 		)
 	}
 
+	if (!result || typeof result !== "object" || Array.isArray(result)) {
+		throw new FlightSearchError(
+			"Seat validation returned an unexpected response.",
+			"INVALID_RESPONSE",
+		)
+	}
 	if ((execution.responseStatusCode ?? 200) >= 400 || result.error) {
 		throw new FlightSearchError(
 			result.error ?? "Seat validation failed. Please try again.",
