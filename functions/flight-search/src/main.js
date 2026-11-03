@@ -459,6 +459,48 @@ function collectSeatElements(seatMap) {
 	return elements
 }
 
+function isValidSeatMapPayload(seatMaps) {
+	return Array.isArray(seatMaps) && seatMaps.every((seatMap) =>
+		isRecord(seatMap) &&
+		typeof seatMap.segment_id === "string" &&
+		/^seg_[A-Za-z0-9]+$/.test(seatMap.segment_id) &&
+		Array.isArray(seatMap.cabins) &&
+		seatMap.cabins.every((cabin) =>
+			isRecord(cabin) &&
+			Array.isArray(cabin.rows) &&
+			cabin.rows.every((row) =>
+				isRecord(row) &&
+				Array.isArray(row.sections) &&
+				row.sections.every((section) =>
+					isRecord(section) &&
+					Array.isArray(section.elements) &&
+					section.elements.every((element) =>
+						isRecord(element) &&
+						typeof element.type === "string" &&
+						(element.type !== "seat" || (
+							typeof element.designator === "string" &&
+							Array.isArray(element.disclosures) &&
+							element.disclosures.every((item) => typeof item === "string") &&
+							Array.isArray(element.available_services) &&
+							element.available_services.every((service) =>
+								isRecord(service) &&
+								typeof service.id === "string" &&
+								/^ase_[A-Za-z0-9]+$/.test(service.id) &&
+								typeof service.passenger_id === "string" &&
+								/^pas_[A-Za-z0-9]+$/.test(service.passenger_id) &&
+								typeof service.total_amount === "string" &&
+								normalizeDecimal(service.total_amount) !== null &&
+								typeof service.total_currency === "string" &&
+								/^[A-Z]{3}$/.test(service.total_currency)
+							)
+						))
+					)
+				)
+			)
+		)
+	)
+}
+
 function compareSeatSelections(selectedSeats, seatMaps) {
 	const results = selectedSeats.map((selection) => {
 		const seatMap = seatMaps.find((item) => item.segment_id === selection.segmentId)
@@ -557,7 +599,7 @@ async function validateSeatServices(offerId, selectedSeats, token, res, log, err
 				"We couldn't verify your selected seats. Please try again.",
 			)
 		}
-		if (!Array.isArray(payload?.data) || payload.data.some((item) => !isRecord(item))) {
+		if (!isValidSeatMapPayload(payload?.data)) {
 			error("Duffel returned an invalid seat-map response during seat-service validation.")
 			return jsonError(
 				res,
