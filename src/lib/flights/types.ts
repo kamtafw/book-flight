@@ -122,7 +122,6 @@ export interface SeatServiceValidationSelection {
 	seatDesignator: string
 	expectedAmount: string
 	expectedCurrency: string
-	expectedSeatName: string
 	expectedDisclosures: string[]
 }
 
