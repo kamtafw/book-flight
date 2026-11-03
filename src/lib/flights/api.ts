@@ -4,6 +4,8 @@ import {
 	type FlightSearchRequest,
 	type FlightSearchResponse,
 	type SeatMapResponse,
+	type SeatServiceValidationResponse,
+	type SelectedSeatService,
 } from "@/lib/flights/types"
 
 function getConfig() {
@@ -218,5 +220,121 @@ export async function getSeatMaps(offerId: string): Promise<SeatMapResponse> {
 		throw new FlightSearchError("Seat maps returned an unexpected response.", "INVALID_RESPONSE")
 	}
 
+	return result
+}
+
+export async function validateSeatServices(
+	offerId: string,
+	selectedSeats: SelectedSeatService[],
+): Promise<SeatServiceValidationResponse> {
+	if (!/^off_[A-Za-z0-9]+$/.test(offerId)) {
+		throw new FlightSearchError(
+			"Choose a valid flight offer before validating seats.",
+			"INVALID_OFFER_ID",
+		)
+	}
+	if (!Array.isArray(selectedSeats)) {
+		throw new FlightSearchError(
+			"Seat selections must be provided as an array.",
+			"INVALID_SEAT_SELECTIONS",
+		)
+	}
+	if (selectedSeats.length === 0) {
+		return { status: "not_selected", selections: [] }
+	}
+	if (
+		selectedSeats.some(
+			(seat) =>
+				seat.offerId !== offerId ||
+				!seat.id ||
+				!seat.passengerId ||
+				!seat.segmentId ||
+				!seat.seatDesignator ||
+				!seat.totalAmount ||
+				!seat.totalCurrency,
+		)
+	) {
+		throw new FlightSearchError(
+			"One or more selected seats do not belong to this flight offer or are incomplete.",
+			"INVALID_SEAT_SELECTIONS",
+		)
+	}
+
+	const { endpoint, projectId, functionId } = getConfig()
+	const response = await fetch(
+		`${endpoint}/functions/${encodeURIComponent(functionId)}/executions`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"X-Appwrite-Project": projectId,
+			},
+			body: JSON.stringify({
+				async: false,
+				method: "POST",
+				path: "/",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					action: "validate-seat-services",
+					offerId,
+					selectedSeats: selectedSeats.map((seat) => ({
+						serviceId: seat.id,
+						passengerId: seat.passengerId,
+						segmentId: seat.segmentId,
+						seatDesignator: seat.seatDesignator,
+						expectedAmount: seat.totalAmount,
+						expectedCurrency: seat.totalCurrency,
+						expectedDisclosures: seat.disclosures,
+					})),
+				}),
+			}),
+		},
+	)
+
+	if (!response.ok) {
+		throw new FlightSearchError(
+			response.status === 401 || response.status === 403
+				? "Appwrite rejected the seat-validation request. Check the function's execution permissions."
+				: "We couldn't reach seat validation. Please try again.",
+			"APPWRITE_EXECUTION_FAILED",
+		)
+	}
+
+	const execution = (await response.json()) as {
+		responseBody?: string
+		responseStatusCode?: number
+		status?: string
+	}
+	let result: SeatServiceValidationResponse & { error?: string; code?: string }
+	try {
+		result = JSON.parse(execution.responseBody ?? "") as typeof result
+	} catch {
+		throw new FlightSearchError(
+			"Seat validation returned an unreadable response.",
+			"INVALID_RESPONSE",
+		)
+	}
+
+	if (!result || typeof result !== "object" || Array.isArray(result)) {
+		throw new FlightSearchError(
+			"Seat validation returned an unexpected response.",
+			"INVALID_RESPONSE",
+		)
+	}
+	if ((execution.responseStatusCode ?? 200) >= 400 || result.error) {
+		throw new FlightSearchError(
+			result.error ?? "Seat validation failed. Please try again.",
+			result.code ?? "SEAT_VALIDATION_FAILED",
+		)
+	}
+	if (
+		!["valid", "price_changed", "selection_changed", "not_selected"].includes(result.status) ||
+		!Array.isArray(result.selections)
+	) {
+		throw new FlightSearchError(
+			"Seat validation returned an unexpected response.",
+			"INVALID_RESPONSE",
+		)
+	}
 	return result
 }
