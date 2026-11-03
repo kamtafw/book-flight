@@ -1,7 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 
-import { formatDuration, mapOffer, validateRequest } from "./main.js"
+import { formatDuration, mapOffer, mapPassengers, validateRequest } from "./main.js"
 
 const validRequest = {
   origin: "LOS",
@@ -29,9 +29,35 @@ test("rejects children counts or invalid adult counts", () => {
   assert.match(validateRequest({ ...validRequest, adults: 1.5 }), /1 and 9 adult/)
 })
 
-test("rejects child and infant passenger requests", () => {
-  assert.match(validateRequest({ ...validRequest, children: 1 }), /adult travellers only/)
-  assert.match(validateRequest({ ...validRequest, infants: 1 }), /adult travellers only/)
+test("accepts children and infants when valid ages are supplied", () => {
+  assert.equal(validateRequest({ ...validRequest, childAges: [4, 11], infantAges: [0] }), null)
+})
+
+test("rejects invalid child and infant ages", () => {
+  assert.match(validateRequest({ ...validRequest, childAges: [1] }), /age from 2 through 11/)
+  assert.match(validateRequest({ ...validRequest, childAges: [12] }), /age from 2 through 11/)
+  assert.match(validateRequest({ ...validRequest, infantAges: [-1] }), /age of 0 or 1/)
+  assert.match(validateRequest({ ...validRequest, infantAges: [2] }), /age of 0 or 1/)
+})
+
+test("rejects unaccompanied infants and more than nine travellers", () => {
+  assert.match(validateRequest({ ...validRequest, infantAges: [0, 1] }), /accompanied by an adult/)
+  assert.match(validateRequest({ ...validRequest, adults: 8, childAges: [5, 6] }), /at most 9 travellers/)
+})
+
+test("rejects legacy child and infant counts so they cannot be silently ignored", () => {
+  assert.match(validateRequest({ ...validRequest, children: 1 }), /childAges and infantAges arrays/)
+  assert.match(validateRequest({ ...validRequest, infants: 1 }), /childAges and infantAges arrays/)
+})
+
+test("maps adults by type and minors by age for Duffel", () => {
+  assert.deepEqual(mapPassengers(2, [4, 10], [0]), [
+    { type: "adult" },
+    { type: "adult" },
+    { age: 4 },
+    { age: 10 },
+    { age: 0 },
+  ])
 })
 
 test("rejects unsupported cabin classes", () => {

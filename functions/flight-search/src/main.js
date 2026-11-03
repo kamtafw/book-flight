@@ -89,8 +89,17 @@ function validateRequest(body) {
   if (!isRecord(body)) return "Provide a valid flight-search request."
 
   const { origin, destination, departureDate, adults, cabinClass } = body
-  if ((body.children !== undefined && body.children !== 0) || (body.infants !== undefined && body.infants !== 0)) {
-    return "This version supports adult travellers only. Remove children and infants from the search."
+  const childAges = body.childAges === undefined ? [] : body.childAges
+  const infantAges = body.infantAges === undefined ? [] : body.infantAges
+
+  if (body.children !== undefined || body.infants !== undefined) {
+    return "Provide childAges and infantAges arrays instead of child or infant counts."
+  }
+  if (!Array.isArray(childAges) || childAges.some((age) => !Number.isInteger(age) || age < 2 || age > 11)) {
+    return "Each child must have an age from 2 through 11."
+  }
+  if (!Array.isArray(infantAges) || infantAges.some((age) => !Number.isInteger(age) || age < 0 || age > 1)) {
+    return "Each infant must have an age of 0 or 1."
   }
   if (typeof origin !== "string" || !/^[A-Z]{3}$/.test(origin)) {
     return "Origin must be a three-letter IATA airport code."
@@ -102,8 +111,8 @@ function validateRequest(body) {
   if (
     typeof departureDate !== "string" ||
     !/^\d{4}-\d{2}-\d{2}$/.test(departureDate) ||
-    Number.isNaN(Date.parse(`${departureDate}T00:00:00Z`)) ||
-    new Date(`${departureDate}T00:00:00Z`).toISOString().slice(0, 10) !== departureDate
+    Number.isNaN(Date.parse(departureDate + "T00:00:00Z")) ||
+    new Date(departureDate + "T00:00:00Z").toISOString().slice(0, 10) !== departureDate
   ) {
     return "Departure date must be a valid date in YYYY-MM-DD format."
   }
@@ -113,11 +122,25 @@ function validateRequest(body) {
   if (!Number.isInteger(adults) || adults < 1 || adults > 9) {
     return "Choose between 1 and 9 adult travellers."
   }
+  if (infantAges.length > adults) {
+    return "Each infant must be accompanied by an adult."
+  }
+  if (adults + childAges.length + infantAges.length > 9) {
+    return "A search can include at most 9 travellers."
+  }
   if (typeof cabinClass !== "string" || !CABIN_CLASSES.has(cabinClass)) {
     return "Choose a supported cabin class."
   }
 
   return null
+}
+
+function mapPassengers(adults, childAges = [], infantAges = []) {
+  return [
+    ...Array.from({ length: adults }, () => ({ type: "adult" })),
+    ...childAges.map((age) => ({ age })),
+    ...infantAges.map((age) => ({ age })),
+  ]
 }
 
 export default async function ({ req, res, log, error }) {
@@ -161,7 +184,7 @@ export default async function ({ req, res, log, error }) {
                 departure_date: body.departureDate,
               },
             ],
-            passengers: Array.from({ length: body.adults }, () => ({ type: "adult" })),
+            passengers: mapPassengers(body.adults, body.childAges ?? [], body.infantAges ?? []),
             cabin_class: body.cabinClass,
           },
         }),
@@ -204,4 +227,4 @@ export default async function ({ req, res, log, error }) {
   }
 }
 
-export { formatDuration, mapOffer, validateRequest }
+export { formatDuration, mapOffer, mapPassengers, validateRequest }

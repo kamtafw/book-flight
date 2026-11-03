@@ -13,8 +13,10 @@ import { useFlightOffersStore } from "@/store/flight-offers.store"
 import { useFlightSearchStore } from "@/store/flight-search.store"
 
 export default function FlightResultsScreen() {
-  const { tripType, departureDate, returnDate, fromAirport, toAirport, passengers, cabinClass } =
-    useFlightSearchStore()
+  const {
+    tripType, departureDate, returnDate, fromAirport, toAirport, passengers,
+    childAges, infantAges, cabinClass,
+  } = useFlightSearchStore()
   const offers = useFlightOffersStore((state) => state.offers)
   const setOffers = useFlightOffersStore((state) => state.setOffers)
   const [loading, setLoading] = useState(false)
@@ -50,14 +52,6 @@ export default function FlightResultsScreen() {
         return
       }
 
-      if (passengers.children > 0 || passengers.infants > 0) {
-        setErrorMessage(
-          "Live search currently supports adults only. Remove children and infants to continue.",
-        )
-        setLoading(false)
-        return
-      }
-
       if (!fromAirport || !toAirport || !departureDate) {
         setErrorMessage("Go back and choose your departure airport, destination, and date.")
         setLoading(false)
@@ -70,6 +64,8 @@ export default function FlightResultsScreen() {
           destination: toAirport,
           departureDate,
           adults: passengers.adults,
+          childAges,
+          infantAges,
           cabinClass,
         })
         if (active) setOffers(result.offers)
@@ -97,6 +93,8 @@ export default function FlightResultsScreen() {
     passengers.adults,
     passengers.children,
     passengers.infants,
+    childAges,
+    infantAges,
     cabinClass,
     setOffers,
   ])
