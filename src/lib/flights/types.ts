@@ -114,3 +114,37 @@ export interface SelectedSeatService extends SeatMapService {
 	seatName: string
 	disclosures: string[]
 }
+
+export interface SeatServiceValidationSelection {
+	serviceId: string
+	passengerId: string
+	segmentId: string
+	seatDesignator: string
+	expectedAmount: string
+	expectedCurrency: string
+	expectedSeatName: string
+	expectedDisclosures: string[]
+}
+
+export interface ValidatedSeatServiceDetails {
+	serviceId: string
+	passengerId: string
+	segmentId: string
+	seatDesignator: string
+	seatName: string
+	disclosures: string[]
+	amount: string
+	currency: string
+}
+
+export interface SeatServiceValidationResult extends SeatServiceValidationSelection {
+	status: "valid" | "price_changed" | "selection_changed"
+	reason: string | null
+	priceChanged?: boolean
+	current: ValidatedSeatServiceDetails | null
+}
+
+export interface SeatServiceValidationResponse {
+	status: "valid" | "price_changed" | "selection_changed" | "not_selected"
+	selections: SeatServiceValidationResult[]
+}
