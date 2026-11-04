@@ -28,58 +28,13 @@ Seat selection is a user preference only. It does not reserve a seat or guarante
 
 The client should submit a booking intent to Appwrite. The client must not submit provider credentials, decide the authoritative amount to charge, or send a provider order payload that the server blindly forwards.
 
-Conceptual request (field names are illustrative until the implementation task defines the TypeScript types):
+The passenger domain model, internal passenger identities, provider passenger references, passenger contact ownership, travel documents, and passenger relationships are defined by [BR-04: Passenger Information Contract](./br-04-passenger-information.md).
 
-```ts
-interface BookingIntent {
- offerId: string
- passengers: PassengerDetails[]
- selectedSeats: SelectedSeatIntent[]
- contact: BookingContact
- expectedOfferPrice?: {
-  amount: string
-  currency: string
- }
-}
+The eventual booking intent must carry or resolve the active passenger collection and its exact provider references for the selected offer. It must not introduce a second, competing passenger-details schema. The server-side adapter maps the provider-agnostic passenger records to the selected provider's order payload after validating the current offer and provider requirements.
 
-interface PassengerDetails {
- offerPassengerId: string
- givenName: string
- familyName: string
- bornOn: string // YYYY-MM-DD
- title?: string
- gender?: string
- email?: string
- phoneNumber?: string
- // Additional fields only when required by Duffel/the validating airline.
-}
+Booking contact remains a separate booking-level object. Selected seats remain optional and continue to reference exact provider passenger IDs.
 
-interface SelectedSeatIntent {
- serviceId: string
- offerPassengerId: string
- segmentId: string
- seatDesignator: string
-}
-
-interface BookingContact {
- email: string
- phoneNumber?: string
-}
-```
-
-### Contract rules
-
-- `offerId` must be a valid provider offer ID and must identify the selected offer.
-- `offerPassengerId` must match one of the passengers belonging to the refreshed offer. Array position is not an identity.
-- Passenger details must cover every passenger on the offer exactly once; no missing, duplicate, or foreign passenger IDs.
-- Passenger ages/types must remain consistent with the search request and offer passenger records. Date of birth is validated against the passenger's provider/search age category, with edge cases resolved using the airline/provider's requirements rather than assuming the UI category is authoritative.
-- `selectedSeats` may be empty because seat selection is optional. If present, every entry must be validated against the current seat-map response for the same offer, passenger, and segment.
-- Do not trust client-submitted seat prices, offer prices, currency, seat designators, or disclosures as authoritative booking data. They are useful for review/UI and mismatch detection only.
-- `expectedOfferPrice` is an optional comparison value, not an amount to charge. If the refreshed offer price differs, checkout must return a price-change state and require explicit traveller acceptance before proceeding.
-- Contact details are separate from passenger details. Do not assume the lead passenger is necessarily the booking contact.
-- Do not log names, dates of birth, passport details, contact information, payment credentials, or full booking payloads.
-
-This is a conceptual contract, not yet a committed application type or an exact provider payload.
+The exact request and TypeScript types are implementation deliverables, not defined by this conceptual checkout contract.
 
 ## 4. Server-side validation and refresh sequence
 
@@ -149,8 +104,8 @@ These are conceptual product states, not a required literal enum. In particular,
 | ------------------------------------------ | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | Offer ID                                   | Duffel                                                         | Preserve the selected ID; never invent one.                                               |
 | Current itinerary, price, currency, expiry | Refreshed Duffel offer                                         | Display and ask for acceptance if price changes.                                          |
-| Passenger IDs                              | Refreshed offer                                                | Map each form to the correct provider passenger ID.                                       |
-| Passenger personal details                 | Traveller, validated against provider requirements             | Collect only required fields; validate format and completeness.                           |
+| Provider passenger IDs                     | Refreshed offer                                                | Preserve exact IDs and map them to internal passenger records as defined by BR-04.         |
+| Passenger personal details                 | Traveller, validated against provider requirements             | Collect through the BR-04 domain model; apply provider-specific requirements via adapter. |
 | Seat service ID and price                  | Fresh Duffel seat-map/service response                         | Preserve the intended choice; do not treat it as reserved.                                |
 | Final order total/status/reference         | Duffel order response/status                                   | Display only after checking the authoritative result.                                     |
 | Payment outcome                            | The chosen payment/provider flow, reconciled with order status | Show accurate pending/success/failure states; don't infer success from a client redirect. |
@@ -174,4 +129,4 @@ These are conceptual product states, not a required literal enum. In particular,
 - Duffel, [Creating orders](https://duffel.com/docs/api/v2/orders): order creation requires the selected offer, passenger details, and payment/hold information appropriate to the offer.
 - Duffel, [Adding seats](https://duffel.com/docs/guides/adding-seats): use current passenger-specific seat service IDs and quantity `1`; the payment amount must account for selected services.
 
-These provider references should be rechecked when implementing BR-02 onward because API requirements can change.
+The passenger data model and provider mapping are specified in [BR-04](./br-04-passenger-information.md). Provider references should be rechecked at implementation time because API requirements can change.

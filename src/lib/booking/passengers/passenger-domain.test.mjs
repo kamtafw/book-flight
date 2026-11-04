@@ -84,12 +84,14 @@ test("preserves provider passenger IDs without relying on passenger array positi
 test("rejects an offer without provider passenger identities", () => {
 	assert.throws(
 		() =>
-			createPassengerCollectionFromOffer({ id: "off_empty", passengers: [] }, {
-				provider: "duffel",
-				createInternalId: makeIdFactory(),
-			}),
-		(error) =>
-			error instanceof PassengerDomainError && error.code === "MISSING_OFFER_PASSENGERS",
+			createPassengerCollectionFromOffer(
+				{ id: "off_empty", passengers: [] },
+				{
+					provider: "duffel",
+					createInternalId: makeIdFactory(),
+				},
+			),
+		(error) => error instanceof PassengerDomainError && error.code === "MISSING_OFFER_PASSENGERS",
 	)
 })
 
@@ -97,7 +99,13 @@ test("rejects duplicate provider passenger IDs", () => {
 	assert.throws(
 		() =>
 			createPassengerCollectionFromOffer(
-				{ id: "off_duplicate", passengers: [{ id: "pas_1", type: "adult", age: 30 }, { id: "pas_1", type: "adult", age: 30 }] },
+				{
+					id: "off_duplicate",
+					passengers: [
+						{ id: "pas_1", type: "adult", age: 30 },
+						{ id: "pas_1", type: "adult", age: 30 },
+					],
+				},
 				{ provider: "duffel", createInternalId: makeIdFactory() },
 			),
 		(error) =>
@@ -122,7 +130,11 @@ test("validates relationship references and prevents multiple responsible-adult 
 		provider: "duffel",
 		createInternalId: makeIdFactory(),
 		getCategory: (passenger) =>
-			passenger.type === "adult" ? "adult" : passenger.type === "infant_without_seat" ? "infant" : "child",
+			passenger.type === "adult"
+				? "adult"
+				: passenger.type === "infant_without_seat"
+					? "infant"
+					: "child",
 	})
 	const [adult, child, infant] = collection.passengers
 

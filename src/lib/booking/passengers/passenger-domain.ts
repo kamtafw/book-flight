@@ -84,7 +84,6 @@ export type PassengerDomainErrorCode =
 
 export class PassengerDomainError extends Error {
 	readonly code: PassengerDomainErrorCode
-
 	constructor(message: string, code: PassengerDomainErrorCode) {
 		super(message)
 		this.name = "PassengerDomainError"
