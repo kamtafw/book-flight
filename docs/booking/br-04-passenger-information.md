@@ -83,6 +83,7 @@ This is a semantic contract, not a requirement to copy the illustrative interfac
 ### 3.2 Provider identity mapping
 
 For the selected offer:
+
 - Every provider passenger maps to exactly one internal passenger record.
 - Every internal passenger in the active booking collection maps to exactly one passenger identity for that offer.
 - Preserve the provider passenger ID exactly as returned.
@@ -99,6 +100,7 @@ If the user selects a different offer, reconcile the passenger collection agains
 Represent relationships using internal passenger IDs, independently of UI controls.
 
 For an infant requiring a responsible adult:
+
 - The relationship points from the infant to the responsible adult.
 - Both passengers must exist in the active collection and map to the same selected offer.
 - The responsible passenger must qualify as an adult under the selected provider's requirements.
@@ -135,6 +137,7 @@ Travel-document values are sensitive personal data. Do not log them, persist the
 The core passenger model describes information; it does not dictate provider rules.
 
 A provider-specific requirements/adapter layer is responsible for:
+
 - Declaring required, optional, and conditional fields for a provider and booking context.
 - Validating provider-specific formats and allowed values.
 - Applying age/category and infant relationship constraints.
@@ -168,6 +171,7 @@ Age/category validation uses the selected offer's provider passenger identity/ty
 ## 6. Data lifecycle and privacy
 
 For this milestone:
+
 - Hold passenger data in memory in the booking flow.
 - Do not add AsyncStorage, local-storage, database persistence, or saved-traveller profiles.
 - Keep data available while navigating between booking screens in the active flow.
@@ -183,6 +187,7 @@ Cleanup must be explicit and testable. Identify the abandonment/completion bound
 ## 7. UI responsibilities
 
 The passenger-information UI is a presentation/data-entry layer over the domain model. It must:
+
 - Render the complete passenger collection from the selected offer.
 - Associate each form with the correct internal passenger ID.
 - Display passenger category/type from selected-offer/search context.
@@ -197,12 +202,12 @@ The UI must not generate provider IDs, define provider validation rules, or trea
 
 ## 8. BR-04 stages
 
-| Stage | Deliverable |
-|---|---|
+| Stage  | Deliverable                                                                                |
+| ------ | ------------------------------------------------------------------------------------------ |
 | BR-04A | Provider-agnostic passenger domain model, provider references, and passenger relationships |
-| BR-04B | Multi-passenger information UI driven by the domain model |
-| BR-04C | Provider-aware validation, including conditional requirements and infant responsibility |
-| BR-04D | Booking-readiness result, in-memory lifecycle, and cleanup |
+| BR-04B | Multi-passenger information UI driven by the domain model                                  |
+| BR-04C | Provider-aware validation, including conditional requirements and infant responsibility    |
+| BR-04D | Booking-readiness result, in-memory lifecycle, and cleanup                                 |
 
 Stages may be implemented in bounded passes, but must preserve this contract. No order or payment work is included.
 
@@ -232,6 +237,7 @@ Stages may be implemented in bounded passes, but must preserve this contract. No
 ## 10. Test expectations
 
 Automated tests should cover:
+
 - Mapping every selected-offer passenger to one internal record.
 - Missing, duplicate, foreign-offer, and mismatched provider references.
 - Stable internal identity independent of list ordering.
@@ -248,6 +254,7 @@ Automated tests should cover:
 ## 11. Non-goals and later decisions
 
 Not part of BR-04:
+
 - Provider order creation.
 - Payment provider selection, payment credentials, charging, refunds, or payment status.
 - Booking confirmation, ticketing, cancellation, or booking recovery.
