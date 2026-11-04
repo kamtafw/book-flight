@@ -368,7 +368,10 @@ export default function ChooseSeatScreen() {
 		})
 	}
 
-	const handleContinue = () => router.push("/personal-information-2")
+	const handleContinue = () => {
+		if (!flightId || !flight) return
+		router.push({ pathname: "/personal-information-2", params: { flightId } })
+	}
 
 	return (
 		<SafeAreaView edges={["top", "bottom"]} className="flex-1 bg-[#FFF9F6]">
