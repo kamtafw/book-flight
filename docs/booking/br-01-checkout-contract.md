@@ -104,8 +104,8 @@ These are conceptual product states, not a required literal enum. In particular,
 | ------------------------------------------ | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | Offer ID                                   | Duffel                                                         | Preserve the selected ID; never invent one.                                               |
 | Current itinerary, price, currency, expiry | Refreshed Duffel offer                                         | Display and ask for acceptance if price changes.                                          |
-| Passenger IDs                              | Refreshed offer                                                | Map each form to the correct provider passenger ID.                                       |
-| Passenger personal details                 | Traveller, validated against provider requirements             | Collect only required fields; validate format and completeness.                           |
+| Provider passenger IDs                     | Refreshed offer                                                | Preserve exact IDs and map them to internal passenger records as defined by BR-04.         |
+| Passenger personal details                 | Traveller, validated against provider requirements             | Collect through the BR-04 domain model; apply provider-specific requirements via adapter. |
 | Seat service ID and price                  | Fresh Duffel seat-map/service response                         | Preserve the intended choice; do not treat it as reserved.                                |
 | Final order total/status/reference         | Duffel order response/status                                   | Display only after checking the authoritative result.                                     |
 | Payment outcome                            | The chosen payment/provider flow, reconciled with order status | Show accurate pending/success/failure states; don't infer success from a client redirect. |
@@ -129,4 +129,4 @@ These are conceptual product states, not a required literal enum. In particular,
 - Duffel, [Creating orders](https://duffel.com/docs/api/v2/orders): order creation requires the selected offer, passenger details, and payment/hold information appropriate to the offer.
 - Duffel, [Adding seats](https://duffel.com/docs/guides/adding-seats): use current passenger-specific seat service IDs and quantity `1`; the payment amount must account for selected services.
 
-These provider references should be rechecked when implementing BR-02 onward because API requirements can change.
+The passenger data model and provider mapping are specified in [BR-04](./br-04-passenger-information.md). Provider references should be rechecked at implementation time because API requirements can change.

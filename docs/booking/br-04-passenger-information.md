@@ -3,7 +3,7 @@
 **Status:** Approved design direction; implementation not started  
 **Scope:** Provider-agnostic passenger domain model and passenger-information collection for the current one-way booking flow  
 **Depends on:** BR-01 checkout contract, BR-02 offer refresh/validation, BR-03 seat-service validation  
-**Explicitly excludes:** Order creation, payment processing, booking confirmation, saved-traveller profiles, and persistent passenger-data storage  
+**Explicitly excludes:** Order creation, payment processing, booking confirmation, saved-traveller profiles, and persistent passenger-data storage
 
 ## 1. Purpose
 
@@ -33,48 +33,48 @@ Illustrative TypeScript shape (implementation may refine names and exact types w
 type InternalPassengerId = string
 
 interface Passenger {
- id: InternalPassengerId
- identity: PassengerIdentity
- contacts: PassengerContact[]
- travelDocuments: TravelDocument[]
- providerReferences: ProviderPassengerReference[]
+  id: InternalPassengerId
+  identity: PassengerIdentity
+  contacts: PassengerContact[]
+  travelDocuments: TravelDocument[]
+  providerReferences: ProviderPassengerReference[]
 }
 
 interface PassengerIdentity {
- givenName?: string
- middleName?: string
- familyName?: string
- title?: string
- gender?: string
- dateOfBirth?: string // YYYY-MM-DD
+  givenName?: string
+  middleName?: string
+  familyName?: string
+  title?: string
+  gender?: string
+  dateOfBirth?: string // YYYY-MM-DD
 }
 
 interface PassengerContact {
- id: string
- type: "email" | "phone"
- value: string
- belongsTo: "passenger" | "other"
- relatedPersonPassengerId?: InternalPassengerId
+  id: string
+  type: "email" | "phone"
+  value: string
+  belongsTo: "passenger" | "other"
+  relatedPersonPassengerId?: InternalPassengerId
 }
 
 interface TravelDocument {
- id: string
- type: string
- documentNumber?: string
- issuingCountry?: string // ISO 3166-1 alpha-2 where applicable
- expirationDate?: string // YYYY-MM-DD
+  id: string
+  type: string
+  documentNumber?: string
+  issuingCountry?: string // ISO 3166-1 alpha-2 where applicable
+  expirationDate?: string // YYYY-MM-DD
 }
 
 interface ProviderPassengerReference {
- provider: string
- offerId: string
- providerPassengerId: string
+  provider: string
+  offerId: string
+  providerPassengerId: string
 }
 
 interface PassengerRelationship {
- passengerId: InternalPassengerId
- relatedPassengerId: InternalPassengerId
- type: "responsible_adult"
+  passengerId: InternalPassengerId
+  relatedPassengerId: InternalPassengerId
+  type: "responsible_adult"
 }
 ```
 
