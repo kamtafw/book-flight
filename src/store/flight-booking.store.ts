@@ -175,7 +175,8 @@ export const useFlightBookingStore = create<FlightBookingState>((set) => ({
 			if (
 				belongsTo === "other" &&
 				relatedPersonPassengerId &&
-				!state.passengerCollection.passengers.some((item) => item.id === relatedPersonPassengerId)
+				(passengerId === relatedPersonPassengerId ||
+					!state.passengerCollection.passengers.some((item) => item.id === relatedPersonPassengerId))
 			) {
 				return state
 			}
@@ -239,12 +240,16 @@ export const useFlightBookingStore = create<FlightBookingState>((set) => ({
 			if (!state.passengerCollection) return state
 			const passengers = state.passengerCollection.passengers
 			if (!passengers.some((item) => item.id === infantPassengerId)) return state
-			if (
-				adultPassengerId &&
-				(!passengers.some((item) => item.id === adultPassengerId) ||
-					adultPassengerId === infantPassengerId)
-			) {
-				return state
+			const infant = passengers.find((item) => item.id === infantPassengerId)
+			if (adultPassengerId) {
+				const adult = passengers.find((item) => item.id === adultPassengerId)
+				if (
+					infant?.category !== "infant" ||
+					adult?.category !== "adult" ||
+					adultPassengerId === infantPassengerId
+				) {
+					return state
+				}
 			}
 
 			const relationships = state.passengerCollection.relationships.filter(
