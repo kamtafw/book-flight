@@ -172,18 +172,24 @@ export const useFlightBookingStore = create<FlightBookingState>((set) => ({
 			const passenger = state.passengerCollection.passengers.find((item) => item.id === passengerId)
 			if (!passenger) return state
 
-			const contacts = passenger.contacts.filter((contact) => contact.type !== type)
-			if (value.trim()) {
-				contacts.push({
-					id: passenger.contacts.find((contact) => contact.type === type)?.id ?? createInternalPassengerId(),
-					type,
-					value: value.trim(),
-					belongsTo,
-					...(belongsTo === "other" && relatedPersonPassengerId
-						? { relatedPersonPassengerId }
-						: {}),
-				})
+			if (
+				belongsTo === "other" &&
+				relatedPersonPassengerId &&
+				!state.passengerCollection.passengers.some((item) => item.id === relatedPersonPassengerId)
+			) {
+				return state
 			}
+
+			const contacts = passenger.contacts.filter((contact) => contact.type !== type)
+			contacts.push({
+				id: passenger.contacts.find((contact) => contact.type === type)?.id ?? createInternalPassengerId(),
+				type,
+				value: value.trim(),
+				belongsTo,
+				...(belongsTo === "other" && relatedPersonPassengerId
+					? { relatedPersonPassengerId }
+					: {}),
+			})
 
 			return {
 				passengerCollection: {
