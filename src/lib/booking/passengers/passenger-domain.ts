@@ -83,12 +83,12 @@ export type PassengerDomainErrorCode =
 	| "DUPLICATE_INTERNAL_PASSENGER_ID"
 
 export class PassengerDomainError extends Error {
-	constructor(
-		message: string,
-		readonly code: PassengerDomainErrorCode,
-	) {
+	readonly code: PassengerDomainErrorCode
+
+	constructor(message: string, code: PassengerDomainErrorCode) {
 		super(message)
 		this.name = "PassengerDomainError"
+		this.code = code
 	}
 }
 
