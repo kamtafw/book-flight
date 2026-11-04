@@ -1,6 +1,6 @@
 import { CountrySelectorModal } from "@/components/country-selector-modal"
 import { FieldShell, FloatingInput } from "@/components/floating-label-input"
-import { defaultPickerDate } from "@/constants"
+import { countries, defaultPickerDate } from "@/constants"
 import type {
 	Passenger,
 	PassengerContact,
@@ -63,7 +63,7 @@ function passengerLabels(passengers: Passenger[]) {
 			const category = categoryLabel(passenger.category)
 			const nextCount = (counts.get(category) ?? 0) + 1
 			counts.set(category, nextCount)
-			return [passenger.id, `${category} ${nextCount}`]
+			return [passenger.id, `${category} ${nextCount}`] as const
 		}),
 	)
 }
@@ -147,7 +147,9 @@ function PassengerCard({
 		(relationship) =>
 			relationship.type === "responsible_adult" && relationship.passengerId === passenger.id,
 	)?.relatedPassengerId
-	const adultPassengers = passengers.filter((item) => item.category === "adult")
+	const adultPassengers = passengers.filter(
+		(item) => item.category === "adult" && item.id !== passenger.id,
+	)
 	const displayName = [identity.givenName, identity.familyName].filter(Boolean).join(" ")
 
 	const updateDocument = (patch: Partial<Omit<TravelDocument, "id">>) => {
@@ -281,7 +283,7 @@ function PassengerCard({
 										identity.nationality ? "text-gray-200" : "text-gray-400",
 									)}
 								>
-									{identity.nationality || "Select nationality"}
+									{countries.find((country) => country.code === identity.nationality)?.name ?? identity.nationality ?? "Select nationality"}
 								</Text>
 								<Feather name="chevron-down" size={17} color="#999" />
 							</Pressable>
@@ -472,7 +474,7 @@ function PassengerCard({
 										document?.issuingCountry ? "text-gray-200" : "text-gray-400",
 									)}
 								>
-									{document?.issuingCountry || "Select issuing country"}
+									{countries.find((country) => country.code === document?.issuingCountry)?.name ?? document?.issuingCountry ?? "Select issuing country"}
 								</Text>
 								<Feather name="chevron-down" size={17} color="#999" />
 							</Pressable>
@@ -575,10 +577,14 @@ export default function PersonalInformationScreen() {
 	}, [flightId, passengerCollection])
 
 	useEffect(() => {
-		if (activeCollection?.passengers.length && expandedPassengerIds.length === 0) {
-			setExpandedPassengerIds([activeCollection.passengers[0].id])
+		if (activeCollection?.passengers.length) {
+			setExpandedPassengerIds((current) =>
+				current.length > 0 && current.some((id) => activeCollection.passengers.some((item) => item.id === id))
+					? current
+					: [activeCollection.passengers[0].id],
+			)
 		}
-	}, [activeCollection, expandedPassengerIds.length])
+	}, [activeCollection])
 
 	const labels = useMemo(
 		() => passengerLabels(activeCollection?.passengers ?? []),
@@ -666,13 +672,13 @@ export default function PersonalInformationScreen() {
 			)
 			if (!passenger) return
 			if (countryPicker.target === "nationality") {
-				updatePassengerIdentity(passenger.id, { nationality: country.name })
+				updatePassengerIdentity(passenger.id, { nationality: country.code })
 			} else {
 				const document = getDocument(passenger)
 				setPassengerTravelDocument(passenger.id, {
 					type: document?.type ?? "",
 					documentNumber: document?.documentNumber ?? "",
-					issuingCountry: country.name,
+					issuingCountry: country.code,
 					expirationDate: document?.expirationDate ?? "",
 				})
 			}
