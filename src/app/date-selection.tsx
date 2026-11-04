@@ -69,7 +69,7 @@ export default function DateSelectionScreen() {
 	const today = new Date()
 	const initialVisibleDate = initialDepartureDate ?? today
 
-	const [visibleMonth, setVisibleMonth] = useState(
+	const [visibleMonth] = useState(
 		new Date(initialVisibleDate.getFullYear(), initialVisibleDate.getMonth(), 1),
 	)
 

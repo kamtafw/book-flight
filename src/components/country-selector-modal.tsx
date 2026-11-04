@@ -1,5 +1,5 @@
 import { countries } from "@/constants"
-import clsx from "clsx"
+import { clsx } from "clsx"
 import { Check, Search, X } from "lucide-react-native"
 import { memo, useCallback, useMemo, useState } from "react"
 import {
@@ -96,7 +96,11 @@ export function CountrySelectorModal({
 
 	const renderCountry = useCallback(
 		({ item }: { item: AppConfig.Country }) => (
-			<CountryRow country={item} selected={item.name === selectedCountry} onPress={handleSelect} />
+			<CountryRow
+				country={item}
+				selected={item.name === selectedCountry || item.code === selectedCountry}
+				onPress={handleSelect}
+			/>
 		),
 		[handleSelect, selectedCountry],
 	)

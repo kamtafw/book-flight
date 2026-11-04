@@ -1,4 +1,4 @@
-import clsx from "clsx"
+import { clsx } from "clsx"
 import { forwardRef, ReactNode, useImperativeHandle, useRef, useState } from "react"
 import { Pressable, Text, TextInput, TextInputProps, View } from "react-native"
 
