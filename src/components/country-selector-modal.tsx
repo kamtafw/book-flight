@@ -96,7 +96,7 @@ export function CountrySelectorModal({
 
 	const renderCountry = useCallback(
 		({ item }: { item: AppConfig.Country }) => (
-			<CountryRow country={item} selected={item.name === selectedCountry} onPress={handleSelect} />
+			<CountryRow country={item} selected={item.name === selectedCountry || item.code === selectedCountry} onPress={handleSelect} />
 		),
 		[handleSelect, selectedCountry],
 	)
