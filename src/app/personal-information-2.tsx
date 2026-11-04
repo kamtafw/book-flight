@@ -300,7 +300,6 @@ function PassengerCard({
 						</View>
 
 						<View className="gap-y-2">
-							<FieldLabel>Email address</FieldLabel>
 							<FloatingInput
 								label="Email"
 								icon={<Feather name="mail" size={18} color="#999" />}
@@ -368,7 +367,6 @@ function PassengerCard({
 						</View>
 
 						<View className="gap-y-2">
-							<FieldLabel>Phone number</FieldLabel>
 							<FloatingInput
 								label="Phone"
 								icon={<Feather name="phone" size={18} color="#999" />}
@@ -815,7 +813,6 @@ export default function PersonalInformationScreen() {
 				mode="date"
 				date={selectedDate}
 				maximumDate={datePicker?.target === "dateOfBirth" ? new Date() : undefined}
-				minimumDate={datePicker?.target === "documentExpiration" ? new Date() : undefined}
 				display={Platform.OS === "ios" ? "inline" : "default"}
 				themeVariant="light"
 				accentColor="#EC441E"
