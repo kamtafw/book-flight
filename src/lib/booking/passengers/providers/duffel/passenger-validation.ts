@@ -1,8 +1,13 @@
-import type { Passenger, PassengerCollection } from "@/lib/booking/passengers/passenger-domain"
-import { validatePassengerRelationships } from "@/lib/booking/passengers/passenger-domain"
+import {
+	validatePassengerRelationships,
+	type Passenger,
+	type PassengerCollection,
+} from "../../passenger-domain"
 import type { FlightOffer } from "@/lib/flights/types"
 import {
 	extractDuffelPassengerRequirements,
+	type DuffelPassengerRequirements,
+} from "./passenger-requirements"
 	type DuffelPassengerRequirements,
 } from "./passenger-requirements"
 
