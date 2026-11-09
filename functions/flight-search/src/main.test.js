@@ -89,6 +89,8 @@ test("maps the offer id, fare, segments, and operating carriers", () => {
 		total_amount: "125.50",
 		total_currency: "USD",
 		expires_at: "2099-05-20T12:00:00Z",
+		passenger_identity_documents_required: true,
+		supported_passenger_identity_document_types: ["passport", "identity_card"],
 		owner: { name: "Example Airways" },
 		passengers: [
 			{ id: "pas_adult", type: "adult" },
@@ -120,6 +122,8 @@ test("maps the offer id, fare, segments, and operating carriers", () => {
 	assert.equal(offer.price, 125.5)
 	assert.equal(offer.priceAmount, "125.50")
 	assert.equal(offer.currency, "USD")
+	assert.equal(offer.passengerIdentityDocumentsRequired, true)
+	assert.deepEqual(offer.supportedPassengerIdentityDocumentTypes, ["passport", "identity_card"])
 	assert.deepEqual(offer.passengers, [
 		{ id: "pas_adult", type: "adult", age: null },
 		{ id: "pas_child", type: null, age: 7 },
@@ -129,6 +133,27 @@ test("maps the offer id, fare, segments, and operating carriers", () => {
 	assert.deepEqual(offer.operatingCarrierNames, ["Regional Partner"])
 	assert.equal(offer.slices[0].segments[0].operatingCarrierName, "Regional Partner")
 	assert.equal(offer.slices[0].segments[0].flightNumber, "EA 123")
+})
+
+
+test("preserves explicit false and empty supported-document metadata", () => {
+	const offer = mapOffer({
+		id: "off_metadata_false",
+		passenger_identity_documents_required: false,
+		supported_passenger_identity_document_types: [],
+	})
+	assert.equal(offer.passengerIdentityDocumentsRequired, false)
+	assert.deepEqual(offer.supportedPassengerIdentityDocumentTypes, [])
+})
+
+test("keeps missing or malformed document metadata unknown", () => {
+	const offer = mapOffer({
+		id: "off_metadata_unknown",
+		passenger_identity_documents_required: "false",
+		supported_passenger_identity_document_types: null,
+	})
+	assert.equal(offer.passengerIdentityDocumentsRequired, null)
+	assert.equal(offer.supportedPassengerIdentityDocumentTypes, null)
 })
 
 test("normalizes provider seat maps and preserves passenger-specific service IDs", () => {
