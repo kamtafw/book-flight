@@ -84,6 +84,17 @@ function mapOffer(offer) {
 		priceAmount: typeof offer.total_amount === "string" ? offer.total_amount : null,
 		currency: offer.total_currency,
 		expiresAt: offer.expires_at ?? null,
+		passengerIdentityDocumentsRequired:
+			typeof offer.passenger_identity_documents_required === "boolean"
+				? offer.passenger_identity_documents_required
+				: null,
+		supportedPassengerIdentityDocumentTypes: Array.isArray(
+			offer.supported_passenger_identity_document_types,
+		)
+			? offer.supported_passenger_identity_document_types.filter(
+					(documentType) => typeof documentType === "string",
+				)
+			: null,
 		operatingCarrierNames,
 		passengers: (Array.isArray(offer.passengers) ? offer.passengers : [])
 			.filter((passenger) => isRecord(passenger) && typeof passenger.id === "string")
