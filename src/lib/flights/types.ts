@@ -47,6 +47,10 @@ export interface FlightOffer {
 	price: number
 	currency: string
 	expiresAt: string | null
+	/** null means Duffel did not provide this requirement value. */
+	passengerIdentityDocumentsRequired?:boolean|null
+	/** null means the supported document types were not provider; [] is an explicit empty list. */
+	supportedPassengerIdentityDocumentTypes?:string[]|null
 	operatingCarrierNames: string[]
 	passengers?: FlightOfferPassenger[]
 	slices: FlightSlice[]
