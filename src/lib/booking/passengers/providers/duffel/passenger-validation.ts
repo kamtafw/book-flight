@@ -165,6 +165,9 @@ export function validateDuffelPassengers(
 
 	for (const passenger of passengers) {
 		const type = providerPassengerType(requirements, passenger)
+		if (!type) {
+			addIssue(issues, "PASSENGER_TYPE_UNKNOWN", "provider", "The selected offer does not identify this traveller's provider passenger type.", passenger.id, "passengerType")
+		}
 		const isInfant = typeof type === "string" && type.startsWith("infant")
 		const ownRelationships = infantRelationships.filter((item) => item.passengerId === passenger.id)
 		if (isInfant && ownRelationships.length !== 1) {
@@ -271,6 +274,8 @@ export function validateDuffelPassengers(
 			} else {
 				if (requirements.identityDocuments.supportedTypes && !requirements.identityDocuments.supportedTypes.some((item) => item.trim().toLowerCase() === documentType)) {
 					addIssue(issues, "UNSUPPORTED_DOCUMENT_TYPE", "provider", "The selected offer does not support this travel-document type.", passenger.id, "travelDocument")
+				} else if (!requirements.identityDocuments.supportedTypes) {
+					addIssue(issues, "DOCUMENT_TYPE_SUPPORT_UNKNOWN", "provider", "The offer's supported travel-document types are unknown, so this document cannot yet be verified.", passenger.id, "travelDocument")
 				}
 				if (requirements.identityDocuments.status === "required" && documentType !== "passport") {
 					addIssue(issues, "PASSPORT_REQUIRED", "provider", "The selected offer requires a passport for this traveller.", passenger.id, "travelDocument")
