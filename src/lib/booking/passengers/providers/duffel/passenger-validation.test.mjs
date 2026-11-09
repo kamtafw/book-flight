@@ -50,7 +50,7 @@ function makePassenger(id = "internal-adult", providerId = "pas_adult", override
 			givenName: "Ada",
 			familyName: "Lovelace",
 			gender: "female",
-			dateOfBirth: "1996-01-01",
+			dateOfBirth: "1996-06-01",
 		},
 		contacts: [
 			{ id: "email-1", type: "email", value: "ada@example.com", belongsTo: "passenger" },
@@ -155,7 +155,7 @@ test("accepts a valid phone explicitly owned by another adult passenger", () => 
 			provider: "duffel", offerId: "off_validation",
 			providerPassengerId: "pas_child", providerPassengerType: "child", age: 8,
 		}],
-		identity: { ...makePassenger().identity, dateOfBirth: "2018-01-01" },
+		identity: { ...makePassenger().identity, dateOfBirth: "2018-06-01" },
 		contacts: [
 			{ id: "child-email", type: "email", value: "child@example.com", belongsTo: "passenger" },
 			{ id: "parent-phone", type: "phone", value: "+2348012345678", belongsTo: "other", relatedPersonPassengerId: "adult" },
@@ -276,7 +276,7 @@ test("validates infant responsibility and Duffel's unique adult assignment", () 
 		...makePassenger("infant1", "pas_infant1"),
 		category: "infant",
 		providerReferences: [{ provider: "duffel", offerId: "off_validation", providerPassengerId: "pas_infant1", providerPassengerType: "infant_without_seat", age: 0 }],
-		identity: { ...makePassenger().identity, dateOfBirth: "2026-01-01" },
+		identity: { ...makePassenger().identity, dateOfBirth: "2026-05-01" },
 	}
 	const infant2 = {
 		...infant1,
