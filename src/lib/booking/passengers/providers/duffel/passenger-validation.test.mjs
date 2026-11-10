@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { validateDuffelPassengers } from "./passenger-validation.ts"
+import { validateDuffelPassengers } from "./passenger-validation"
 
 function makeOffer(overrides = {}) {
 	return {
