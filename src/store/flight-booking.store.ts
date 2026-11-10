@@ -159,6 +159,7 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 
 	initializePassengerCollection: (offer) =>
 		set((state) => {
+			if (state.activeBookingSession?.offerId !== offer.id) return state
 			if (collectionMatchesOffer(state.passengerCollection, offer)) return state
 
 			const passengerCollection = createPassengerCollectionFromOffer(offer, {
