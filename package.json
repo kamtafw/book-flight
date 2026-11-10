@@ -51,7 +51,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test:passenger-domain": "node --experimental-strip-types --test src/lib/booking/passengers/passenger-domain.test.mjs"
+    "test:passenger-domain": "node --experimental-strip-types --test src/lib/booking/passengers/passenger-domain.test.mjs",
+    "test:booking-session": "node --experimental-strip-types --test src/lib/booking/readiness/booking-session.test.mjs"
   },
   "private": true
 }
