@@ -5,6 +5,7 @@ import type {
 	TravelDocument,
 } from "@/lib/booking/passengers/passenger-domain"
 import { createPassengerCollectionFromOffer } from "@/lib/booking/passengers/passenger-domain"
+import { clearBookingSessionState, transitionBookingSession, type ActiveBookingSession } from "@/lib/booking/readiness/booking-session"
 import type { FlightOffer, SelectedSeatService } from "@/lib/flights/types"
 import { create } from "zustand"
 
@@ -12,6 +13,7 @@ interface FlightBookingState {
 	selectedOutboundSeats: string[]
 	selectedOutboundSeatServices: SelectedSeatService[]
 	passengerCollection: PassengerCollection | null
+	activeBookingSession: ActiveBookingSession | null
 
 	setOutboundSeats: (seats: string[]) => void
 	toggleOutboundSeat: (seat: string) => void
@@ -19,6 +21,9 @@ interface FlightBookingState {
 	selectOutboundSeatService: (selection: SelectedSeatService) => void
 	clearOutboundSeatServices: () => void
 
+	beginBookingSession: (offer: Pick<FlightOffer, "id">) => string
+	abandonBookingSession: () => void
+	completeBookingSession: () => void
 	initializePassengerCollection: (offer: FlightOffer) => void
 	updatePassengerIdentity: (passengerId: string, identity: Partial<Passenger["identity"]>) => void
 	setPassengerContact: (
@@ -61,10 +66,11 @@ function collectionMatchesOffer(collection: PassengerCollection | null, offer: F
 	)
 }
 
-export const useFlightBookingStore = create<FlightBookingState>((set) => ({
+export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 	selectedOutboundSeats: [],
 	selectedOutboundSeatServices: [],
 	passengerCollection: null,
+	activeBookingSession: null,
 
 	setOutboundSeats: (seats) => {
 		set({ selectedOutboundSeats: seats })
@@ -134,6 +140,22 @@ export const useFlightBookingStore = create<FlightBookingState>((set) => ({
 		}),
 	clearOutboundSeatServices: () =>
 		set({ selectedOutboundSeatServices: [], selectedOutboundSeats: [] }),
+
+	beginBookingSession: (offer) => {
+		const current = get().activeBookingSession
+		if (current?.offerId === offer.id) return current.id
+
+		const next = transitionBookingSession(
+			get(),
+			offer.id,
+			createInternalPassengerId,
+		)
+		set(next)
+		return next.activeBookingSession!.id
+	},
+
+	abandonBookingSession: () => set((state) => clearBookingSessionState(state)),
+	completeBookingSession: () => set((state) => clearBookingSessionState(state)),
 
 	initializePassengerCollection: (offer) =>
 		set((state) => {
