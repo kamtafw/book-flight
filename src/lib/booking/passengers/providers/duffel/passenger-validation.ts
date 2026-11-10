@@ -356,12 +356,15 @@ export function validateDuffelPassengers(
 						"dateOfBirth",
 					)
 				}
-			} else if (type) {
+			} else if (type && type !== "adult") {
+				// Adult search passengers are intentionally sent without ages. The offer's
+				// adult classification is authoritative; missing adult age is not a blocker.
+				// Age-dependent categories still require provider age for consistency checks.
 				addIssue(
 					issues,
 					"AGE_CHECK_UNKNOWN",
 					"provider",
-					"The offer does not provide an age for this passenger, so age consistency cannot be confirmed.",
+					"The offer does not provide an age for this age-dependent passenger, so age consistency cannot be confirmed.",
 					passenger.id,
 					"dateOfBirth",
 				)

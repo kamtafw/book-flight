@@ -132,12 +132,32 @@ test("compares date of birth age against the provider age on the last flight dat
 	assert.ok(mismatch.issues.some((issue) => issue.code === "PASSENGER_AGE_MISMATCH"))
 })
 
-test("keeps unknown age or itinerary date from claiming provider readiness", () => {
-	const result = validateDuffelPassengers(
-		makeOffer({ passengers: [{ id: "pas_adult", type: "adult", age: null }] }),
-		makeCollection(),
-		options,
-	)
+test("allows an adult with no provider age to become provider-ready", () => {
+	const offer = makeOffer({ passengers: [{ id: "pas_adult", type: "adult", age: null }] })
+	const result = validateDuffelPassengers(offer, makeCollection(), options)
+	assert.equal(result.status, "provider_ready")
+	assert.ok(!result.issues.some((issue) => issue.code === "AGE_CHECK_UNKNOWN"))
+})
+
+test("keeps age-dependent passengers without provider age from claiming provider readiness", () => {
+	const child = {
+		...makePassenger("child", "pas_child"),
+		category: "child",
+		identity: { ...makePassenger().identity, dateOfBirth: "2018-06-01" },
+		providerReferences: [
+			{
+				provider: "duffel",
+				offerId: "off_validation",
+				providerPassengerId: "pas_child",
+				providerPassengerType: "child",
+				age: null,
+			},
+		],
+	}
+	const offer = makeOffer({
+		passengers: [{ id: "pas_child", type: "child", age: null }],
+	})
+	const result = validateDuffelPassengers(offer, makeCollection([child]), options)
 	assert.equal(result.status, "locally_valid")
 	assert.ok(result.issues.some((issue) => issue.code === "AGE_CHECK_UNKNOWN"))
 })
