@@ -10,11 +10,11 @@ export interface BookingSessionState {
 	passengerCollection: unknown | null
 }
 
-export interface BookingSessionReset {
-	activeBookingSession: null
-	selectedOutboundSeats: []
-	selectedOutboundSeatServices: []
-	passengerCollection: null
+type BookingSessionFields<T extends BookingSessionState> = {
+	activeBookingSession: ActiveBookingSession | null
+	selectedOutboundSeats: T["selectedOutboundSeats"]
+	selectedOutboundSeatServices: T["selectedOutboundSeatServices"]
+	passengerCollection: T["passengerCollection"]
 }
 
 /**
@@ -26,22 +26,10 @@ export function transitionBookingSession<T extends BookingSessionState>(
 	state: T,
 	offerId: string,
 	createSessionId: () => string,
-): Omit<T, keyof BookingSessionReset> & {
-	activeBookingSession: ActiveBookingSession
-	selectedOutboundSeats: string[]
-	selectedOutboundSeatServices: unknown[]
-	passengerCollection: unknown | null
-} {
+): Omit<T, keyof BookingSessionFields<T>> & BookingSessionFields<T> {
 	if (!offerId.trim()) throw new Error("A valid offer ID is required.")
 
-	if (state.activeBookingSession?.offerId === offerId) {
-		return state as Omit<T, keyof BookingSessionReset> & {
-			activeBookingSession: ActiveBookingSession
-			selectedOutboundSeats: string[]
-			selectedOutboundSeatServices: unknown[]
-			passengerCollection: unknown | null
-		}
-	}
+	if (state.activeBookingSession?.offerId === offerId) return state
 
 	return {
 		...state,
@@ -55,7 +43,7 @@ export function transitionBookingSession<T extends BookingSessionState>(
 /** Clears only booking-session data; search criteria/results remain untouched. */
 export function clearBookingSessionState<T extends BookingSessionState>(
 	state: T,
-): Omit<T, keyof BookingSessionReset> & BookingSessionReset {
+): Omit<T, keyof BookingSessionFields<T>> & BookingSessionFields<T> {
 	return {
 		...state,
 		activeBookingSession: null,
