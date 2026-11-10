@@ -1,19 +1,24 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { CountrySelectorModal } from "@/components/country-selector-modal"
-import { FieldShell, FloatingInput } from "@/components/floating-label-input"
-import { countries, defaultPickerDate } from "@/constants"
+import { FieldShell,FloatingInput } from "@/components/floating-label-input"
+import { countries,defaultPickerDate } from "@/constants"
 import type {
 	Passenger,
 	PassengerContact,
 	PassengerRelationship,
 	TravelDocument,
 } from "@/lib/booking/passengers/passenger-domain"
+import {
+	validateDuffelPassengers,
+	type PassengerValidationIssue,
+	type PassengerValidationResult,
+} from "@/lib/booking/passengers/providers/duffel/passenger-validation"
 import { useFlightBookingStore } from "@/store/flight-booking.store"
 import { useFlightOffersStore } from "@/store/flight-offers.store"
-import { Feather, FontAwesome5, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons"
+import { Feather,FontAwesome5,Ionicons,MaterialCommunityIcons } from "@expo/vector-icons"
 import { clsx } from "clsx"
-import { router, useLocalSearchParams } from "expo-router"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { router,useLocalSearchParams } from "expo-router"
+import { useCallback,useEffect,useMemo,useState } from "react"
 import {
 	ActivityIndicator,
 	KeyboardAvoidingView,
@@ -109,6 +114,7 @@ function PassengerCard({
 	label,
 	passengers,
 	relationships,
+	issues,
 	expanded,
 	onToggle,
 	onIdentityChange,
@@ -122,6 +128,7 @@ function PassengerCard({
 	label: string
 	passengers: Passenger[]
 	relationships: PassengerRelationship[]
+	issues: PassengerValidationIssue[]
 	expanded: boolean
 	onToggle: () => void
 	onIdentityChange: (passengerId: string, field: keyof Passenger["identity"], value: string) => void
@@ -189,12 +196,30 @@ function PassengerCard({
 					<Text className="mt-0.5 font-inter text-xs text-gray-200">
 						{displayName || "Passenger details not added"}
 					</Text>
+					{issues.length > 0 ? (
+						<Text className="mt-1 font-inter-medium text-xs text-red-600">
+							{issues.length} item{issues.length === 1 ? "" : "s"} need attention
+						</Text>
+					) : null}
 				</View>
 				<Feather name={expanded ? "chevron-up" : "chevron-down"} size={20} color="#737373" />
 			</Pressable>
 
 			{expanded ? (
 				<View className="gap-y-5 border-t border-border px-4 pb-5 pt-5">
+					{issues.length > 0 ? (
+						<View className="gap-y-2 rounded-xl border border-red-100 bg-red-50 p-3">
+							<Text className="font-inter-semibold text-sm text-red-700">Review these details</Text>
+							{issues.map((issue, index) => (
+								<Text
+									key={`${issue.code}-${issue.field ?? "general"}-${index}`}
+									className="font-inter text-xs leading-5 text-red-700"
+								>
+									{issue.message}
+								</Text>
+							))}
+						</View>
+					) : null}
 					<View className="gap-y-4">
 						<Text className="font-inter-semibold text-sm text-black">Personal details</Text>
 						<FloatingInput
@@ -560,6 +585,28 @@ export default function PersonalInformationScreen() {
 		return allBelongToOffer ? passengerCollection : null
 	}, [flightId, passengerCollection])
 
+	const validationResult = useMemo<PassengerValidationResult>(() => {
+		if (!flight || !activeCollection) {
+			return { status: "draft", issues: [] }
+		}
+		try {
+			return validateDuffelPassengers(flight, activeCollection)
+		} catch {
+			return {
+				status: "draft",
+				issues: [
+					{
+						code: "VALIDATION_UNAVAILABLE",
+						stage: "local",
+						severity: "error",
+						message:
+							"Passenger requirements could not be evaluated for this offer. Return and select the offer again.",
+					},
+				],
+			}
+		}
+	}, [activeCollection, flight])
+
 	useEffect(() => {
 		if (activeCollection?.passengers.length) {
 			setExpandedPassengerIds((current) =>
@@ -760,6 +807,45 @@ export default function PersonalInformationScreen() {
 						</Text>
 					</View>
 
+					<View className="mb-4 rounded-2xl border border-border bg-white p-4">
+						<View className="flex-row items-center justify-between">
+							<Text className="font-inter-semibold text-sm text-black">Validation status</Text>
+							<Text
+								className={clsx(
+									"rounded-full px-3 py-1 font-inter-medium text-xs",
+									validationResult.status === "provider_ready"
+										? "bg-green-50 text-green-700"
+										: validationResult.status === "locally_valid"
+											? "bg-amber-50 text-amber-700"
+											: "bg-red-50 text-red-700",
+								)}
+							>
+								{validationResult.status === "provider_ready"
+									? "Provider-ready"
+									: validationResult.status === "locally_valid"
+										? "Local checks passed"
+										: "Draft"}
+							</Text>
+						</View>
+						<Text className="mt-2 font-inter text-xs leading-5 text-gray-200">
+							{validationResult.status === "provider_ready"
+								? "The passenger details satisfy the requirements currently known for this offer. This is not a booking confirmation."
+								: validationResult.status === "locally_valid"
+									? "Basic details are valid, but one or more provider requirements still need attention or verification."
+									: "Some passenger details are missing or locally invalid."}
+						</Text>
+						{validationResult.issues
+							.filter((issue) => !issue.passengerId)
+							.map((issue, index) => (
+								<Text
+									key={`global-${issue.code}-${index}`}
+									className="mt-2 font-inter text-xs leading-5 text-red-700"
+								>
+									{issue.message}
+								</Text>
+							))}
+					</View>
+
 					{activeCollection.passengers.map((passenger) => (
 						<PassengerCard
 							key={passenger.id}
@@ -767,6 +853,7 @@ export default function PersonalInformationScreen() {
 							label={labels.get(passenger.id) ?? "Traveller"}
 							passengers={activeCollection.passengers}
 							relationships={activeCollection.relationships}
+							issues={validationResult.issues.filter((issue) => issue.passengerId === passenger.id)}
 							expanded={expandedPassengerIds.includes(passenger.id)}
 							onToggle={() => togglePassenger(passenger.id)}
 							onIdentityChange={handleIdentityChange}
