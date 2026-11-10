@@ -560,27 +560,6 @@ export default function PersonalInformationScreen() {
 	)
 	const setResponsibleAdult = useFlightBookingStore((state) => state.setResponsibleAdult)
 
-	const validationResult = useMemo<PassengerValidationResult>(() => {
-		if (!flight || !activeCollection) {
-			return { status: "draft", issues: [] }
-		}
-		try {
-			return validateDuffelPassengers(flight, activeCollection)
-		} catch {
-			return {
-				status: "locally_valid",
-				issues: [
-					{
-						code: "VALIDATION_UNAVAILABLE",
-						stage: "provider",
-						severity: "error",
-						message: "Passenger requirements could not be evaluated for this offer. Return and select the offer again.",
-					},
-				],
-			}
-		}
-	}, [activeCollection, flight])
-
 	const [expandedPassengerIds, setExpandedPassengerIds] = useState<string[]>([])
 	const [datePicker, setDatePicker] = useState<{
 		passengerId: string
@@ -604,6 +583,27 @@ export default function PersonalInformationScreen() {
 		)
 		return allBelongToOffer ? passengerCollection : null
 	}, [flightId, passengerCollection])
+
+	const validationResult = useMemo<PassengerValidationResult>(() => {
+		if (!flight || !activeCollection) {
+			return { status: "draft", issues: [] }
+		}
+		try {
+			return validateDuffelPassengers(flight, activeCollection)
+		} catch {
+			return {
+				status: "locally_valid",
+				issues: [
+					{
+						code: "VALIDATION_UNAVAILABLE",
+						stage: "provider",
+						severity: "error",
+						message: "Passenger requirements could not be evaluated for this offer. Return and select the offer again.",
+					},
+				],
+			}
+		}
+	}, [activeCollection, flight])
 
 	useEffect(() => {
 		if (activeCollection?.passengers.length) {
