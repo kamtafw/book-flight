@@ -1,8 +1,10 @@
 import { airports } from "@/lib/data"
 import { useFlightOffersStore } from "@/store/flight-offers.store"
 import { useFlightSearchStore } from "@/store/flight-search.store"
+import { useFlightBookingStore } from "@/store/flight-booking.store"
 import { Feather, FontAwesome5 } from "@expo/vector-icons"
 import { router, useLocalSearchParams } from "expo-router"
+import { useEffect } from "react"
 import { Pressable, ScrollView, Text, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
@@ -23,6 +25,12 @@ export default function FlightDetails() {
   const { departureDate, fromAirport, toAirport } = useFlightSearchStore()
   const offers = useFlightOffersStore((state) => state.offers)
   const flight = offers.find((item) => item.id === flightId)
+  const beginBookingSession = useFlightBookingStore((state) => state.beginBookingSession)
+  const abandonBookingSession = useFlightBookingStore((state) => state.abandonBookingSession)
+
+  useEffect(() => {
+    if (flight?.id) beginBookingSession({ id: flight.id })
+  }, [flight?.id, beginBookingSession])
 
   const segments = flight?.slices[0]?.segments ?? []
   const firstSegment = segments[0]
@@ -32,7 +40,10 @@ export default function FlightDetails() {
   const arrivalAirport = airports.find((airport) => airport.code === lastSegment?.arrivalAirportCode)
     ?? airports.find((airport) => airport.code === toAirport)
 
-  const handleCancel = () => router.back()
+  const handleCancel = () => {
+    abandonBookingSession()
+    router.back()
+  }
 
   const handleConfirm = () => {
     if (!flight) return
