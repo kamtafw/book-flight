@@ -1,5 +1,5 @@
 import type { FlightOffer } from "@/lib/flights/types"
-import type { PassengerCollection } from "../passenger-domain"
+import type { PassengerCollection } from "../passengers/passenger-domain"
 import {
 	validateDuffelPassengers,
 	type PassengerValidationIssue,
@@ -38,15 +38,16 @@ export function getBookingReadiness(
 		}
 	}
 
-	const passengers = collection.passengers.map((passenger) => ({
-		internalPassengerId: passenger.id,
-		providerPassengerId:
-			passenger.providerReferences.length === 1
-				? passenger.providerReferences[0].providerPassengerId
-				: "",
-	}))
-
 	try {
+		const passengers = Array.isArray(collection.passengers)
+			? collection.passengers.map((passenger) => ({
+					internalPassengerId: passenger.id,
+					providerPassengerId:
+						Array.isArray(passenger.providerReferences) && passenger.providerReferences.length === 1
+							? passenger.providerReferences[0].providerPassengerId
+							: "",
+				}))
+			: []
 		const validation = validateDuffelPassengers(offer, collection, options)
 		return {
 			status: validation.status === "provider_ready"
@@ -60,7 +61,7 @@ export function getBookingReadiness(
 		return {
 			status: "incomplete",
 			offerId: offer.id,
-			passengers,
+			passengers: [],
 			issues: [{
 				code: "READINESS_UNAVAILABLE",
 				stage: "provider",
