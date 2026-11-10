@@ -2,14 +2,12 @@ import {
 	validatePassengerRelationships,
 	type Passenger,
 	type PassengerCollection,
-} from "../../passenger-domain"
+} from "../../passenger-domain.ts"
 import type { FlightOffer } from "@/lib/flights/types"
 import {
 	extractDuffelPassengerRequirements,
 	type DuffelPassengerRequirements,
-} from "./passenger-requirements"
-	type DuffelPassengerRequirements,
-} from "./passenger-requirements"
+} from "./passenger-requirements.ts"
 
 export type PassengerValidationStatus = "draft" | "locally_valid" | "provider_ready"
 export type PassengerValidationStage = "local" | "provider"
