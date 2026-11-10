@@ -592,11 +592,11 @@ export default function PersonalInformationScreen() {
 			return validateDuffelPassengers(flight, activeCollection)
 		} catch {
 			return {
-				status: "locally_valid",
+				status: "draft",
 				issues: [
 					{
 						code: "VALIDATION_UNAVAILABLE",
-						stage: "provider",
+						stage: "local",
 						severity: "error",
 						message: "Passenger requirements could not be evaluated for this offer. Return and select the offer again.",
 					},
