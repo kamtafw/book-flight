@@ -39,10 +39,7 @@ export class DuffelPassengerRequirementsError extends Error {
 function isCalendarDate(value: string): boolean {
 	if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
 	const parsed = new Date(`${value}T00:00:00.000Z`)
-	return (
-		Number.isFinite(parsed.getTime()) &&
-		parsed.toISOString().slice(0, 10) === value
-	)
+	return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
 }
 
 function getLastFlightDate(offer: FlightOffer): string | null {
@@ -84,10 +81,7 @@ export function extractDuffelPassengerRequirements(
 
 	const providerPassengerIds = new Set<string>()
 	const passengers = offer.passengers.map((passenger) => {
-		if (
-			typeof passenger.id !== "string" ||
-			!passenger.id.trim()
-		) {
+		if (typeof passenger.id !== "string" || !passenger.id.trim()) {
 			throw new DuffelPassengerRequirementsError(
 				"An offer passenger is missing a valid provider passenger ID.",
 				"INVALID_PROVIDER_PASSENGER_ID",
@@ -103,12 +97,9 @@ export function extractDuffelPassengerRequirements(
 
 		return {
 			providerPassengerId: passenger.id,
-			providerPassengerType:
-				typeof passenger.type === "string" ? passenger.type : null,
+			providerPassengerType: typeof passenger.type === "string" ? passenger.type : null,
 			age:
-				typeof passenger.age === "number" &&
-				Number.isFinite(passenger.age) &&
-				passenger.age >= 0
+				typeof passenger.age === "number" && Number.isFinite(passenger.age) && passenger.age >= 0
 					? passenger.age
 					: null,
 		}
@@ -129,9 +120,7 @@ export function extractDuffelPassengerRequirements(
 					: documentRequired === false
 						? "not_required"
 						: "unknown",
-			supportedTypes: Array.isArray(supportedTypes)
-				? [...supportedTypes]
-				: null,
+			supportedTypes: Array.isArray(supportedTypes) ? [...supportedTypes] : null,
 		},
 		acceptedGenderValues: ["m", "f"],
 	}

@@ -135,7 +135,6 @@ test("maps the offer id, fare, segments, and operating carriers", () => {
 	assert.equal(offer.slices[0].segments[0].flightNumber, "EA 123")
 })
 
-
 test("preserves explicit false and empty supported-document metadata", () => {
 	const offer = mapOffer({
 		id: "off_metadata_false",

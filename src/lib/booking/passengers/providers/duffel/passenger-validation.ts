@@ -1,13 +1,13 @@
+import type { FlightOffer } from "@/lib/flights/types"
 import {
 	validatePassengerRelationships,
 	type Passenger,
 	type PassengerCollection,
-} from "../../passenger-domain.ts"
-import type { FlightOffer } from "@/lib/flights/types"
+} from "../../passenger-domain"
 import {
 	extractDuffelPassengerRequirements,
 	type DuffelPassengerRequirements,
-} from "./passenger-requirements.ts"
+} from "./passenger-requirements"
 
 export type PassengerValidationStatus = "draft" | "locally_valid" | "provider_ready"
 export type PassengerValidationStage = "local" | "provider"
@@ -105,14 +105,24 @@ export function validateDuffelPassengers(
 	const passengers = collection?.passengers
 
 	if (!Array.isArray(passengers)) {
-		addIssue(issues, "INVALID_PASSENGER_COLLECTION", "local", "Passenger information is unavailable.")
+		addIssue(
+			issues,
+			"INVALID_PASSENGER_COLLECTION",
+			"local",
+			"Passenger information is unavailable.",
+		)
 		return { status: "draft", issues }
 	}
 
 	const internalIds = new Set<string>()
 	for (const passenger of passengers) {
 		if (!passenger.id || internalIds.has(passenger.id)) {
-			addIssue(issues, "DUPLICATE_OR_INVALID_INTERNAL_ID", "local", "Each traveller must have a unique internal identity.")
+			addIssue(
+				issues,
+				"DUPLICATE_OR_INVALID_INTERNAL_ID",
+				"local",
+				"Each traveller must have a unique internal identity.",
+			)
 		}
 		internalIds.add(passenger.id)
 	}
@@ -121,38 +131,81 @@ export function validateDuffelPassengers(
 	const mappedIds = new Set<string>()
 	for (const passenger of passengers) {
 		if (!Array.isArray(passenger.providerReferences) || passenger.providerReferences.length !== 1) {
-			addIssue(issues, "INVALID_PROVIDER_REFERENCE_COUNT", "local", "Each traveller must map to exactly one passenger identity on the selected offer.", passenger.id)
+			addIssue(
+				issues,
+				"INVALID_PROVIDER_REFERENCE_COUNT",
+				"local",
+				"Each traveller must map to exactly one passenger identity on the selected offer.",
+				passenger.id,
+			)
 			continue
 		}
 		const reference = passenger.providerReferences[0]
 		if (reference.provider !== "duffel") {
-			addIssue(issues, "WRONG_PROVIDER", "local", "A traveller is linked to an unsupported flight provider.", passenger.id)
+			addIssue(
+				issues,
+				"WRONG_PROVIDER",
+				"local",
+				"A traveller is linked to an unsupported flight provider.",
+				passenger.id,
+			)
 			continue
 		}
 		if (reference.offerId !== requirements.offerId) {
-			addIssue(issues, "FOREIGN_OFFER_REFERENCE", "local", "A traveller is linked to a different flight offer.", passenger.id)
+			addIssue(
+				issues,
+				"FOREIGN_OFFER_REFERENCE",
+				"local",
+				"A traveller is linked to a different flight offer.",
+				passenger.id,
+			)
 			continue
 		}
 		if (!reference.providerPassengerId || !offerIds.has(reference.providerPassengerId)) {
-			addIssue(issues, "MISMATCHED_PROVIDER_PASSENGER", "local", "A traveller does not match a passenger on the selected offer.", passenger.id)
+			addIssue(
+				issues,
+				"MISMATCHED_PROVIDER_PASSENGER",
+				"local",
+				"A traveller does not match a passenger on the selected offer.",
+				passenger.id,
+			)
 			continue
 		}
 		if (mappedIds.has(reference.providerPassengerId)) {
-			addIssue(issues, "DUPLICATE_PROVIDER_PASSENGER_MAPPING", "local", "More than one traveller maps to the same offer passenger.", passenger.id)
+			addIssue(
+				issues,
+				"DUPLICATE_PROVIDER_PASSENGER_MAPPING",
+				"local",
+				"More than one traveller maps to the same offer passenger.",
+				passenger.id,
+			)
 			continue
 		}
 		mappedIds.add(reference.providerPassengerId)
 	}
 	for (const providerId of offerIds) {
 		if (!mappedIds.has(providerId)) {
-			addIssue(issues, "MISSING_INTERNAL_PASSENGER", "local", "A passenger on the selected offer has no matching traveller details.")
+			addIssue(
+				issues,
+				"MISSING_INTERNAL_PASSENGER",
+				"local",
+				"A passenger on the selected offer has no matching traveller details.",
+			)
 		}
 	}
 	if (mappedIds.size !== offerIds.size || passengers.length !== requirements.passengers.length) {
-		addIssue(issues, "PASSENGER_SET_MISMATCH", "local", "Traveller details must match the selected offer's passenger list exactly.")
+		addIssue(
+			issues,
+			"PASSENGER_SET_MISMATCH",
+			"local",
+			"Traveller details must match the selected offer's passenger list exactly.",
+		)
 	}
 
-	for (const relationshipIssue of validatePassengerRelationships(passengers, collection.relationships ?? [])) {
+	for (const relationshipIssue of validatePassengerRelationships(
+		passengers,
+		collection.relationships ?? [],
+	)) {
 		addIssue(
 			issues,
 			relationshipIssue.code,
@@ -164,27 +217,57 @@ export function validateDuffelPassengers(
 
 	const passengerById = new Map(passengers.map((passenger) => [passenger.id, passenger]))
 	const adultAssignedInfants = new Set<string>()
-	const infantRelationships = (collection.relationships ?? []).filter((item) => item.type === "responsible_adult")
+	const infantRelationships = (collection.relationships ?? []).filter(
+		(item) => item.type === "responsible_adult",
+	)
 
 	for (const passenger of passengers) {
 		const type = providerPassengerType(requirements, passenger)
 		if (!type) {
-			addIssue(issues, "PASSENGER_TYPE_UNKNOWN", "provider", "The selected offer does not identify this traveller's provider passenger type.", passenger.id, "passengerType")
+			addIssue(
+				issues,
+				"PASSENGER_TYPE_UNKNOWN",
+				"provider",
+				"The selected offer does not identify this traveller's provider passenger type.",
+				passenger.id,
+				"passengerType",
+			)
 		}
 		const isInfant = typeof type === "string" && type.startsWith("infant")
 		const ownRelationships = infantRelationships.filter((item) => item.passengerId === passenger.id)
 		if (isInfant && ownRelationships.length !== 1) {
-			addIssue(issues, "INFANT_RESPONSIBLE_ADULT_REQUIRED", "provider", "Assign exactly one responsible adult to this infant.", passenger.id, "responsibleAdult")
+			addIssue(
+				issues,
+				"INFANT_RESPONSIBLE_ADULT_REQUIRED",
+				"provider",
+				"Assign exactly one responsible adult to this infant.",
+				passenger.id,
+				"responsibleAdult",
+			)
 		}
 		for (const relationship of ownRelationships) {
 			const adult = passengerById.get(relationship.relatedPassengerId)
 			const adultType = adult ? providerPassengerType(requirements, adult) : null
 			if (!adult || adultType !== "adult") {
-				addIssue(issues, "RESPONSIBLE_PASSENGER_NOT_ADULT", "provider", "The responsible traveller must be an adult on this offer.", passenger.id, "responsibleAdult")
+				addIssue(
+					issues,
+					"RESPONSIBLE_PASSENGER_NOT_ADULT",
+					"provider",
+					"The responsible traveller must be an adult on this offer.",
+					passenger.id,
+					"responsibleAdult",
+				)
 				continue
 			}
 			if (adultAssignedInfants.has(adult.id)) {
-				addIssue(issues, "ADULT_ASSIGNED_MULTIPLE_INFANTS", "provider", "Each infant must have a different responsible adult.", passenger.id, "responsibleAdult")
+				addIssue(
+					issues,
+					"ADULT_ASSIGNED_MULTIPLE_INFANTS",
+					"provider",
+					"Each infant must have a different responsible adult.",
+					passenger.id,
+					"responsibleAdult",
+				)
 			}
 			adultAssignedInfants.add(adult.id)
 		}
@@ -193,112 +276,319 @@ export function validateDuffelPassengers(
 		const passenger = passengerById.get(relationship.passengerId)
 		const type = passenger ? providerPassengerType(requirements, passenger) : null
 		if (type && !type.startsWith("infant")) {
-			addIssue(issues, "RELATIONSHIP_OWNER_NOT_INFANT", "local", "Only an infant can have a responsible-adult relationship.", relationship.passengerId, "responsibleAdult")
+			addIssue(
+				issues,
+				"RELATIONSHIP_OWNER_NOT_INFANT",
+				"local",
+				"Only an infant can have a responsible-adult relationship.",
+				relationship.passengerId,
+				"responsibleAdult",
+			)
 		}
 	}
 
 	for (const passenger of passengers) {
 		const identity = passenger.identity ?? {}
 		if (!identity.givenName?.trim()) {
-			addIssue(issues, "GIVEN_NAME_REQUIRED", "local", "Enter this traveller's given name.", passenger.id, "givenName")
+			addIssue(
+				issues,
+				"GIVEN_NAME_REQUIRED",
+				"local",
+				"Enter this traveller's given name.",
+				passenger.id,
+				"givenName",
+			)
 		}
 		if (!identity.familyName?.trim()) {
-			addIssue(issues, "FAMILY_NAME_REQUIRED", "local", "Enter this traveller's family name.", passenger.id, "familyName")
+			addIssue(
+				issues,
+				"FAMILY_NAME_REQUIRED",
+				"local",
+				"Enter this traveller's family name.",
+				passenger.id,
+				"familyName",
+			)
 		}
 		if (!isCalendarDate(identity.dateOfBirth)) {
-			addIssue(issues, "INVALID_DATE_OF_BIRTH", "local", "Enter a real date of birth in YYYY-MM-DD format.", passenger.id, "dateOfBirth")
+			addIssue(
+				issues,
+				"INVALID_DATE_OF_BIRTH",
+				"local",
+				"Enter a real date of birth in YYYY-MM-DD format.",
+				passenger.id,
+				"dateOfBirth",
+			)
 		} else if (identity.dateOfBirth > today) {
-			addIssue(issues, "DATE_OF_BIRTH_IN_FUTURE", "local", "Date of birth cannot be in the future.", passenger.id, "dateOfBirth")
+			addIssue(
+				issues,
+				"DATE_OF_BIRTH_IN_FUTURE",
+				"local",
+				"Date of birth cannot be in the future.",
+				passenger.id,
+				"dateOfBirth",
+			)
 		} else {
 			const type = providerPassengerType(requirements, passenger)
 			const providerPassenger = requirements.passengers.find((item) =>
-				passenger.providerReferences.some((reference) => reference.providerPassengerId === item.providerPassengerId),
+				passenger.providerReferences.some(
+					(reference) => reference.providerPassengerId === item.providerPassengerId,
+				),
 			)
 			if (providerPassenger?.age !== null && providerPassenger?.age !== undefined) {
 				if (!requirements.lastFlightDate) {
-					addIssue(issues, "AGE_CHECK_UNKNOWN", "provider", "The itinerary does not provide a reliable final-flight date for age verification.", passenger.id, "dateOfBirth")
-				} else if (calculateAge(identity.dateOfBirth, requirements.lastFlightDate) !== providerPassenger.age) {
-					addIssue(issues, "PASSENGER_AGE_MISMATCH", "local", "Date of birth does not match the age returned for this passenger on the selected offer.", passenger.id, "dateOfBirth")
+					addIssue(
+						issues,
+						"AGE_CHECK_UNKNOWN",
+						"provider",
+						"The itinerary does not provide a reliable final-flight date for age verification.",
+						passenger.id,
+						"dateOfBirth",
+					)
+				} else if (
+					calculateAge(identity.dateOfBirth, requirements.lastFlightDate) !== providerPassenger.age
+				) {
+					addIssue(
+						issues,
+						"PASSENGER_AGE_MISMATCH",
+						"local",
+						"Date of birth does not match the age returned for this passenger on the selected offer.",
+						passenger.id,
+						"dateOfBirth",
+					)
 				}
 			} else if (type && type !== "adult") {
 				// Adult search passengers are intentionally sent without ages. The offer's
 				// adult classification is authoritative; missing adult age is not a blocker.
 				// Age-dependent categories still require provider age for consistency checks.
-				addIssue(issues, "AGE_CHECK_UNKNOWN", "provider", "The offer does not provide an age for this age-dependent passenger, so age consistency cannot be confirmed.", passenger.id, "dateOfBirth")
+				addIssue(
+					issues,
+					"AGE_CHECK_UNKNOWN",
+					"provider",
+					"The offer does not provide an age for this age-dependent passenger, so age consistency cannot be confirmed.",
+					passenger.id,
+					"dateOfBirth",
+				)
 			}
 		}
 
 		if (!normalizeGender(identity.gender)) {
-			addIssue(issues, "UNSUPPORTED_GENDER", "local", "Select a gender value supported by the flight provider (male or female).", passenger.id, "gender")
+			addIssue(
+				issues,
+				"UNSUPPORTED_GENDER",
+				"local",
+				"Select a gender value supported by the flight provider (male or female).",
+				passenger.id,
+				"gender",
+			)
 		}
 
 		const contacts = passenger.contacts ?? []
 		const emailContacts = contacts.filter((item) => item.type === "email")
 		const phoneContacts = contacts.filter((item) => item.type === "phone")
 		if (emailContacts.length !== 1) {
-			addIssue(issues, "PASSENGER_EMAIL_REQUIRED", "provider", "Enter one valid email address belonging to this traveller.", passenger.id, "email")
+			addIssue(
+				issues,
+				"PASSENGER_EMAIL_REQUIRED",
+				"provider",
+				"Enter one valid email address belonging to this traveller.",
+				passenger.id,
+				"email",
+			)
 		} else {
 			const email = emailContacts[0]
-			if (email.belongsTo !== "passenger" || !email.value.trim() || !EMAIL_PATTERN.test(email.value.trim())) {
-				addIssue(issues, "PASSENGER_OWN_EMAIL_REQUIRED", "provider", "A valid email address belonging to this traveller is required; another person's email cannot be used.", passenger.id, "email")
+			if (
+				email.belongsTo !== "passenger" ||
+				!email.value.trim() ||
+				!EMAIL_PATTERN.test(email.value.trim())
+			) {
+				addIssue(
+					issues,
+					"PASSENGER_OWN_EMAIL_REQUIRED",
+					"provider",
+					"A valid email address belonging to this traveller is required; another person's email cannot be used.",
+					passenger.id,
+					"email",
+				)
 			}
 		}
 		if (phoneContacts.length !== 1) {
-			addIssue(issues, "PASSENGER_PHONE_REQUIRED", "provider", "Enter one valid phone number for this traveller.", passenger.id, "phone")
+			addIssue(
+				issues,
+				"PASSENGER_PHONE_REQUIRED",
+				"provider",
+				"Enter one valid phone number for this traveller.",
+				passenger.id,
+				"phone",
+			)
 		} else {
 			const phone = phoneContacts[0]
 			if (!isValidPhone(phone.value)) {
-				addIssue(issues, "INVALID_PHONE", "provider", "Enter a valid phone number using 7 to 15 digits.", passenger.id, "phone")
+				addIssue(
+					issues,
+					"INVALID_PHONE",
+					"provider",
+					"Enter a valid phone number using 7 to 15 digits.",
+					passenger.id,
+					"phone",
+				)
 			} else if (phone.belongsTo === "other") {
-				const owner = phone.relatedPersonPassengerId ? passengerById.get(phone.relatedPersonPassengerId) : undefined
+				const owner = phone.relatedPersonPassengerId
+					? passengerById.get(phone.relatedPersonPassengerId)
+					: undefined
 				const ownerType = owner ? providerPassengerType(requirements, owner) : null
 				if (!owner || owner.id === passenger.id || ownerType !== "adult") {
-					addIssue(issues, "INVALID_PHONE_OWNER", "provider", "Select a different adult traveller as the owner of this phone number.", passenger.id, "phone")
+					addIssue(
+						issues,
+						"INVALID_PHONE_OWNER",
+						"provider",
+						"Select a different adult traveller as the owner of this phone number.",
+						passenger.id,
+						"phone",
+					)
 				}
 			} else if (phone.belongsTo !== "passenger") {
-				addIssue(issues, "INVALID_PHONE_OWNERSHIP", "provider", "Identify who owns this phone number.", passenger.id, "phone")
+				addIssue(
+					issues,
+					"INVALID_PHONE_OWNERSHIP",
+					"provider",
+					"Identify who owns this phone number.",
+					passenger.id,
+					"phone",
+				)
 			}
 		}
 
 		const documents = passenger.travelDocuments ?? []
 		if (documents.length > 1) {
-			addIssue(issues, "MULTIPLE_DOCUMENTS_UNSUPPORTED", "provider", "This form currently supports one travel document per traveller.", passenger.id, "travelDocument")
+			addIssue(
+				issues,
+				"MULTIPLE_DOCUMENTS_UNSUPPORTED",
+				"provider",
+				"This form currently supports one travel document per traveller.",
+				passenger.id,
+				"travelDocument",
+			)
 		}
 		const document = documents[0]
 		if (requirements.identityDocuments.status === "unknown") {
-			addIssue(issues, "DOCUMENT_REQUIREMENT_UNKNOWN", "provider", "The selected offer's travel-document requirement is unknown; verify the offer before continuing.", passenger.id, "travelDocument")
-		} else if (requirements.identityDocuments.status === "required" && !requirements.identityDocuments.supportedTypes) {
-			addIssue(issues, "DOCUMENT_TYPES_UNKNOWN", "provider", "The offer requires a passport but does not provide its supported document types; this must be verified.", passenger.id, "travelDocument")
+			addIssue(
+				issues,
+				"DOCUMENT_REQUIREMENT_UNKNOWN",
+				"provider",
+				"The selected offer's travel-document requirement is unknown; verify the offer before continuing.",
+				passenger.id,
+				"travelDocument",
+			)
+		} else if (
+			requirements.identityDocuments.status === "required" &&
+			!requirements.identityDocuments.supportedTypes
+		) {
+			addIssue(
+				issues,
+				"DOCUMENT_TYPES_UNKNOWN",
+				"provider",
+				"The offer requires a passport but does not provide its supported document types; this must be verified.",
+				passenger.id,
+				"travelDocument",
+			)
 		}
 		if (requirements.identityDocuments.status === "required" && !document) {
-			addIssue(issues, "PASSPORT_REQUIRED", "provider", "Add a passport for this traveller because the selected offer requires identity documents.", passenger.id, "travelDocument")
+			addIssue(
+				issues,
+				"PASSPORT_REQUIRED",
+				"provider",
+				"Add a passport for this traveller because the selected offer requires identity documents.",
+				passenger.id,
+				"travelDocument",
+			)
 		}
 		if (document) {
 			const documentType = document.type.trim().toLowerCase()
-			if (!documentType || !document.documentNumber?.trim() || !document.issuingCountry?.trim() || !document.expirationDate?.trim()) {
-				addIssue(issues, "INCOMPLETE_TRAVEL_DOCUMENT", "provider", "Complete the document type, number, issuing country and expiry date.", passenger.id, "travelDocument")
+			if (
+				!documentType ||
+				!document.documentNumber?.trim() ||
+				!document.issuingCountry?.trim() ||
+				!document.expirationDate?.trim()
+			) {
+				addIssue(
+					issues,
+					"INCOMPLETE_TRAVEL_DOCUMENT",
+					"provider",
+					"Complete the document type, number, issuing country and expiry date.",
+					passenger.id,
+					"travelDocument",
+				)
 			} else {
-				if (requirements.identityDocuments.supportedTypes && !requirements.identityDocuments.supportedTypes.some((item) => item.trim().toLowerCase() === documentType)) {
-					addIssue(issues, "UNSUPPORTED_DOCUMENT_TYPE", "provider", "The selected offer does not support this travel-document type.", passenger.id, "travelDocument")
+				if (
+					requirements.identityDocuments.supportedTypes &&
+					!requirements.identityDocuments.supportedTypes.some(
+						(item) => item.trim().toLowerCase() === documentType,
+					)
+				) {
+					addIssue(
+						issues,
+						"UNSUPPORTED_DOCUMENT_TYPE",
+						"provider",
+						"The selected offer does not support this travel-document type.",
+						passenger.id,
+						"travelDocument",
+					)
 				} else if (!requirements.identityDocuments.supportedTypes) {
-					addIssue(issues, "DOCUMENT_TYPE_SUPPORT_UNKNOWN", "provider", "The offer's supported travel-document types are unknown, so this document cannot yet be verified.", passenger.id, "travelDocument")
+					addIssue(
+						issues,
+						"DOCUMENT_TYPE_SUPPORT_UNKNOWN",
+						"provider",
+						"The offer's supported travel-document types are unknown, so this document cannot yet be verified.",
+						passenger.id,
+						"travelDocument",
+					)
 				}
 				if (requirements.identityDocuments.status === "required" && documentType !== "passport") {
-					addIssue(issues, "PASSPORT_REQUIRED", "provider", "The selected offer requires a passport for this traveller.", passenger.id, "travelDocument")
+					addIssue(
+						issues,
+						"PASSPORT_REQUIRED",
+						"provider",
+						"The selected offer requires a passport for this traveller.",
+						passenger.id,
+						"travelDocument",
+					)
 				}
 				if (!/^[A-Z]{2}$/.test(document.issuingCountry.trim().toUpperCase())) {
-					addIssue(issues, "INVALID_ISSUING_COUNTRY", "provider", "Use a two-letter ISO country code for the document's issuing country.", passenger.id, "travelDocument")
+					addIssue(
+						issues,
+						"INVALID_ISSUING_COUNTRY",
+						"provider",
+						"Use a two-letter ISO country code for the document's issuing country.",
+						passenger.id,
+						"travelDocument",
+					)
 				}
 				if (!isCalendarDate(document.expirationDate)) {
-					addIssue(issues, "INVALID_DOCUMENT_EXPIRY", "provider", "Enter a real document expiry date in YYYY-MM-DD format.", passenger.id, "travelDocument")
+					addIssue(
+						issues,
+						"INVALID_DOCUMENT_EXPIRY",
+						"provider",
+						"Enter a real document expiry date in YYYY-MM-DD format.",
+						passenger.id,
+						"travelDocument",
+					)
 				} else if (document.expirationDate < today) {
-					addIssue(issues, "EXPIRED_DOCUMENT", "provider", "This travel document has expired.", passenger.id, "travelDocument")
+					addIssue(
+						issues,
+						"EXPIRED_DOCUMENT",
+						"provider",
+						"This travel document has expired.",
+						passenger.id,
+						"travelDocument",
+					)
 				}
 			}
 		}
 	}
 
-	const hasLocalErrors = issues.some((issue) => issue.stage === "local" && issue.severity === "error")
+	const hasLocalErrors = issues.some(
+		(issue) => issue.stage === "local" && issue.severity === "error",
+	)
 	if (hasLocalErrors) return { status: "draft", issues }
 	if (issues.some((issue) => issue.severity === "error")) return { status: "locally_valid", issues }
 	return { status: "provider_ready", issues }

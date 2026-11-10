@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { CountrySelectorModal } from "@/components/country-selector-modal"
-import { FieldShell, FloatingInput } from "@/components/floating-label-input"
-import { countries, defaultPickerDate } from "@/constants"
+import { FieldShell,FloatingInput } from "@/components/floating-label-input"
+import { countries,defaultPickerDate } from "@/constants"
 import type {
 	Passenger,
 	PassengerContact,
@@ -15,10 +15,10 @@ import {
 } from "@/lib/booking/passengers/providers/duffel/passenger-validation"
 import { useFlightBookingStore } from "@/store/flight-booking.store"
 import { useFlightOffersStore } from "@/store/flight-offers.store"
-import { Feather, FontAwesome5, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons"
+import { Feather,FontAwesome5,Ionicons,MaterialCommunityIcons } from "@expo/vector-icons"
 import { clsx } from "clsx"
-import { router, useLocalSearchParams } from "expo-router"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { router,useLocalSearchParams } from "expo-router"
+import { useCallback,useEffect,useMemo,useState } from "react"
 import {
 	ActivityIndicator,
 	KeyboardAvoidingView,
@@ -209,11 +209,12 @@ function PassengerCard({
 				<View className="gap-y-5 border-t border-border px-4 pb-5 pt-5">
 					{issues.length > 0 ? (
 						<View className="gap-y-2 rounded-xl border border-red-100 bg-red-50 p-3">
-							<Text className="font-inter-semibold text-sm text-red-700">
-								Review these details
-							</Text>
+							<Text className="font-inter-semibold text-sm text-red-700">Review these details</Text>
 							{issues.map((issue, index) => (
-								<Text key={`${issue.code}-${issue.field ?? "general"}-${index}`} className="font-inter text-xs leading-5 text-red-700">
+								<Text
+									key={`${issue.code}-${issue.field ?? "general"}-${index}`}
+									className="font-inter text-xs leading-5 text-red-700"
+								>
 									{issue.message}
 								</Text>
 							))}
@@ -598,7 +599,8 @@ export default function PersonalInformationScreen() {
 						code: "VALIDATION_UNAVAILABLE",
 						stage: "local",
 						severity: "error",
-						message: "Passenger requirements could not be evaluated for this offer. Return and select the offer again.",
+						message:
+							"Passenger requirements could not be evaluated for this offer. Return and select the offer again.",
 					},
 				],
 			}
@@ -808,14 +810,16 @@ export default function PersonalInformationScreen() {
 					<View className="mb-4 rounded-2xl border border-border bg-white p-4">
 						<View className="flex-row items-center justify-between">
 							<Text className="font-inter-semibold text-sm text-black">Validation status</Text>
-							<Text className={clsx(
-								"rounded-full px-3 py-1 font-inter-medium text-xs",
-								validationResult.status === "provider_ready"
-									? "bg-green-50 text-green-700"
-									: validationResult.status === "locally_valid"
-										? "bg-amber-50 text-amber-700"
-										: "bg-red-50 text-red-700",
-							)}>
+							<Text
+								className={clsx(
+									"rounded-full px-3 py-1 font-inter-medium text-xs",
+									validationResult.status === "provider_ready"
+										? "bg-green-50 text-green-700"
+										: validationResult.status === "locally_valid"
+											? "bg-amber-50 text-amber-700"
+											: "bg-red-50 text-red-700",
+								)}
+							>
 								{validationResult.status === "provider_ready"
 									? "Provider-ready"
 									: validationResult.status === "locally_valid"
@@ -830,11 +834,16 @@ export default function PersonalInformationScreen() {
 									? "Basic details are valid, but one or more provider requirements still need attention or verification."
 									: "Some passenger details are missing or locally invalid."}
 						</Text>
-						{validationResult.issues.filter((issue) => !issue.passengerId).map((issue, index) => (
-							<Text key={`global-${issue.code}-${index}`} className="mt-2 font-inter text-xs leading-5 text-red-700">
-								{issue.message}
-							</Text>
-						))}
+						{validationResult.issues
+							.filter((issue) => !issue.passengerId)
+							.map((issue, index) => (
+								<Text
+									key={`global-${issue.code}-${index}`}
+									className="mt-2 font-inter text-xs leading-5 text-red-700"
+								>
+									{issue.message}
+								</Text>
+							))}
 					</View>
 
 					{activeCollection.passengers.map((passenger) => (
