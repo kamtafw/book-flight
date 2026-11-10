@@ -115,7 +115,9 @@ Validate DOB against the selected offer's passenger age when that age is availab
 - Calculate age on the relevant last-flight date from the selected itinerary.
 - Compare with provider-returned age using a documented age calculation.
 - Report inconsistency; do not overwrite provider passenger type/category or infer a new category from generic age cutoffs.
-- If provider age or a reliable last-flight date is unavailable, report the relevant check as unknown rather than inventing certainty.
+- If provider age is available, a reliable last-flight date is required to compare DOB-derived age with provider age.
+- If provider age is unavailable for a passenger classified as an adult, do not block readiness on age consistency: adult search passengers are intentionally sent without ages, and the selected offer's `adult` classification remains authoritative. Still require a real, non-future DOB.
+- If provider age is unavailable for a child or infant (or another age-dependent provider category), report the age check as unknown and block provider readiness. Do not infer or reconstruct the missing provider age from generic category cutoffs.
 - Provider passenger type/category from the selected offer remains authoritative for adapter-level eligibility decisions.
 
 ## 7. Contact validation
@@ -204,7 +206,7 @@ Issue messages must be actionable and must not echo passport numbers, email addr
 - [ ] Selected-offer/internal-passenger mapping is exact, one-to-one, provider-correct, and offer-scoped.
 - [ ] Missing, duplicate, mismatched, extra, and foreign-offer identities block readiness.
 - [ ] Required names, real DOB, and supported gender values are validated.
-- [ ] DOB/age consistency uses the selected itinerary's last-flight date and provider-returned age when available.
+- [ ] DOB/age consistency uses the selected itinerary's last-flight date and provider-returned age when available; missing adult age does not block readiness, while missing age for child/infant categories does.
 - [ ] Provider passenger category is not redefined by generic age cutoffs.
 - [ ] Passenger's own email is required; another adult's email cannot satisfy it.
 - [ ] A phone owned by another adult is accepted only with explicit, valid ownership association.
@@ -244,7 +246,9 @@ At minimum, tests must cover:
 - valid gender mapping;
 - unsupported gender value;
 - DOB/age match and mismatch using last-flight date;
-- unknown age/date does not produce a false pass.
+- missing adult age does not block readiness when DOB is locally valid;
+- missing child/infant age blocks provider readiness;
+- missing age-dependent category/date does not produce a false pass.
 
 **Contacts**
 - passenger-owned valid email;
