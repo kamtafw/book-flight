@@ -1,13 +1,14 @@
 import { Feather, FontAwesome5, MaterialIcons, Octicons } from "@expo/vector-icons"
 import { clsx } from "clsx"
-import { router } from "expo-router"
-import { useState } from "react"
+import { router, useFocusEffect } from "expo-router"
+import { useCallback, useState } from "react"
 import { Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
 import BookingPreferencesModal from "@/components/booking-preferences-modal"
 import { cabinOptions, tripOptions } from "@/constants"
 import { airports } from "@/lib/data"
+import { useFlightBookingStore } from "@/store/flight-booking.store"
 import { useFlightSearchStore } from "@/store/flight-search.store"
 
 export default function Index() {
@@ -15,6 +16,13 @@ export default function Index() {
 		useFlightSearchStore()
 	const setTripType = useFlightSearchStore((state) => state.setTripType)
 	const setAirports = useFlightSearchStore((state) => state.setAirports)
+	const abandonBookingSession = useFlightBookingStore((state) => state.abandonBookingSession)
+
+	useFocusEffect(
+		useCallback(() => {
+			abandonBookingSession()
+		}, [abandonBookingSession]),
+	)
 
 	const selectedFromAirport = airports.find((airport) => airport.code === fromAirport)
 	const selectedToAirport = airports.find((airport) => airport.code === toAirport)

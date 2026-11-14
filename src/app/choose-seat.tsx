@@ -261,7 +261,6 @@ export default function ChooseSeatScreen() {
 	const passengers = useFlightSearchStore((state) => state.passengers)
 	const selectedSeats = useFlightBookingStore((state) => state.selectedOutboundSeatServices)
 	const selectSeat = useFlightBookingStore((state) => state.selectOutboundSeatService)
-	const clearSeats = useFlightBookingStore((state) => state.clearOutboundSeatServices)
 
 	const [seatMaps, setSeatMaps] = useState<FlightSeatMap[]>([])
 	const [loading, setLoading] = useState(true)
@@ -270,13 +269,12 @@ export default function ChooseSeatScreen() {
 
 	useEffect(() => {
 		let active = true
-		clearSeats()
 		// eslint-disable-next-line react-hooks/set-state-in-effect
 		setSeatMaps([])
 		setErrorMessage(null)
 		setLoading(true)
 
-		if (!flightId || !flight) {
+		if (!flightId || flight?.id !== flightId) {
 			setErrorMessage("This flight is no longer available. Go back and select a flight again.")
 			setLoading(false)
 			return () => {
@@ -305,7 +303,7 @@ export default function ChooseSeatScreen() {
 		return () => {
 			active = false
 		}
-	}, [flightId, flight?.id, clearSeats])
+	}, [flightId, flight?.id])
 
 	const passengerIds = useMemo(
 		// eslint-disable-next-line react-hooks/preserve-manual-memoization

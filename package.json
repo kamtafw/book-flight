@@ -42,6 +42,7 @@
 		"eslint-config-expo": "~57.0.2",
 		"prettier-plugin-tailwindcss": "^0.5.14",
 		"tailwindcss": "^3.4.19",
+		"tsx": "^4.23.15",
 		"typescript": "~6.0.3"
 	},
 	"scripts": {
@@ -51,8 +52,13 @@
 		"ios": "expo start --ios",
 		"web": "expo start --web",
 		"lint": "expo lint",
-		"test:passenger-domain": "node --experimental-strip-types --test src/lib/booking/passengers/passenger-domain.test.mjs",
-		"test:booking-session": "node --experimental-strip-types --test src/lib/booking/readiness/booking-session.test.mjs"
+		"test": "tsx --test src/lib/booking/passengers/passenger-domain.test.mjs src/lib/booking/passengers/providers/duffel/passenger-requirements.test.mjs src/lib/booking/passengers/providers/duffel/passenger-validation.test.mjs src/lib/booking/readiness/booking-readiness.test.mjs src/lib/booking/readiness/booking-session.test.mjs functions/flight-search/src/main.test.js",
+		"test:passenger-domain": "tsx --test src/lib/booking/passengers/passenger-domain.test.mjs",
+		"test:passenger-requirements": "tsx --test src/lib/booking/passengers/providers/duffel/passenger-requirements.test.mjs",
+		"test:passenger-validation": "tsx --test src/lib/booking/passengers/providers/duffel/passenger-validation.test.mjs",
+		"test:booking-readiness": "tsx --test src/lib/booking/readiness/booking-readiness.test.mjs",
+		"test:booking-session": "tsx --test src/lib/booking/readiness/booking-session.test.mjs",
+		"test:flight-search": "tsx --test functions/flight-search/src/main.test.js"
 	},
 	"private": true
 }

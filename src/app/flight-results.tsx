@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons"
-import { router } from "expo-router"
-import { useEffect, useState } from "react"
+import { router, useFocusEffect } from "expo-router"
+import { useCallback, useEffect, useState } from "react"
 import { ActivityIndicator, FlatList, Pressable, Text, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
@@ -9,6 +9,7 @@ import { cabinOptions } from "@/constants"
 import { airports } from "@/lib/data"
 import { searchFlights } from "@/lib/flights/api"
 import { FlightSearchError, type FlightOffer } from "@/lib/flights/types"
+import { useFlightBookingStore } from "@/store/flight-booking.store"
 import { useFlightOffersStore } from "@/store/flight-offers.store"
 import { useFlightSearchStore } from "@/store/flight-search.store"
 
@@ -28,6 +29,13 @@ export default function FlightResultsScreen() {
 	const setOffers = useFlightOffersStore((state) => state.setOffers)
 	const [loading, setLoading] = useState(false)
 	const [errorMessage, setErrorMessage] = useState<string | null>(null)
+	const abandonBookingSession = useFlightBookingStore((state) => state.abandonBookingSession)
+
+	useFocusEffect(
+		useCallback(() => {
+			abandonBookingSession()
+		}, [abandonBookingSession]),
+	)
 
 	const selectedFromAirport = airports.find((airport) => airport.code === fromAirport)
 	const selectedToAirport = airports.find((airport) => airport.code === toAirport)

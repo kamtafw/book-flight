@@ -1,5 +1,5 @@
 import type { FlightOffer } from "@/lib/flights/types"
-import type { PassengerCollection } from "../passengers/passenger-domain.ts"
+import type { PassengerCollection } from "../passengers/passenger-domain"
 import {
 	validateDuffelPassengers,
 	type PassengerValidationIssue,
