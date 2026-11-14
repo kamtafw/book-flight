@@ -52,7 +52,7 @@ export function getBookingReadiness(
 		return {
 			status: validation.status === "provider_ready" ? "ready_for_order_preparation" : "incomplete",
 			offerId: offer.id,
-			passengers,
+			passengers: validation.status === "provider_ready" ? passengers : [],
 			issues: validation.issues,
 		}
 	} catch {
