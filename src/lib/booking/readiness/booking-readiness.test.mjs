@@ -103,11 +103,30 @@ test("does not mark incomplete passenger data ready", () => {
 	assert.ok(result.issues.some((issue) => issue.code === "GIVEN_NAME_REQUIRED"))
 })
 
-test("ties readiness to the exact offer and provider passenger mapping", () => {
+test("ties readiness to the exact offer and does not expose an unverified mapping", () => {
 	const result = getBookingReadiness(makeOffer("off_other"), makeCollection(), options)
 	assert.equal(result.status, "incomplete")
 	assert.equal(result.offerId, "off_other")
+	assert.deepEqual(result.passengers, [])
 	assert.ok(result.issues.some((issue) => issue.code === "FOREIGN_OFFER_REFERENCE"))
+})
+
+test("does not expose a passenger mapping with the wrong provider", () => {
+	const collection = makeCollection()
+	collection.passengers[0].providerReferences[0].provider = "other-provider"
+	const result = getBookingReadiness(makeOffer(), collection, options)
+	assert.equal(result.status, "incomplete")
+	assert.deepEqual(result.passengers, [])
+	assert.ok(result.issues.some((issue) => issue.code === "WRONG_PROVIDER"))
+})
+
+test("does not expose a passenger mapping for an unknown provider passenger ID", () => {
+	const collection = makeCollection()
+	collection.passengers[0].providerReferences[0].providerPassengerId = "pas_unrelated"
+	const result = getBookingReadiness(makeOffer(), collection, options)
+	assert.equal(result.status, "incomplete")
+	assert.deepEqual(result.passengers, [])
+	assert.ok(result.issues.some((issue) => issue.code === "MISMATCHED_PROVIDER_PASSENGER"))
 })
 
 test("does not expose passenger contact or document values in the readiness result", () => {
