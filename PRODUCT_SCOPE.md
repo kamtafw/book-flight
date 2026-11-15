@@ -437,18 +437,3 @@ The product should fulfil this purpose reliably before expanding into additional
 
 **The objective is not to build the flight-booking application with the most features. It is to build a flight-booking application that customers can depend on.**# Book Flight
 
----
-
-I already have the new changes integrated into main and pushed remotely.
-We have reached a strong end by closing out BR-04. I will also suggest we cut this conversation at this point and move to a new chat where we can start with a new task. Create me a handoff to start the new chat. Don't make a book from the handoff, but a concise summary that captures significant details and recent context.
-
-Here's a table of the tasks we built earlier. It's not exhaustive, but carries much information to it. Before we get to the end of these tasks
-
-| Step  | Work                                     | Acceptance condition                                                                                       |
-| ----- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| BR-01 | Define the checkout data contract        | We know exactly what information the app must supply to initiate a booking.                                |
-| BR-02 | Add offer-refresh and validation support | Checkout can detect an expired or changed offer.                                                           |
-| BR-03 | Revalidate selected seat services        | Invalid or unavailable selections cannot proceed silently.                                                 |
-| BR-04 | Model information per traveller          | Each traveller can have their own required details.                                                        |
-| BR-05 | Add a checkout review state              | The traveller can review the current itinerary, passengers, seats and applicable prices before proceeding. |
-| BR-06 | Implement order creation and payment     | Only after the preceding contract and validation decisions are settled.                                    |
