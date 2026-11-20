@@ -342,7 +342,7 @@ export async function validateSeatServices(
 }
 
 
-const DECIMAL_AMOUNT_PATTERN = /^(?:0|[1-9]\d*)(?:\\.\d+)?$/
+const DECIMAL_AMOUNT_PATTERN = /^\d+(?:\.\d+)?$/
 const OFFER_ID_PATTERN = /^off_[A-Za-z0-9]+$/
 
 function isRecord(value: unknown): value is Record<string, unknown> {
