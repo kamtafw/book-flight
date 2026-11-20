@@ -1,7 +1,6 @@
 # BR-04C: Duffel-Aware Passenger Validation Contract
 
-**Status:** Approved for implementation  
-**Branch:** `feat/booking-br-04c-provider-validation`  
+**Status:** Approved; implementation complete and merged into `main`  
 **Depends on:** BR-04A passenger domain model, BR-04B multi-passenger UI, BR-02 offer refresh/validation  
 **Scope:** Pure, offer-aware validation of the active passenger collection against Duffel requirements  
 **Explicitly excludes:** Order creation, payment, booking confirmation, saved traveller profiles, persistence, seat-selection changes, and passenger-form redesign
