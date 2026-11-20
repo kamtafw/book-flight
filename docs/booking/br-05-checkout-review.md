@@ -471,6 +471,8 @@ The client integration must add a typed `refreshOffer(offer)` helper to `src/lib
 
 The helper must parse the Appwrite execution's `responseStatusCode` and `responseBody`, distinguish the four business outcomes below from HTTP/provider failures, and validate the shape of successful response data before returning it. The backend already implements this action; BR-05 must not add a second backend refresh action.
 
+Retain the originally selected offer snapshot separately from the latest refreshed offer. Do not overwrite the original amount/itinerary baseline before the review has captured it, because the customer must be able to see the original and current values and the refresh request must compare against the snapshot the customer initially selected.
+
 #### Outcomes
 
 | Outcome             | Result                                           |
@@ -578,6 +580,8 @@ At minimum, the application must be able to establish:
 - The underlying version or fingerprint of the validated component.
 
 If any underlying data that affects an accepted amount changes, the associated acceptance becomes invalid.
+
+Changed-disclosure acknowledgement is separate from price acceptance. Store acknowledgement against the exact seat-service identity and the current disclosure set. If the same acknowledged selection is revalidated after another seat changes, do not repeatedly ask the customer to acknowledge an unchanged disclosure set. A changed seat/service or a further disclosure change invalidates the previous acknowledgement.
 
 The customer must then review and accept the new amount.
 
