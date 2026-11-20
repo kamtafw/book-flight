@@ -4,7 +4,8 @@ import { useEffect, useMemo } from "react"
 import { ActivityIndicator, Pressable, Text, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
-import { getBookingReadiness } from "@/lib/booking/readiness/booking-readiness"
+import { getCheckoutReviewEntryState } from "@/lib/booking/readiness/checkout-review"
+import { isCheckoutReviewSessionCurrent } from "@/lib/booking/readiness/booking-session"
 import { useFlightBookingStore } from "@/store/flight-booking.store"
 import { useFlightOffersStore } from "@/store/flight-offers.store"
 
@@ -19,22 +20,16 @@ export default function CheckoutReviewScreen() {
 	const getOrCreateCheckoutReviewSession = useFlightBookingStore(
 		(state) => state.getOrCreateCheckoutReviewSession,
 	)
-	const readiness = useMemo(
-		() => getBookingReadiness(flight, passengerCollection),
-		[flight, passengerCollection],
+	const entryState = useMemo(
+		() => getCheckoutReviewEntryState(flightId, flight, activeBookingSession, passengerCollection),
+		[activeBookingSession, flight, flightId, passengerCollection],
 	)
-
-	const hasMatchingBookingSession =
-		Boolean(flightId) &&
-		activeBookingSession?.offerId === flightId &&
-		Boolean(activeBookingSession.id)
-	const hasReadyPassengers =
-		readiness.status === "ready_for_order_preparation" && readiness.offerId === flightId
-	const canOpenReview = Boolean(flight) && hasMatchingBookingSession && hasReadyPassengers
-	const hasReviewSession =
-		Boolean(checkoutReviewSession) &&
-		checkoutReviewSession?.bookingSessionId === activeBookingSession?.id &&
-		checkoutReviewSession?.offerId === flightId
+	const canOpenReview = entryState === "ready"
+	const hasReviewSession = isCheckoutReviewSessionCurrent(
+		checkoutReviewSession,
+		activeBookingSession,
+		flightId,
+	)
 
 	useEffect(() => {
 		if (canOpenReview && flightId) getOrCreateCheckoutReviewSession(flightId)
@@ -50,7 +45,7 @@ export default function CheckoutReviewScreen() {
 
 	const returnToSearch = () => router.replace("/flight-results")
 
-	if (!flight) {
+	if (entryState === "flight_unavailable") {
 		return (
 			<SafeAreaView className="flex-1 items-center justify-center bg-background px-8">
 				<Text className="font-inter-semibold text-lg text-black">Flight unavailable</Text>
@@ -65,7 +60,7 @@ export default function CheckoutReviewScreen() {
 		)
 	}
 
-	if (!hasMatchingBookingSession) {
+	if (entryState === "booking_session_unavailable") {
 		return (
 			<SafeAreaView className="flex-1 items-center justify-center bg-background px-8">
 				<Text className="font-inter-semibold text-lg text-black">Booking session unavailable</Text>
@@ -80,7 +75,7 @@ export default function CheckoutReviewScreen() {
 		)
 	}
 
-	if (!passengerCollection || !hasReadyPassengers) {
+	if (entryState === "passenger_details_incomplete") {
 		return (
 			<SafeAreaView className="flex-1 items-center justify-center bg-background px-8">
 				<Text className="font-inter-semibold text-lg text-black">Passenger details need attention</Text>
