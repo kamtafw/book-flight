@@ -7,17 +7,13 @@ import type {
 import { createPassengerCollectionFromOffer } from "@/lib/booking/passengers/passenger-domain"
 import {
 	type ActiveBookingSession,
+	type CheckoutReviewSession,
 	clearBookingSessionState,
+	getOrCreateCheckoutReviewSession as resolveCheckoutReviewSession,
 	transitionBookingSession,
 } from "@/lib/booking/readiness/booking-session"
 import type { FlightOffer, SelectedSeatService } from "@/lib/flights/types"
 import { create } from "zustand"
-
-interface CheckoutReviewSession {
-	id: string
-	bookingSessionId: string
-	offerId: string
-}
 
 interface FlightBookingState {
 	selectedOutboundSeats: string[]
@@ -159,33 +155,24 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 		if (current?.offerId === offer.id) return current.id
 
 		const next = transitionBookingSession(get(), offer.id, createInternalPassengerId)
-		set({ ...next, checkoutReviewSession: null })
+		set(next)
 		return next.activeBookingSession!.id
 	},
 
 	getOrCreateCheckoutReviewSession: (offerId) => {
-		const { activeBookingSession, checkoutReviewSession } = get()
-		if (!activeBookingSession || activeBookingSession.offerId !== offerId) return null
-		if (
-			checkoutReviewSession?.bookingSessionId === activeBookingSession.id &&
-			checkoutReviewSession.offerId === offerId
-		) {
-			return checkoutReviewSession
-		}
-
-		const next: CheckoutReviewSession = {
-			id: createInternalPassengerId(),
-			bookingSessionId: activeBookingSession.id,
+		const state = get()
+		const next = resolveCheckoutReviewSession(
+			state.activeBookingSession,
+			state.checkoutReviewSession,
 			offerId,
-		}
-		set({ checkoutReviewSession: next })
+			createInternalPassengerId,
+		)
+		if (next && next !== state.checkoutReviewSession) set({ checkoutReviewSession: next })
 		return next
 	},
 
-	abandonBookingSession: () =>
-		set((state) => ({ ...clearBookingSessionState(state), checkoutReviewSession: null })),
-	completeBookingSession: () =>
-		set((state) => ({ ...clearBookingSessionState(state), checkoutReviewSession: null })),
+	abandonBookingSession: () => set((state) => clearBookingSessionState(state)),
+	completeBookingSession: () => set((state) => clearBookingSessionState(state)),
 
 	initializePassengerCollection: (offer) =>
 		set((state) => {
