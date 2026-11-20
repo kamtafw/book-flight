@@ -547,7 +547,10 @@ function PassengerCard({
 }
 
 export default function PersonalInformationScreen() {
-	const { flightId } = useLocalSearchParams<{ flightId?: string }>()
+	const { flightId, returnToReview } = useLocalSearchParams<{
+		flightId?: string
+		returnToReview?: string
+	}>()
 	const flight = useFlightOffersStore((state) =>
 		state.offers.find((offer) => offer.id === flightId),
 	)
@@ -889,6 +892,10 @@ export default function PersonalInformationScreen() {
 					<Pressable
 						onPress={() => {
 							if (!canContinueToReview || !flightId) return
+							if (returnToReview === "true") {
+								router.back()
+								return
+							}
 							router.push({ pathname: "/checkout-review", params: { flightId } })
 						}}
 						disabled={!canContinueToReview}
