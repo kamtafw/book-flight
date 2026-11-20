@@ -166,7 +166,7 @@ test("maps backend technical failures to FlightSearchError", async () => {
 		async () => {
 			await assert.rejects(
 				refreshOffer(makeOffer()),
-				(error: unknown) =>
+				(error) =>
 					error instanceof FlightSearchError &&
 					error.code === "DUFFEL_OFFER_REFRESH_FAILED",
 			)
@@ -178,7 +178,7 @@ test("rejects malformed provider response shapes", async () => {
 	await withFetch(mockExecution({ status: "valid", offer: { id: "off_refresh123" } }), async () => {
 		await assert.rejects(
 			refreshOffer(makeOffer()),
-			(error: unknown) => error instanceof FlightSearchError && error.code === "INVALID_RESPONSE",
+			(error) => error instanceof FlightSearchError && error.code === "INVALID_RESPONSE",
 		)
 	})
 })
