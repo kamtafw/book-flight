@@ -1,4 +1,3 @@
-| BR05-12 | Unavailable seats require customer intervention; unavailable seats are distinguished from changed disclosures using per-selection `current` data and reason. |
 
 **Status:** Updated after implementation-readiness audit; pending user approval; implementation not started  
 **Scope:** Checkout Review for the current one-way booking flow, including connecting itineraries with multiple segments  
@@ -430,11 +429,11 @@ flowchart TD
     I -- No --> K{"Any selected seats?"}
     K -- No --> N["Prepare pricing and review"]
     K -- Yes --> L["Validate selected seats"]
-    L --> M{"Seat validation successful?"}
+    L --> M{"Any seat action required?"}
     M -- Technical error --> H
-    M -- Business issue --> O["Present seat issues for resolution"]
-    M -- Yes --> N
-    O --> P["Customer reviews disclosures and resolves unavailable seats"]
+    M -- Yes --> O["Present seat price/disclosure changes and unavailable seats"]
+    M -- No --> N
+    O --> P["Customer reviews seat prices/disclosures and resolves unavailable seats"]
     P --> T{"Did the seat selection change?"}
     T -- No --> N
     T -- Yes --> U{"Offer unchanged and unexpired?"}
@@ -876,7 +875,7 @@ These are the proposed completion criteria for BR-05.
 | BR05-01 | Customer cannot enter Checkout Review with incomplete or invalid required passenger information; Personal Information exposes a forward action only when `getBookingReadiness()` returns `ready_for_order_preparation`. |
 | BR05-02 | Checkout Review displays the complete itinerary.                                                                        |
 | BR05-03 | Connecting flights display their individual segments and layovers.                                                      |
-| BR05-04 | Passenger information is displayed individually and accurately.                                                         |
+| BR05-04 | Passenger information is displayed individually and accurately, including contact details with their actual ownership; sensitive document numbers are masked. |
 | BR05-05 | Selected seats appear under the correct passenger and flight segment.                                                   |
 | BR05-06 | Passengers without selected seats do not display unnecessary seat information.                                          |
 | BR05-07 | First entry into Checkout Review for an active booking session triggers a fresh offer refresh; unchanged review results may be reused on return while the offer remains unexpired. |
