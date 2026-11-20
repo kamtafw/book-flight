@@ -14,6 +14,7 @@ export function getCheckoutReviewEntryState(
 	offer: FlightOffer | undefined,
 	activeBookingSession: ActiveBookingSession | null,
 	passengerCollection: PassengerCollection | null,
+	options: { today?: string } = {},
 ): CheckoutReviewEntryState {
 	if (!flightId || !offer || offer.id !== flightId) return "flight_unavailable"
 	if (!activeBookingSession || activeBookingSession.offerId !== flightId) {
@@ -21,7 +22,7 @@ export function getCheckoutReviewEntryState(
 	}
 	if (!passengerCollection) return "passenger_details_incomplete"
 
-	const readiness = getBookingReadiness(offer, passengerCollection)
+	const readiness = getBookingReadiness(offer, passengerCollection, options)
 	return readiness.status === "ready_for_order_preparation" && readiness.offerId === flightId
 		? "ready"
 		: "passenger_details_incomplete"
