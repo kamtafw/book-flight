@@ -52,13 +52,14 @@
 		"ios": "expo start --ios",
 		"web": "expo start --web",
 		"lint": "expo lint",
-		"test": "tsx --test src/lib/booking/passengers/passenger-domain.test.mjs src/lib/booking/passengers/providers/duffel/passenger-requirements.test.mjs src/lib/booking/passengers/providers/duffel/passenger-validation.test.mjs src/lib/booking/readiness/booking-readiness.test.mjs src/lib/booking/readiness/checkout-review.test.mjs src/lib/booking/readiness/booking-session.test.mjs src/lib/flights/api.test.mjs functions/flight-search/src/main.test.js",
+		"test": "tsx --test src/lib/booking/passengers/passenger-domain.test.mjs src/lib/booking/passengers/providers/duffel/passenger-requirements.test.mjs src/lib/booking/passengers/providers/duffel/passenger-validation.test.mjs src/lib/booking/readiness/booking-readiness.test.mjs src/lib/booking/readiness/checkout-review.test.mjs src/lib/booking/readiness/offer-review.test.mjs src/lib/booking/readiness/booking-session.test.mjs src/lib/flights/api.test.mjs functions/flight-search/src/main.test.js",
 		"test:passenger-domain": "tsx --test src/lib/booking/passengers/passenger-domain.test.mjs",
 		"test:passenger-requirements": "tsx --test src/lib/booking/passengers/providers/duffel/passenger-requirements.test.mjs",
 		"test:passenger-validation": "tsx --test src/lib/booking/passengers/providers/duffel/passenger-validation.test.mjs",
 		"test:booking-readiness": "tsx --test src/lib/booking/readiness/booking-readiness.test.mjs",
 		"test:booking-session": "tsx --test src/lib/booking/readiness/booking-session.test.mjs",
-		"test:flight-search": "tsx --test functions/flight-search/src/main.test.js"
+		"test:flight-search": "tsx --test functions/flight-search/src/main.test.js",
+		"test:offer-review": "tsx --test src/lib/booking/readiness/offer-review.test.mjs"
 	},
 	"private": true
 }
