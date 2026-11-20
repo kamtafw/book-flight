@@ -70,10 +70,11 @@ function makeCollection(offerId = "off_review") {
 const offer = makeOffer()
 const bookingSession = { id: "booking-1", offerId: offer.id }
 const passengers = makeCollection()
+const options = { today: "2026-11-10" }
 
 test("allows entry only when the selected offer, booking session and passenger data match", () => {
 	assert.equal(
-		getCheckoutReviewEntryState(offer.id, offer, bookingSession, passengers),
+		getCheckoutReviewEntryState(offer.id, offer, bookingSession, passengers, options),
 		"ready",
 	)
 })
@@ -94,13 +95,13 @@ test("rejects a missing or foreign booking session", () => {
 
 test("rejects missing or incomplete passenger details", () => {
 	assert.equal(
-		getCheckoutReviewEntryState(offer.id, offer, bookingSession, null),
+		getCheckoutReviewEntryState(offer.id, offer, bookingSession, null, options),
 		"passenger_details_incomplete",
 	)
 	const incomplete = makeCollection()
 	incomplete.passengers[0].identity.givenName = ""
 	assert.equal(
-		getCheckoutReviewEntryState(offer.id, offer, bookingSession, incomplete),
+		getCheckoutReviewEntryState(offer.id, offer, bookingSession, incomplete, options),
 		"passenger_details_incomplete",
 	)
 })
