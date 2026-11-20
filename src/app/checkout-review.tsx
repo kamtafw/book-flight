@@ -40,7 +40,7 @@ export default function CheckoutReviewScreen() {
 			router.replace("/flight-results")
 			return
 		}
-		router.replace({ pathname: "/personal-information", params: { flightId } })
+		router.push({ pathname: "/personal-information", params: { flightId } })
 	}
 
 	const returnToSearch = () => router.replace("/flight-results")
