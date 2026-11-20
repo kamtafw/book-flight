@@ -1,9 +1,9 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 import { buildOfferRefreshSnapshot, refreshOffer } from "./api"
-import { FlightSearchError, type FlightOffer } from "./types"
+import { FlightSearchError } from "./types"
 
-function makeOffer(): FlightOffer {
+function makeOffer() {
 	return {
 		id: "off_refresh123",
 		airline: "Example Air",
@@ -40,14 +40,14 @@ function makeOffer(): FlightOffer {
 	}
 }
 
-function mockExecution(body: unknown, responseStatusCode = 200) {
+function mockExecution(body, responseStatusCode = 200) {
 	return new Response(
 		JSON.stringify({ responseBody: JSON.stringify(body), responseStatusCode }),
 		{ status: 200, headers: { "Content-Type": "application/json" } },
 	)
 }
 
-function withFetch(response: Response, run: () => Promise<void>, verifyRequest?: (input: RequestInfo | URL, init?: RequestInit) => void) {
+function withFetch(response, run, verifyRequest) {
 	const originalFetch = globalThis.fetch
 	const originalEnv = {
 		endpoint: process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT,
@@ -95,7 +95,7 @@ test("refuses to reconstruct a missing provider price from the numeric display p
 	const offer = { ...makeOffer(), priceAmount: null }
 	assert.throws(
 		() => buildOfferRefreshSnapshot(offer),
-		(error: unknown) => error instanceof FlightSearchError && error.code === "INVALID_OFFER_PRICE",
+		(error) => error instanceof FlightSearchError && error.code === "INVALID_OFFER_PRICE",
 	)
 })
 
