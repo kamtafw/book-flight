@@ -932,6 +932,17 @@ P2 is limited to offer refresh and its review lifecycle. Seat validation remains
    - Parse Appwrite execution status and response body; validate response shape and distinguish business outcomes from technical failures.
    - Reject missing or malformed original decimal amounts; never reconstruct them from numeric `price`.
 
+**P2-01 implementation checkpoint — pushed; local verification pending**
+
+- Added the nullable `FlightOffer.priceAmount` field and typed BR-02 request/response contracts.
+- Added `buildOfferRefreshSnapshot()` and `refreshOffer()` to the mobile flight API.
+- The helper sends the original decimal amount, currency, provider passenger IDs and complete slice/segment identity to the existing Appwrite action.
+- Appwrite execution errors remain technical `FlightSearchError` failures; `valid`, `price_changed`, `itinerary_changed` and `unavailable` are typed business outcomes.
+- Refreshed offer payloads are shape-checked, including the provider decimal amount and expiry. No price is reconstructed from the numeric display value.
+- Added focused client tests for snapshot construction, missing original price, request payload, valid response, changed fare, itinerary-change precedence, unavailable offers, technical failures and malformed responses.
+
+The code is on `feat/br-05-p2-offer-refresh`. Local test, TypeScript and lint results are still required before P2-01 is considered verified.
+
 2. **P2-02 — Offer comparison and outcome model**
    - Represent `valid`, `price_changed`, `itinerary_changed`, and `unavailable` as explicit typed outcomes.
    - Preserve BR-02 precedence: `itinerary_changed` blocks progression even when `priceChanged` is also true.
