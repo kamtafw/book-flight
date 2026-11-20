@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 import { buildOfferRefreshSnapshot, refreshOffer } from "./api"
-import { FlightSearchError } from "./types"
+import { FlightSearchError } from "@/lib/flights/types"
 
 function makeOffer() {
 	return {
