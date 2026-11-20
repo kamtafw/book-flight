@@ -45,6 +45,8 @@ export interface FlightOffer {
 	arrivalTime: string
 	duration: string
 	price: number
+	/** Original provider amount preserved as a decimal string for financial comparisons. */
+	priceAmount: string | null
 	currency: string
 	expiresAt: string | null
 	/** null means Duffel did not provide this requirement value. */
@@ -151,3 +153,42 @@ export interface SeatServiceValidationResponse {
 	status: "valid" | "price_changed" | "selection_changed" | "not_selected"
 	selections: SeatServiceValidationResult[]
 }
+
+export interface OfferRefreshPrice {
+	amount: string
+	currency: string
+}
+
+export interface OfferRefreshExpectedSnapshot {
+	id: string
+	totalAmount: string
+	totalCurrency: string
+	passengers: { id: string }[]
+	slices: {
+		originCode: string
+		destinationCode: string
+		segments: {
+			id: string
+			departureAt: string
+			arrivalAt: string
+		}[]
+	}[]
+}
+
+export type OfferRefreshResponse =
+	| { status: "valid"; offer: FlightOffer }
+	| {
+			status: "price_changed"
+			previousPrice: OfferRefreshPrice
+			currentPrice: OfferRefreshPrice
+			offer: FlightOffer
+	  }
+	| {
+			status: "itinerary_changed"
+			materialDifferences: string[]
+			priceChanged: boolean
+			previousPrice: OfferRefreshPrice
+			currentPrice: OfferRefreshPrice
+			offer: FlightOffer
+	  }
+	| { status: "unavailable"; code: string; message: string }

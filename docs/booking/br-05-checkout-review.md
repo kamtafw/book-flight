@@ -333,14 +333,14 @@ BR-03 remains authoritative for the seat-service validation contract.
 
 The review should account for its outcomes:
 
-| Result | Meaning and Checkout Review behaviour |
-| --- | --- |
-| Per-selection `valid` | The selected service remains available with unchanged price and disclosures. Display it as available. |
-| Per-selection `price_changed` | The service remains available, but its amount or currency changed. Display the updated amount and require acceptance for that seat-service component. |
-| Per-selection `selection_changed`, `current: null` | The segment, seat, or matching service is unavailable. Require the customer to replace or remove that selection. |
+| Result                                                                                     | Meaning and Checkout Review behaviour                                                                                                                                                  |
+| ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Per-selection `valid`                                                                      | The selected service remains available with unchanged price and disclosures. Display it as available.                                                                                  |
+| Per-selection `price_changed`                                                              | The service remains available, but its amount or currency changed. Display the updated amount and require acceptance for that seat-service component.                                  |
+| Per-selection `selection_changed`, `current: null`                                         | The segment, seat, or matching service is unavailable. Require the customer to replace or remove that selection.                                                                       |
 | Per-selection `selection_changed`, `current` present and reason `seat_disclosures_changed` | The seat remains available but its disclosures changed. Present the updated disclosures and require acknowledgement. If `priceChanged` is also true, require price acceptance as well. |
-| Top-level `not_selected` | No seats were submitted. Skip seat validation and display no seat rows. This is a top-level result, not a per-selection status. |
-| Top-level `provider_error` or technical request failure | Treat as a technical failure, block progression and offer retry. The current client helper converts an unexpected/provider-error response into a `FlightSearchError`. |
+| Top-level `not_selected`                                                                   | No seats were submitted. Skip seat validation and display no seat rows. This is a top-level result, not a per-selection status.                                                        |
+| Top-level `provider_error` or technical request failure                                    | Treat as a technical failure, block progression and offer retry. The current client helper converts an unexpected/provider-error response into a `FlightSearchError`.                  |
 
 Where a selected seat is unavailable, the customer must be able to:
 
@@ -683,14 +683,14 @@ Navigation must preserve the customer's work while ensuring that stale validatio
 
 ### 9.1 Navigation behaviour
 
-| Customer action | Expected behaviour |
-| --- | --- |
-| First entry into Checkout Review for the active booking session | Refresh the offer, then validate selected seats if any |
-| Return to Personal Information and edit passenger details | Preserve passenger data; recalculate passenger readiness. Do not refresh the offer or seats if their dependencies are unchanged |
-| Return to Seat Selection and change/remove a seat | Preserve the offer validation and flight-price acceptance if still current; revalidate the complete current seat-selection set |
-| Change the selected flight offer/start a new booking session | Invalidate offer validation, seat validation, review state and all price acceptances |
-| Return to review without changing dependencies | Reuse validation and acceptance only while they belong to the same active booking/review session and the offer has not expired |
-| Offer expiry reached while the customer is reviewing | Refresh the offer again and revalidate selected seats before allowing progression |
+| Customer action                                                 | Expected behaviour                                                                                                              |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| First entry into Checkout Review for the active booking session | Refresh the offer, then validate selected seats if any                                                                          |
+| Return to Personal Information and edit passenger details       | Preserve passenger data; recalculate passenger readiness. Do not refresh the offer or seats if their dependencies are unchanged |
+| Return to Seat Selection and change/remove a seat               | Preserve the offer validation and flight-price acceptance if still current; revalidate the complete current seat-selection set  |
+| Change the selected flight offer/start a new booking session    | Invalidate offer validation, seat validation, review state and all price acceptances                                            |
+| Return to review without changing dependencies                  | Reuse validation and acceptance only while they belong to the same active booking/review session and the offer has not expired  |
+| Offer expiry reached while the customer is reviewing            | Refresh the offer again and revalidate selected seats before allowing progression                                               |
 
 ### 9.2 Validation invalidation
 
@@ -871,36 +871,36 @@ BR-05 must not assume that its validation result guarantees the offer or seat re
 
 These are the proposed completion criteria for BR-05.
 
-| ID      | Acceptance criterion                                                                                                    |
-| ------- | ----------------------------------------------------------------------------------------------------------------------- |
+| ID      | Acceptance criterion                                                                                                                                                                                                    |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | BR05-01 | Customer cannot enter Checkout Review with incomplete or invalid required passenger information; Personal Information exposes a forward action only when `getBookingReadiness()` returns `ready_for_order_preparation`. |
-| BR05-02 | Checkout Review displays the complete itinerary.                                                                        |
-| BR05-03 | Connecting flights display their individual segments and layovers.                                                      |
-| BR05-04 | Passenger information is displayed individually and accurately, including contact details with their actual ownership; sensitive document numbers are masked. |
-| BR05-05 | Selected seats appear under the correct passenger and flight segment.                                                   |
-| BR05-06 | Passengers without selected seats do not display unnecessary seat information.                                          |
-| BR05-07 | First entry into Checkout Review for an active booking session triggers a fresh offer refresh; unchanged review results may be reused on return while the offer remains unexpired. |
-| BR05-08 | An unavailable offer blocks review progression and offers a return to search.                                           |
-| BR05-09 | Material itinerary changes block progression and require flight reselection.                                            |
-| BR05-10 | Harmless offer-description changes do not unnecessarily invalidate the offer.                                           |
-| BR05-11 | Selected seats are revalidated after successful offer validation.                                                       |
-| BR05-12 | Unavailable seats require customer intervention; unavailable seats are distinguished from changed disclosures using per-selection `current` data and reason. |
-| BR05-13 | Changed seat prices are displayed and require explicit acceptance.                                                      |
-| BR05-14 | Flight price changes are displayed with original and updated amounts and require explicit acceptance.                   |
-| BR05-15 | Acceptance of one price component does not automatically accept another.                                                |
-| BR05-16 | Acceptance remains valid only while its underlying component remains unchanged.                                         |
-| BR05-17 | The pricing breakdown correctly combines flight fares, seat prices and supported additional services.                   |
-| BR05-18 | The total payable amount is calculated from current validated component amounts.                                        |
-| BR05-19 | Currency inconsistencies are handled safely and cannot produce an invalid combined total.                               |
-| BR05-20 | Technical provider failures are distinguishable from business outcomes.                                                 |
-| BR05-21 | Provider failures offer retry support, with a maximum of three attempts per affected operation during a review attempt. |
-| BR05-22 | Exhausting retries blocks progression without automatically deleting the booking draft.                                 |
-| BR05-23 | Returning to passenger information preserves existing passenger data.                                                   |
-| BR05-24 | Changing a seat invalidates the relevant previous seat validation.                                                      |
-| BR05-25 | Changing the selected offer invalidates dependent validation and price acceptance.                                      |
-| BR05-26 | Old asynchronous validation responses cannot overwrite newer review state.                                              |
-| BR05-27 | Review validation results cannot be reused across unrelated booking sessions.                                           |
-| BR05-28 | No order, payment, ticket issuance or booking confirmation is created by BR-05.                                         |
+| BR05-02 | Checkout Review displays the complete itinerary.                                                                                                                                                                        |
+| BR05-03 | Connecting flights display their individual segments and layovers.                                                                                                                                                      |
+| BR05-04 | Passenger information is displayed individually and accurately, including contact details with their actual ownership; sensitive document numbers are masked.                                                           |
+| BR05-05 | Selected seats appear under the correct passenger and flight segment.                                                                                                                                                   |
+| BR05-06 | Passengers without selected seats do not display unnecessary seat information.                                                                                                                                          |
+| BR05-07 | First entry into Checkout Review for an active booking session triggers a fresh offer refresh; unchanged review results may be reused on return while the offer remains unexpired.                                      |
+| BR05-08 | An unavailable offer blocks review progression and offers a return to search.                                                                                                                                           |
+| BR05-09 | Material itinerary changes block progression and require flight reselection.                                                                                                                                            |
+| BR05-10 | Harmless offer-description changes do not unnecessarily invalidate the offer.                                                                                                                                           |
+| BR05-11 | Selected seats are revalidated after successful offer validation.                                                                                                                                                       |
+| BR05-12 | Unavailable seats require customer intervention; unavailable seats are distinguished from changed disclosures using per-selection `current` data and reason.                                                            |
+| BR05-13 | Changed seat prices are displayed and require explicit acceptance.                                                                                                                                                      |
+| BR05-14 | Flight price changes are displayed with original and updated amounts and require explicit acceptance.                                                                                                                   |
+| BR05-15 | Acceptance of one price component does not automatically accept another.                                                                                                                                                |
+| BR05-16 | Acceptance remains valid only while its underlying component remains unchanged.                                                                                                                                         |
+| BR05-17 | The pricing breakdown correctly combines flight fares, seat prices and supported additional services.                                                                                                                   |
+| BR05-18 | The total payable amount is calculated from current validated component amounts.                                                                                                                                        |
+| BR05-19 | Currency inconsistencies are handled safely and cannot produce an invalid combined total.                                                                                                                               |
+| BR05-20 | Technical provider failures are distinguishable from business outcomes.                                                                                                                                                 |
+| BR05-21 | Provider failures offer retry support, with a maximum of three attempts per affected operation during a review attempt.                                                                                                 |
+| BR05-22 | Exhausting retries blocks progression without automatically deleting the booking draft.                                                                                                                                 |
+| BR05-23 | Returning to passenger information preserves existing passenger data.                                                                                                                                                   |
+| BR05-24 | Changing a seat invalidates the relevant previous seat validation.                                                                                                                                                      |
+| BR05-25 | Changing the selected offer invalidates dependent validation and price acceptance.                                                                                                                                      |
+| BR05-26 | Old asynchronous validation responses cannot overwrite newer review state.                                                                                                                                              |
+| BR05-27 | Review validation results cannot be reused across unrelated booking sessions.                                                                                                                                           |
+| BR05-28 | No order, payment, ticket issuance or booking confirmation is created by BR-05.                                                                                                                                         |
 
 ## 12.1 Implementation progress
 
@@ -932,13 +932,23 @@ P2 is limited to offer refresh and its review lifecycle. Seat validation remains
    - Parse Appwrite execution status and response body; validate response shape and distinguish business outcomes from technical failures.
    - Reject missing or malformed original decimal amounts; never reconstruct them from numeric `price`.
 
-2. **P2-02 — Offer comparison and outcome model**
+**P2-01 implementation checkpoint — pushed; local verification pending**
+
+- Added the nullable `FlightOffer.priceAmount` field and typed BR-02 request/response contracts.
+- Added `buildOfferRefreshSnapshot()` and `refreshOffer()` to the mobile flight API.
+- The helper sends the original decimal amount, currency, provider passenger IDs and complete slice/segment identity to the existing Appwrite action.
+- Appwrite execution errors remain technical `FlightSearchError` failures; `valid`, `price_changed`, `itinerary_changed` and `unavailable` are typed business outcomes.
+- Refreshed offer payloads are shape-checked, including the provider decimal amount and expiry. No price is reconstructed from the numeric display value.
+- Added focused client tests for snapshot construction, missing original price, request payload, valid response, changed fare, itinerary-change precedence, unavailable offers, technical failures and malformed responses.
+  The code is on `feat/br-05-p2-offer-refresh`. Local test, TypeScript and lint results are still required before P2-01 is considered verified.
+
+1. **P2-02 — Offer comparison and outcome model**
    - Represent `valid`, `price_changed`, `itinerary_changed`, and `unavailable` as explicit typed outcomes.
    - Preserve BR-02 precedence: `itinerary_changed` blocks progression even when `priceChanged` is also true.
    - Keep technical/network/Appwrite/provider errors separate from business outcomes.
    - Retain the original offer snapshot independently from the refreshed offer.
 
-3. **P2-03 — Review refresh lifecycle and recovery**
+2. **P2-03 — Review refresh lifecycle and recovery**
    - Trigger offer refresh on the first entry for the active review session.
    - Show loading, successful refresh, price-change, itinerary-change, unavailable and retryable-error states.
    - Do not proceed to seat validation or a completed review on unavailable offers, material itinerary changes or technical failures.
@@ -946,7 +956,7 @@ P2 is limited to offer refresh and its review lifecycle. Seat validation remains
    - Associate each request with the active review-session ID, booking-session ID, original offer ID and attempt identity; ignore stale responses after navigation, a new attempt, or a changed booking.
    - Reuse a successful result on return only while the same review session and offer remain valid; do not introduce an arbitrary freshness TTL.
 
-4. **P2-04 — Focused verification**
+3. **P2-04 — Focused verification**
    - Test request snapshot construction and decimal-string handling.
    - Test all BR-02 business outcomes, including price changes alongside itinerary changes.
    - Test malformed responses, Appwrite failures, network/provider errors and retry.
