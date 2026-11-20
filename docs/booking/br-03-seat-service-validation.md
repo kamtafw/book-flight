@@ -1,6 +1,6 @@
 # BR-03: Seat-Service Validation
 
-**Status:** Initial implementation on `feat/booking-br-03-seat-service-validation`; awaiting local verification and review. Not merged.
+**Status:** Approved; implementation complete and merged into `main`.
 **Depends on:** BR-01 checkout contract and BR-02 offer refresh/validation.
 
 ## Purpose
@@ -100,8 +100,6 @@ Not included:
 - Seat-selection UI redesign.
 - Automatic acceptance of changed prices or disclosures.
 - Payment, Duffel order creation, booking confirmation, or recovery.
-- A guarantee/reservation of a seat after validation.
-- Replacing BR-02 offer refresh. Offer validation and seat-service validation remain separate checks.
 - A guarantee/reservation of a seat after validation.
 - Replacing BR-02 offer refresh. Offer validation and seat-service validation remain separate checks.
 
