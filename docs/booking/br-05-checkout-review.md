@@ -1,3 +1,4 @@
+# BR-05: Checkout Review Contract
 
 **Status:** Updated after implementation-readiness audit; pending user approval; implementation not started  
 **Scope:** Checkout Review for the current one-way booking flow, including connecting itineraries with multiple segments  
