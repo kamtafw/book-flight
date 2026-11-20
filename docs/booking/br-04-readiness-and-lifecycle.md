@@ -1,7 +1,6 @@
 # BR-04D: Booking Readiness and Passenger Information Lifecycle Contract
 
-**Status:** Draft for review  
-**Branch:** `docs/booking-br-04d-contract`  
+**Status:** Approved; implementation complete and merged into `main`  
 **Depends on:** BR-04A passenger domain model, BR-04B multi-passenger UI, BR-04C Duffel-aware passenger validation, BR-02 offer refresh/validation, BR-03 seat-service validation  
 **Scope:** Derive a clear pre-order readiness result and define explicit passenger-information lifecycle/cleanup behavior  
 **Explicitly excludes:** Order creation, payment, booking confirmation, persistent passenger storage, saved traveller profiles, and unrelated search/seat changes
@@ -264,9 +263,9 @@ At minimum, cover:
 - no passenger/document values appear in readiness issues or test diagnostics;
 - no persistence middleware/storage is introduced.
 
-## 10. Implementation sequence
+## 10. Implementation sequence (completed)
 
-After this contract is approved:
+The approved implementation sequence was carried out and integrated into `main`:
 
 1. Audit the latest `main` route graph and booking-store actions to identify exact explicit entry, in-flow navigation, abandonment, and new-session boundaries.
 2. Implement and test the pure booking-readiness result.
@@ -275,7 +274,7 @@ After this contract is approved:
 5. Run focused tests, existing passenger-domain/validation tests, flight-search tests, TypeScript, and Expo lint.
 6. Review the diff for accidental persistence, sensitive logging, unrelated route changes, and any claim that readiness equals booking confirmation.
 
-Do not create the implementation branch or modify application code until this contract is reviewed and explicitly approved.
+This contract is now approved and implemented. The sequence above is retained as a record of the completed implementation.
 
 ## 11. Non-goals
 
