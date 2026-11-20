@@ -13,6 +13,7 @@ import {
 	type PassengerValidationIssue,
 	type PassengerValidationResult,
 } from "@/lib/booking/passengers/providers/duffel/passenger-validation"
+import { getBookingReadiness } from "@/lib/booking/readiness/booking-readiness"
 import { useFlightBookingStore } from "@/store/flight-booking.store"
 import { useFlightOffersStore } from "@/store/flight-offers.store"
 import { Feather,FontAwesome5,Ionicons,MaterialCommunityIcons } from "@expo/vector-icons"
@@ -546,11 +547,15 @@ function PassengerCard({
 }
 
 export default function PersonalInformationScreen() {
-	const { flightId } = useLocalSearchParams<{ flightId?: string }>()
+	const { flightId, returnToReview } = useLocalSearchParams<{
+		flightId?: string
+		returnToReview?: string
+	}>()
 	const flight = useFlightOffersStore((state) =>
 		state.offers.find((offer) => offer.id === flightId),
 	)
 	const passengerCollection = useFlightBookingStore((state) => state.passengerCollection)
+	const activeBookingSession = useFlightBookingStore((state) => state.activeBookingSession)
 	const initializePassengerCollection = useFlightBookingStore(
 		(state) => state.initializePassengerCollection,
 	)
@@ -584,6 +589,15 @@ export default function PersonalInformationScreen() {
 		)
 		return allBelongToOffer ? passengerCollection : null
 	}, [flightId, passengerCollection])
+
+	const bookingReadiness = useMemo(
+		() => getBookingReadiness(flight, activeCollection),
+		[activeCollection, flight],
+	)
+	const canContinueToReview =
+		Boolean(flight && flightId) &&
+		activeBookingSession?.offerId === flightId &&
+		bookingReadiness.status === "ready_for_order_preparation"
 
 	const validationResult = useMemo<PassengerValidationResult>(() => {
 		if (!flight || !activeCollection) {
@@ -876,10 +890,29 @@ export default function PersonalInformationScreen() {
 					</View>
 
 					<Pressable
-						onPress={() => router.back()}
-						className="mt-5 h-14 items-center justify-center rounded-xl bg-primary active:opacity-90"
+						onPress={() => {
+							if (!canContinueToReview || !flightId) return
+							if (returnToReview === "true") {
+								router.back()
+								return
+							}
+							router.push({ pathname: "/checkout-review", params: { flightId } })
+						}}
+						disabled={!canContinueToReview}
+						accessibilityRole="button"
+						accessibilityState={{ disabled: !canContinueToReview }}
+						className={clsx(
+							"mt-5 h-14 items-center justify-center rounded-xl",
+							canContinueToReview ? "bg-primary active:opacity-90" : "bg-gray-300",
+						)}
 					>
-						<Text className="font-inter-semibold text-base text-white">Save and return</Text>
+						<Text className="font-inter-semibold text-base text-white">Continue to review</Text>
+					</Pressable>
+					<Pressable
+						onPress={() => router.back()}
+						className="mt-3 h-14 items-center justify-center rounded-xl border border-primary active:opacity-90"
+					>
+						<Text className="font-inter-semibold text-base text-primary">Save and return</Text>
 					</Pressable>
 				</ScrollView>
 			</KeyboardAvoidingView>
