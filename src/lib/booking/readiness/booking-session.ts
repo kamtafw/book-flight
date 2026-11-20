@@ -3,8 +3,15 @@ export interface ActiveBookingSession {
 	offerId: string
 }
 
+export interface CheckoutReviewSession {
+	id: string
+	bookingSessionId: string
+	offerId: string
+}
+
 export interface BookingSessionState {
 	activeBookingSession: ActiveBookingSession | null
+	checkoutReviewSession: CheckoutReviewSession | null
 	selectedOutboundSeats: string[]
 	selectedOutboundSeatServices: unknown[]
 	passengerCollection: unknown | null
@@ -12,6 +19,7 @@ export interface BookingSessionState {
 
 type BookingSessionFields<T extends BookingSessionState> = {
 	activeBookingSession: ActiveBookingSession | null
+	checkoutReviewSession: CheckoutReviewSession | null
 	selectedOutboundSeats: T["selectedOutboundSeats"]
 	selectedOutboundSeatServices: T["selectedOutboundSeatServices"]
 	passengerCollection: T["passengerCollection"]
@@ -34,6 +42,7 @@ export function transitionBookingSession<T extends BookingSessionState>(
 	return {
 		...state,
 		activeBookingSession: { id: createSessionId(), offerId },
+		checkoutReviewSession: null,
 		selectedOutboundSeats: [],
 		selectedOutboundSeatServices: [],
 		passengerCollection: null,
@@ -47,8 +56,46 @@ export function clearBookingSessionState<T extends BookingSessionState>(
 	return {
 		...state,
 		activeBookingSession: null,
+		checkoutReviewSession: null,
 		selectedOutboundSeats: [],
 		selectedOutboundSeatServices: [],
 		passengerCollection: null,
 	}
+}
+
+/** Returns the existing review identity for this booking or creates one. */
+export function getOrCreateCheckoutReviewSession(
+	activeBookingSession: ActiveBookingSession | null,
+	currentReviewSession: CheckoutReviewSession | null,
+	offerId: string,
+	createSessionId: () => string,
+): CheckoutReviewSession | null {
+	if (!activeBookingSession || activeBookingSession.offerId !== offerId) return null
+	if (
+		currentReviewSession?.bookingSessionId === activeBookingSession.id &&
+		currentReviewSession.offerId === offerId
+	) {
+		return currentReviewSession
+	}
+	return {
+		id: createSessionId(),
+		bookingSessionId: activeBookingSession.id,
+		offerId,
+	}
+}
+
+/** A review identity is usable only within the exact active booking session and offer. */
+export function isCheckoutReviewSessionCurrent(
+	reviewSession: CheckoutReviewSession | null,
+	activeBookingSession: ActiveBookingSession | null,
+	offerId: string | undefined,
+): boolean {
+	return Boolean(
+		reviewSession &&
+		activeBookingSession &&
+		offerId &&
+		reviewSession.bookingSessionId === activeBookingSession.id &&
+		reviewSession.offerId === offerId &&
+		activeBookingSession.offerId === offerId,
+	)
 }
