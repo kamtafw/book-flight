@@ -1,8 +1,9 @@
 # BR-05: Checkout Review Contract
 
-**Status:** Approved design direction; implementation not started  
-**Scope:** Provider-agnostic passenger domain model and passenger-information collection for the current one-way booking flow  
-**Depends on:** BR-01 checkout contract, BR-02 offer refresh/validation, BR-03 seat-service validation, BR-04A passenger domain model, BR-04B multi-passenger UI
+**Status:** Implementation contract reviewed; implementation not started  
+**Scope:** Checkout Review for the current one-way booking flow, including connecting itineraries with multiple segments  
+**Depends on:** BR-01 checkout contract, BR-02 offer refresh/validation, BR-03 seat-service validation, and BR-04 passenger domain, provider-validation, readiness, and lifecycle work  
+**Current-flow boundary:** The current search implementation creates one-way offers. BR-05 must display every segment within the selected journey, including connections, but must not introduce round-trip or multi-city search support.
 **Explicitly excludes:** Order creation, payment processing, booking confirmation, saved-traveller profiles, and persistent passenger-data storage
 
 ## 1. Purpose and objectives
@@ -81,7 +82,7 @@ The following responsibilities belong to future milestones or other product area
 
 BR-06 will define what happens after the customer proceeds from this screen.
 
-## Entry requirements
+## 3. Entry requirements
 
 Checkout Review should only be accessible when the customer has completed the preceding stages.
 
@@ -101,7 +102,7 @@ The expected navigation is:
 
 Order creation and payment lifecycle
 
-### Required entry conditions
+### 3.1 Required entry conditions
 
 Before entering Checkout Review:
 
@@ -121,15 +122,19 @@ The expected readiness state is:
 
 However, this remains a passenger-information readiness state. It does not establish that the flight offer or seat selections are currently valid.
 
-### Passenger validation responsibility
+### 3.2 Passenger readiness and forward navigation
 
 Passenger validation belongs primarily to the Personal Information stage.
 
-The customer must not be allowed to continue from Personal Information while required information is incomplete or invalid.
+The customer must not be allowed to continue from Personal Information while required information is incomplete or invalid. Use the existing `getBookingReadiness(offer, collection)` function, which returns `ready_for_order_preparation` only when the BR-04 provider-aware passenger validation reports `provider_ready` for the exact selected offer.
 
-Checkout Review should still defensively verify the passenger collection before proceeding. This protects against stale or inconsistent in-memory state.
+**Repository finding:** The current Personal Information screen validates the passenger collection but exposes only a `Save and return` action. It does not currently provide a forward action into Checkout Review. BR-05 Checkpoint 1 must add a distinct `Continue to review` action. It must be disabled or otherwise unavailable unless booking readiness is `ready_for_order_preparation`. Keep the existing back/save behaviour separate; ordinary backward navigation must preserve the booking session.
 
-It must not become a replacement for the passenger validation implemented in BR-04.
+Checkout Review must defensively re-evaluate passenger readiness on entry and before progression if passenger data has changed. This protects against stale or inconsistent in-memory state. It must not become a replacement for the passenger validation implemented in BR-04.
+
+### 3.3 Seat-selection entry data
+
+Selected seats remain optional. When selections exist, each must belong to the active offer and reference a valid provider passenger ID and segment ID. The canonical source is `selectedOutboundSeatServices`, not the legacy `selectedOutboundSeats` designator list, which does not preserve passenger and segment identity.
 
 ## 4. Checkout Review information architecture
 
@@ -167,10 +172,11 @@ For each flight segment:
 
 For connections:
 
-- Connection airport.
-- Layover duration.
+- Connection airport and its position in the journey.
+- Layover duration between the preceding segment's arrival and the next segment's departure.
 - Connection sequence.
-- Any available provider-supplied connection information.
+
+The current normalized `FlightSegment` model does not contain a separate layover field. Derive layover duration from adjacent segments' provider timestamps, preserving their timezone offsets. If the timestamps cannot safely produce a duration, omit the calculated duration rather than display a misleading value.
 
 #### Example
 
@@ -301,6 +307,8 @@ For each passenger:
 
 A passenger without a selected seat should not have an empty seat section displayed.
 
+Seat selections must be matched to the displayed passenger through the passenger's BR-04 provider reference (`providerPassengerId` for the active offer), never by array position or display order. The current `SelectedSeatService` already carries the offer ID, provider passenger ID, segment ID, seat designator, service ID, amount, currency and disclosures.
+
 #### Connecting-flight seats
 
 A passenger can have different seats on different flight segments.
@@ -322,13 +330,14 @@ BR-03 remains authoritative for the seat-service validation contract.
 
 The review should account for its outcomes:
 
-| Outcome             | Checkout Review behaviour                                            |
-| ------------------- | -------------------------------------------------------------------- |
-| `valid`             | Display the selected seat as available                               |
-| `price_changed`     | Display updated seat price and request acceptance                    |
-| `selection_changed` | Present the changed selection/disclosure and require customer review |
-| `not_selected`      | Do not present a selected seat as valid                              |
-| Technical failure   | Block progression and offer retry                                    |
+| Result | Meaning and Checkout Review behaviour |
+| --- | --- |
+| Per-selection `valid` | The selected service remains available with unchanged price and disclosures. Display it as available. |
+| Per-selection `price_changed` | The service remains available, but its amount or currency changed. Display the updated amount and require acceptance for that seat-service component. |
+| Per-selection `selection_changed`, `current: null` | The segment, seat, or matching service is unavailable. Require the customer to replace or remove that selection. |
+| Per-selection `selection_changed`, `current` present and reason `seat_disclosures_changed` | The seat remains available but its disclosures changed. Present the updated disclosures and require acknowledgement. If `priceChanged` is also true, require price acceptance as well. |
+| Top-level `not_selected` | No seats were submitted. Skip seat validation and display no seat rows. This is a top-level result, not a per-selection status. |
+| Top-level `provider_error` or technical request failure | Treat as a technical failure, block progression and offer retry. The current client helper converts an unexpected/provider-error response into a `FlightSearchError`. |
 
 Where a selected seat is unavailable, the customer must be able to:
 
@@ -378,9 +387,9 @@ Example:
 | Additional services | ₦25,000        | ₦25,000        |
 | **Total payable**   |                | **₦1,945,000** |
 
-The total must be calculated from the latest validated component amounts.
+The total must be calculated from the latest validated component amounts. The flight fare is the provider's current offer total for all passengers; the seat subtotal is the sum of all currently selected and validated seat-service amounts across passengers and segments.
 
-The original total may optionally be shown as a reference, but the updated total is the amount the customer is reviewing.
+The original total may optionally be shown as a reference, but the updated total is the amount the customer is reviewing. Display the grouped seat subtotal in the pricing breakdown, while retaining the underlying per-seat amounts so a changed seat price can be identified and accepted independently.
 
 #### Financial correctness
 
@@ -390,11 +399,11 @@ The following rules are mandatory:
 2. Original prices are retained for comparison only.
 3. Monetary amounts must preserve their original decimal precision.
 4. Financial calculations must not rely on unsafe floating-point arithmetic.
-5. Currency must be consistent across all components included in the total.
+5. Currency must be consistent across all components included in the total. BR-05 does not perform currency conversion. If the flight fare and any selected seat/add-on component use different currencies, display the individual amounts with their currencies, do not fabricate a combined total, and block progression until the pricing can be represented consistently.
 6. A currency change must be treated as a material pricing change and require explicit acceptance.
 7. The application must never reconstruct authoritative amounts from rounded display values.
 
-The existing `FlightOffer` type discrepancy involving `priceAmount` must be resolved as part of the integration work. The provider's original amount string must remain available.
+The existing `FlightOffer` type discrepancy involving `priceAmount` must be resolved as part of the integration work. The provider's original amount string must remain available. The current backend mapper emits `priceAmount` as a string when supplied by Duffel and null otherwise; the client type must reflect that nullable shape and the review/refresh integration must reject a missing or malformed amount rather than deriving it from `price`.
 
 ## 5. Validation lifecycle
 
@@ -433,7 +442,7 @@ The sequence establishes that the selected offer must be successfully refreshed 
 
 If the flight offer is unavailable or the itinerary has materially changed, seat validation must not continue.
 
-If there are no selected seats, the seat-validation request can be skipped.
+If there are no selected seats, the seat-validation request can be skipped. If the customer changes only seat selections, revalidate the current complete seat-selection set; do not loop back through offer refresh unless the offer itself changed or its refreshed expiry has passed. If the customer resolves a seat issue by changing or removing a selection while the offer and active booking session remain unchanged, revalidate the current complete selected-seat set without automatically refreshing the flight offer again. If the selected offer changes, or the prior offer validation has expired, restart the offer-refresh step before validating seats.
 
 ### 5.2 Offer refresh
 
@@ -451,6 +460,10 @@ The client integration must:
 
 The client must not treat its original snapshot as the current authoritative offer.
 
+The client integration must add a typed `refreshOffer(offer)` helper to `src/lib/flights/api.ts`. It must construct the BR-02 `expectedOffer` snapshot from the selected offer's ID, original decimal amount string, currency, provider passenger IDs, slices, and segment IDs/timestamps. The existing `FlightOffer` TypeScript interface is missing the backend-emitted `priceAmount` field. Add it as `priceAmount: string | null` to match the current mapper. If it is null or is not a valid decimal string, fail safely with a typed client error; never reconstruct it from numeric `price`.
+
+The helper must parse the Appwrite execution's `responseStatusCode` and `responseBody`, distinguish the four business outcomes below from HTTP/provider failures, and validate the shape of successful response data before returning it. The backend already implements this action; BR-05 must not add a second backend refresh action.
+
 #### Outcomes
 
 | Outcome             | Result                                           |
@@ -460,7 +473,7 @@ The client must not treat its original snapshot as the current authoritative off
 | `itinerary_changed` | Block and return to flight selection             |
 | `unavailable`       | Block and return to search                       |
 
-Technical failures must remain distinguishable from these business outcomes.
+Technical failures must remain distinguishable from these business outcomes. When `itinerary_changed` is returned with `priceChanged: true`, the itinerary change takes precedence: block the review and require flight reselection. Do not ask the customer to accept a price for an itinerary that BR-05 will not allow them to use.
 
 ### 5.3 Seat validation
 
@@ -479,6 +492,8 @@ The validation must use:
 - Applicable disclosures.
 
 The result must be associated with the exact seat selection that was submitted.
+
+The existing `validateSeatServices(offerId, selectedSeats)` client helper and backend action already exist. Reuse them. Inspect every per-selection result; the top-level status alone is insufficient when the response contains a mixture of valid, changed-price and changed-selection results. An unavailable result is identified by `selection_changed` with `current: null` and a reason such as `segment_unavailable`, `seat_unavailable`, or `service_unavailable`. A disclosure change is identified by `selection_changed` with current details and reason `seat_disclosures_changed`. A disclosure change and price change can occur together and both customer actions are required.
 
 ### 5.4 Passenger readiness
 
@@ -656,16 +671,14 @@ Navigation must preserve the customer's work while ensuring that stale validatio
 
 ### 9.1 Navigation behaviour
 
-| Customer action                  | Expected behaviour                                                |
-| -------------------------------- | ----------------------------------------------------------------- |
-| Enter Checkout Review            | Trigger fresh validation                                          |
-| Return to Personal Information   | Preserve passenger information                                    |
-| Return to Seat Selection         | Preserve existing selections until changed                        |
-| Change passenger information     | Re-evaluate passenger readiness                                   |
-| Change a seat                    | Invalidate relevant seat validation                               |
-| Remove a seat                    | Invalidate relevant seat validation                               |
-| Change flight offer              | Invalidate offer, seat validation and associated price acceptance |
-| Return to review without changes | Reuse only results that remain valid under freshness rules        |
+| Customer action | Expected behaviour |
+| --- | --- |
+| First entry into Checkout Review for the active booking session | Refresh the offer, then validate selected seats if any |
+| Return to Personal Information and edit passenger details | Preserve passenger data; recalculate passenger readiness. Do not refresh the offer or seats if their dependencies are unchanged |
+| Return to Seat Selection and change/remove a seat | Preserve the offer validation and flight-price acceptance if still current; revalidate the complete current seat-selection set |
+| Change the selected flight offer/start a new booking session | Invalidate offer validation, seat validation, review state and all price acceptances |
+| Return to review without changing dependencies | Reuse validation and acceptance only while they belong to the same active booking/review session and the offer has not expired |
+| Offer expiry reached while the customer is reviewing | Refresh the offer again and revalidate selected seats before allowing progression |
 
 ### 9.2 Validation invalidation
 
@@ -704,7 +717,9 @@ At minimum, the implementation should use a combination of:
 
 A validation result must not be considered current merely because it exists in Zustand.
 
-The implementation must also guard against overlapping asynchronous requests. For example, a response from an earlier review attempt must not overwrite results from a newer attempt.
+The first entry for an active booking session starts the review attempt and performs fresh offer validation followed by seat validation. Returning from passenger or seat editing does not automatically repeat every provider request: only the dependencies that changed are re-evaluated. Do not introduce an arbitrary fixed freshness TTL in BR-05. Reuse is event-based and limited to the same active booking/review session, unchanged dependencies, and an unexpired refreshed offer. If the offer expires before progression, refresh it and revalidate selected seats.
+
+The current booking store already updates passenger collections and selected-seat arrays immutably and exposes an active booking-session ID. The implementation may use immutable snapshot/reference comparison or explicit revision counters; it does not need to add counters if stable immutable snapshots and the session ID provide reliable invalidation. Every asynchronous result must be associated with the review-attempt ID, booking-session ID, offer ID, and relevant passenger/seat snapshot. A response from an earlier attempt or changed snapshot must be ignored.
 
 ## 10. Data and architectural responsibilities
 
@@ -776,6 +791,19 @@ The mobile application must never:
 - Treat local validation as a provider reservation.
 
 The backend must continue validating and interpreting provider responses.
+
+### 10.6 Verified repository baseline and implementation gaps
+
+The focused readiness audit was performed against the current `main` branch. The following observations should guide implementation:
+
+- `src/lib/flights/api.ts` already exposes `getSeatMaps()` and `validateSeatServices()`, but has no `refreshOffer()` client helper. BR-05 must add the missing client integration and reuse the existing backend action.
+- `src/lib/flights/types.ts` defines `FlightOffer.price` and `currency` but omits `priceAmount`, even though `functions/flight-search/src/main.js` emits it. The type correction is required before safely building the refresh snapshot.
+- `SelectedSeatService` already contains the provider service ID, provider passenger ID, offer ID, segment ID, seat designator, amount, currency and disclosures needed by BR-03. Its association with the internal passenger must be resolved through BR-04 provider references.
+- `flight-booking.store.ts` already owns `activeBookingSession`, `passengerCollection`, and `selectedOutboundSeatServices`. `beginBookingSession()` resets booking-specific data when a different offer is selected; abandonment/completion cleanup already clears passenger and seat data. Keep BR-05 state scoped to this session and ensure any new review state is cleared on session replacement, abandonment and completion.
+- Passenger collection updates and seat-selection updates are immutable in the current store. Use the active session ID and immutable snapshots or explicit revisions to reject stale asynchronous responses.
+- `getBookingReadiness()` already derives `ready_for_order_preparation` from the exact offer and provider-ready passenger collection. Reuse it rather than creating another readiness implementation.
+- `flight-details.tsx` begins the booking session; `choose-seat.tsx` already carries seat identity by provider passenger and segment; `personal-information.tsx` currently has no forward Continue action. Adding a readiness-gated route to Checkout Review is a concrete Checkpoint 1 requirement.
+- The current flight mapper provides segment-level airline, flight number, airport, schedule and duration data. Connecting-flight layover duration must be derived from adjacent segment timestamps because no separate layover property exists.
 
 ## 11. Review-to-BR-06 boundary
 
@@ -874,6 +902,7 @@ Establish the screen, navigation, entry conditions and review-specific state.
 
 - Create Checkout Review route.
 - Integrate it after Personal Information.
+- Add a forward `Continue to review` action on Personal Information, gated by `getBookingReadiness()`.
 - Verify passenger readiness.
 - Establish review-session identity and state lifecycle.
 - Handle loading and initial error states.
