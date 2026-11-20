@@ -1,6 +1,7 @@
 import {
 	FlightSearchError,
 	type FlightOffer,
+	type OfferRefreshExpectedSnapshot,
 		type OfferRefreshResponse,
 	type FlightSearchRequest,
 	type FlightSearchResponse,
