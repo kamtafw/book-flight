@@ -1,6 +1,6 @@
-# BR-05: Checkout Review Contract
+| BR05-12 | Unavailable seats require customer intervention; unavailable seats are distinguished from changed disclosures using per-selection `current` data and reason. |
 
-**Status:** Implementation contract reviewed; implementation not started  
+**Status:** Updated after implementation-readiness audit; pending user approval; implementation not started  
 **Scope:** Checkout Review for the current one-way booking flow, including connecting itineraries with multiple segments  
 **Depends on:** BR-01 checkout contract, BR-02 offer refresh/validation, BR-03 seat-service validation, and BR-04 passenger domain, provider-validation, readiness, and lifecycle work  
 **Current-flow boundary:** The current search implementation creates one-way offers. BR-05 must display every segment within the selected journey, including connections, but must not introduce round-trip or multi-city search support.
@@ -263,10 +263,13 @@ Subject to the data available and relevant requirements:
 - Date of birth.
 - Gender, where applicable.
 - Nationality, where applicable.
+- Passenger email and phone details, including clear ownership when a contact belongs to another person rather than the passenger.
 - Travel document type.
 - Document expiry date, where relevant.
 
 Sensitive document numbers should not be unnecessarily exposed. Where a document identifier must be shown for customer verification, use a masked representation.
+
+The BR-04 model distinguishes passenger-owned contact details from another person's contact details. The review must preserve and display that ownership distinction; it must not label another person's email or phone number as the passenger's own. A separate booking-level contact is not currently represented in the active passenger collection, so BR-05 must not invent one or silently reuse passenger contact details as a booking contact.
 
 #### Passenger relationships
 
@@ -431,10 +434,12 @@ flowchart TD
     M -- Technical error --> H
     M -- Business issue --> O["Present seat issues for resolution"]
     M -- Yes --> N
-    O --> P["Customer changes or removes seat selection"]
-    P --> R{"Offer unchanged and unexpired?"}
-    R -- Yes --> L
-    R -- No --> E
+    O --> P["Customer reviews disclosures and resolves unavailable seats"]
+    P --> T{"Did the seat selection change?"}
+    T -- No --> N
+    T -- Yes --> U{"Offer unchanged and unexpired?"}
+    U -- Yes --> L
+    U -- No --> E
     N --> Q["Present updated checkout review"]
     Q --> R["Customer reviews changes"]
     R --> S["Proceed when all conditions are satisfied"]
@@ -444,7 +449,7 @@ The sequence establishes that the selected offer must be successfully refreshed 
 
 If the flight offer is unavailable or the itinerary has materially changed, seat validation must not continue.
 
-If there are no selected seats, the seat-validation request can be skipped. If the customer changes only seat selections, revalidate the current complete seat-selection set; do not repeat offer refresh unless the selected offer changes or the refreshed offer expires. If the customer changes passenger information, re-evaluate passenger readiness without repeating provider validation whose inputs remain unchanged.
+If there are no selected seats, the seat-validation request can be skipped. If the customer changes only seat selections, revalidate the current complete seat-selection set; do not repeat offer refresh unless the selected offer changes or the refreshed offer expires. If the customer changes passenger information, re-evaluate passenger readiness without repeating provider validation whose inputs remain unchanged. Disclosure acknowledgement or price acceptance alone does not require another provider request.
 
 ### 5.2 Offer refresh
 
