@@ -1,6 +1,6 @@
 # BR-05: Checkout Review Contract
 
-**Status:** Approved; implementation not started  
+**Status:** Approved; P1 implementation merged into `main`; P2 in progress  
 **Scope:** Checkout Review for the current one-way booking flow, including connecting itineraries with multiple segments  
 **Depends on:** BR-01 checkout contract, BR-02 offer refresh/validation, BR-03 seat-service validation, and BR-04 passenger domain, provider-validation, readiness, and lifecycle work  
 **Current-flow boundary:** The current search implementation creates one-way offers. BR-05 must display every segment within the selected journey, including connections, but must not introduce round-trip or multi-city search support.
@@ -901,6 +901,61 @@ These are the proposed completion criteria for BR-05.
 | BR05-26 | Old asynchronous validation responses cannot overwrite newer review state.                                              |
 | BR05-27 | Review validation results cannot be reused across unrelated booking sessions.                                           |
 | BR05-28 | No order, payment, ticket issuance or booking confirmation is created by BR-05.                                         |
+
+## 12.1 Implementation progress
+
+### P1: Review foundation — complete
+
+P1 has been implemented, locally verified and merged into `main`.
+
+- **Branch:** `feat/br-05-p1-review-foundation`
+- **Pull request:** [#12](https://github.com/kamtafw/book-flight/pull/12)
+- **Merge commit:** `ce2df076f252a2d933f2e6e8ab7ed066e0608088`
+- **Scope delivered:** passenger-readiness-gated forward navigation, Checkout Review route and entry protection, review-session identity/lifecycle, and focused tests.
+- **Verification:** `npm test` (95 passed), `npx tsc --noEmit`, `npx expo lint`, and manual verification all passed.
+
+P1 establishes the review entry point only. It does not refresh offers, validate seats, calculate checkout pricing, or implement customer acceptance.
+
+### P2: Fresh offer integration — in progress
+
+P2 connects the existing BR-02 `refresh-offer` backend action to the Checkout Review screen. It must preserve the original selected offer as the comparison baseline and use the refreshed provider offer only when BR-02 says it is safe to continue.
+
+P2 is limited to offer refresh and its review lifecycle. Seat validation remains P3; pricing presentation and acceptance remain P4; order creation and payment remain outside BR-05.
+
+**P2 implementation tasks**
+
+1. **P2-01 — Offer types and API integration**
+   - Add `priceAmount: string | null` to `FlightOffer`, matching the backend mapper.
+   - Add typed request/response contracts for the BR-02 refresh action.
+   - Add `refreshOffer(offer)` in `src/lib/flights/api.ts`.
+   - Build the expected snapshot from the selected offer's ID, original decimal amount, currency, provider passenger IDs, slices, segment IDs and timestamps.
+   - Parse Appwrite execution status and response body; validate response shape and distinguish business outcomes from technical failures.
+   - Reject missing or malformed original decimal amounts; never reconstruct them from numeric `price`.
+
+2. **P2-02 — Offer comparison and outcome model**
+   - Represent `valid`, `price_changed`, `itinerary_changed`, and `unavailable` as explicit typed outcomes.
+   - Preserve BR-02 precedence: `itinerary_changed` blocks progression even when `priceChanged` is also true.
+   - Keep technical/network/Appwrite/provider errors separate from business outcomes.
+   - Retain the original offer snapshot independently from the refreshed offer.
+
+3. **P2-03 — Review refresh lifecycle and recovery**
+   - Trigger offer refresh on the first entry for the active review session.
+   - Show loading, successful refresh, price-change, itinerary-change, unavailable and retryable-error states.
+   - Do not proceed to seat validation or a completed review on unavailable offers, material itinerary changes or technical failures.
+   - Allow retry without silently replacing the original offer or abandoning the booking draft.
+   - Associate each request with the active review-session ID, booking-session ID, original offer ID and attempt identity; ignore stale responses after navigation, a new attempt, or a changed booking.
+   - Reuse a successful result on return only while the same review session and offer remain valid; do not introduce an arbitrary freshness TTL.
+
+4. **P2-04 — Focused verification**
+   - Test request snapshot construction and decimal-string handling.
+   - Test all BR-02 business outcomes, including price changes alongside itinerary changes.
+   - Test malformed responses, Appwrite failures, network/provider errors and retry.
+   - Test stale-response protection and review-session isolation.
+   - Run the full test suite, TypeScript check, Expo lint and manual review-flow verification.
+
+**P2 exit condition:** Checkout Review uses a successfully refreshed offer for the active booking/review session; safely blocks unavailable or materially changed itineraries; clearly identifies fare changes for the customer; and offers retry for technical failures without losing the booking draft. P2 does not yet validate seats or allow final checkout progression where a fare change still requires acceptance.
+
+---
 
 ## 13. Proposed implementation checkpoints
 
