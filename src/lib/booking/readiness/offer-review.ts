@@ -56,6 +56,9 @@ function snapshotOffer(offer: FlightOffer): FlightOffer {
 	return {
 		...offer,
 		operatingCarrierNames: [...offer.operatingCarrierNames],
+		supportedPassengerIdentityDocumentTypes: offer.supportedPassengerIdentityDocumentTypes
+			? [...offer.supportedPassengerIdentityDocumentTypes]
+			: offer.supportedPassengerIdentityDocumentTypes,
 		passengers: offer.passengers?.map((passenger) => ({ ...passenger })),
 		slices: offer.slices.map((slice) => ({
 			...slice,
