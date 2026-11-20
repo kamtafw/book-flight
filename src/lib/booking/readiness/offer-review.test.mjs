@@ -15,6 +15,7 @@ function makeOffer(overrides = {}) {
 		currency: "USD",
 		expiresAt: "2027-05-21T10:00:00Z",
 		operatingCarrierNames: ["Example Air"],
+		supportedPassengerIdentityDocumentTypes: ["passport"],
 		passengers: [{ id: "pas_adult", type: "adult", age: 30 }],
 		slices: [{
 			originCode: "LOS",
@@ -142,8 +143,10 @@ test("the original snapshot does not share nested mutable data with the selected
 	outcome.originalOffer.slices[0].segments[0].departureAirportName = "Changed copy"
 	outcome.originalOffer.passengers[0].age = 99
 	outcome.originalOffer.operatingCarrierNames.push("Changed copy")
+	outcome.originalOffer.supportedPassengerIdentityDocumentTypes.push("national_id")
 
 	assert.equal(original.slices[0].segments[0].departureAirportName, "Lagos")
 	assert.equal(original.passengers[0].age, 30)
 	assert.deepEqual(original.operatingCarrierNames, ["Example Air"])
+	assert.deepEqual(original.supportedPassengerIdentityDocumentTypes, ["passport"])
 })
