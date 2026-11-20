@@ -47,7 +47,7 @@ function mockExecution(body: unknown, responseStatusCode = 200) {
 	)
 }
 
-function withFetch(response: Response, run: () => Promise<void>) {
+function withFetch(response: Response, run: () => Promise<void>, verifyRequest?: (input: RequestInfo | URL, init?: RequestInit) => void) {
 	const originalFetch = globalThis.fetch
 	const originalEnv = {
 		endpoint: process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT,
@@ -57,7 +57,10 @@ function withFetch(response: Response, run: () => Promise<void>) {
 	process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT = "https://appwrite.example/v1"
 	process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID = "project"
 	process.env.EXPO_PUBLIC_APPWRITE_FLIGHT_SEARCH_FUNCTION_ID = "flight-search"
-	globalThis.fetch = async () => response
+	globalThis.fetch = async (input, init) => {
+		verifyRequest?.(input, init)
+		return response
+	}
 	return run().finally(() => {
 		globalThis.fetch = originalFetch
 		if (originalEnv.endpoint === undefined) delete process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT
@@ -99,11 +102,24 @@ test("refuses to reconstruct a missing provider price from the numeric display p
 test("sends the refresh-offer action and returns a validated current offer", async () => {
 	const original = makeOffer()
 	const refreshed = { ...original, price: 125.5, priceAmount: "125.50" }
-	await withFetch(mockExecution({ status: "valid", offer: refreshed }), async () => {
-		const result = await refreshOffer(original)
-		assert.equal(result.status, "valid")
-		if (result.status === "valid") assert.equal(result.offer.priceAmount, "125.50")
-	})
+	await withFetch(
+		mockExecution({ status: "valid", offer: refreshed }),
+		async () => {
+			const result = await refreshOffer(original)
+			assert.equal(result.status, "valid")
+			if (result.status === "valid") assert.equal(result.offer.priceAmount, "125.50")
+		},
+		(input, init) => {
+			assert.equal(String(input), "https://appwrite.example/v1/functions/flight-search/executions")
+			assert.equal(init?.method, "POST")
+			const execution = JSON.parse(String(init?.body))
+			const payload = JSON.parse(execution.body)
+			assert.equal(payload.action, "refresh-offer")
+			assert.equal(payload.offerId, original.id)
+			assert.equal(payload.expectedOffer.totalAmount, "125.50")
+			assert.deepEqual(payload.expectedOffer.passengers, [{ id: "pas_adult" }])
+		},
+	)
 })
 
 test("returns unavailable as a business outcome rather than a technical error", async () => {
@@ -165,4 +181,26 @@ test("rejects malformed provider response shapes", async () => {
 			(error: unknown) => error instanceof FlightSearchError && error.code === "INVALID_RESPONSE",
 		)
 	})
+})
+
+
+test("returns changed fare details without treating them as an itinerary failure", async () => {
+	const original = makeOffer()
+	const refreshed = { ...original, price: 140, priceAmount: "140.00" }
+	await withFetch(
+		mockExecution({
+			status: "price_changed",
+			previousPrice: { amount: "125.50", currency: "USD" },
+			currentPrice: { amount: "140.00", currency: "USD" },
+			offer: refreshed,
+		}),
+		async () => {
+			const result = await refreshOffer(original)
+			assert.equal(result.status, "price_changed")
+			if (result.status === "price_changed") {
+				assert.equal(result.previousPrice.amount, "125.50")
+				assert.equal(result.currentPrice.amount, "140.00")
+			}
+		},
+	)
 })
