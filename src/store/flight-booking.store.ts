@@ -7,10 +7,12 @@ import type {
 import { createPassengerCollectionFromOffer } from "@/lib/booking/passengers/passenger-domain"
 import {
 	type ActiveBookingSession,
+	type CheckoutReviewSession,
 	clearBookingSessionState,
+	getOrCreateCheckoutReviewSession as resolveCheckoutReviewSession,
 	transitionBookingSession,
 } from "@/lib/booking/readiness/booking-session"
-import type { FlightOffer, SelectedSeatService } from "@/lib/flights/types"
+import type { FlightOffer,SelectedSeatService } from "@/lib/flights/types"
 import { create } from "zustand"
 
 interface FlightBookingState {
@@ -18,6 +20,7 @@ interface FlightBookingState {
 	selectedOutboundSeatServices: SelectedSeatService[]
 	passengerCollection: PassengerCollection | null
 	activeBookingSession: ActiveBookingSession | null
+	checkoutReviewSession: CheckoutReviewSession | null
 
 	setOutboundSeats: (seats: string[]) => void
 	toggleOutboundSeat: (seat: string) => void
@@ -26,6 +29,7 @@ interface FlightBookingState {
 	clearOutboundSeatServices: () => void
 
 	beginBookingSession: (offer: Pick<FlightOffer, "id">) => string
+	getOrCreateCheckoutReviewSession: (offerId: string) => CheckoutReviewSession | null
 	abandonBookingSession: () => void
 	completeBookingSession: () => void
 	initializePassengerCollection: (offer: FlightOffer) => void
@@ -44,6 +48,10 @@ interface FlightBookingState {
 
 function createInternalPassengerId() {
 	return `passenger-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+function createCheckoutReviewSessionId() {
+	return `review-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
 }
 
 function getPassengerCategory(type: string | null): Passenger["category"] {
@@ -75,6 +83,7 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 	selectedOutboundSeatServices: [],
 	passengerCollection: null,
 	activeBookingSession: null,
+	checkoutReviewSession: null,
 
 	setOutboundSeats: (seats) => {
 		set({ selectedOutboundSeats: seats })
@@ -152,6 +161,18 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 		const next = transitionBookingSession(get(), offer.id, createInternalPassengerId)
 		set(next)
 		return next.activeBookingSession!.id
+	},
+
+	getOrCreateCheckoutReviewSession: (offerId) => {
+		const state = get()
+		const next = resolveCheckoutReviewSession(
+			state.activeBookingSession,
+			state.checkoutReviewSession,
+			offerId,
+			createCheckoutReviewSessionId,
+		)
+		if (next && next !== state.checkoutReviewSession) set({ checkoutReviewSession: next })
+		return next
 	},
 
 	abandonBookingSession: () => set((state) => clearBookingSessionState(state)),
