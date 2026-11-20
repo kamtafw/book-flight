@@ -1,6 +1,8 @@
 import {
 	FlightSearchError,
 	type FlightOffer,
+	type OfferRefreshExpectedSnapshot,
+	type OfferRefreshResponse,
 	type FlightSearchRequest,
 	type FlightSearchResponse,
 	type SeatMapResponse,
@@ -337,4 +339,262 @@ export async function validateSeatServices(
 		)
 	}
 	return result
+}
+
+
+const DECIMAL_AMOUNT_PATTERN = /^(?:0|[1-9]\\d*)(?:\\.\\d+)?$/
+const OFFER_ID_PATTERN = /^off_[A-Za-z0-9]+$/
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+function isDecimalAmount(value: unknown): value is string {
+	return typeof value === "string" && DECIMAL_AMOUNT_PATTERN.test(value)
+}
+
+function isRefreshPrice(value: unknown): value is { amount: string; currency: string } {
+	return (
+		isRecord(value) &&
+		isDecimalAmount(value.amount) &&
+		typeof value.currency === "string" &&
+		/^[A-Z]{3}$/.test(value.currency)
+	)
+}
+
+function isRefreshedOffer(value: unknown, expectedOfferId: string): value is FlightOffer {
+	if (
+		!isRecord(value) ||
+		value.id !== expectedOfferId ||
+		!isDecimalAmount(value.priceAmount) ||
+		typeof value.price !== "number" ||
+		!Number.isFinite(value.price) ||
+		typeof value.currency !== "string" ||
+		!/^[A-Z]{3}$/.test(value.currency) ||
+		typeof value.expiresAt !== "string" ||
+		!Number.isFinite(Date.parse(value.expiresAt)) ||
+		!Array.isArray(value.passengers) ||
+		value.passengers.length === 0 ||
+		!Array.isArray(value.slices) ||
+		value.slices.length === 0
+	) {
+		return false
+	}
+
+	if (
+		value.passengers.some(
+			(passenger) => !isRecord(passenger) || typeof passenger.id !== "string" || !passenger.id,
+		)
+	) {
+		return false
+	}
+
+	return value.slices.every(
+		(slice) =>
+			isRecord(slice) &&
+			typeof slice.originCode === "string" &&
+			typeof slice.destinationCode === "string" &&
+			Array.isArray(slice.segments) &&
+			slice.segments.length > 0 &&
+			slice.segments.every(
+				(segment) =>
+					isRecord(segment) &&
+					typeof segment.id === "string" &&
+					Boolean(segment.id) &&
+					typeof segment.departureAt === "string" &&
+					Number.isFinite(Date.parse(segment.departureAt)) &&
+					typeof segment.arrivalAt === "string" &&
+					Number.isFinite(Date.parse(segment.arrivalAt)),
+			),
+	)
+}
+
+/**
+ * Build the untrusted comparison snapshot required by BR-02 from the exact
+ * offer originally selected by the customer. Never derive priceAmount from
+ * the rounded numeric display price.
+ */
+export function buildOfferRefreshSnapshot(offer: FlightOffer): OfferRefreshExpectedSnapshot {
+	if (!OFFER_ID_PATTERN.test(offer.id)) {
+		throw new FlightSearchError("Choose a valid flight offer before reviewing it.", "INVALID_OFFER_ID")
+	}
+	if (!isDecimalAmount(offer.priceAmount)) {
+		throw new FlightSearchError(
+			"The original flight price is unavailable or invalid. Return to search and select the flight again.",
+			"INVALID_OFFER_PRICE",
+		)
+	}
+	if (typeof offer.currency !== "string" || !/^[A-Z]{3}$/.test(offer.currency)) {
+		throw new FlightSearchError("The selected flight has an invalid currency.", "INVALID_OFFER_CURRENCY")
+	}
+	if (!Array.isArray(offer.passengers) || offer.passengers.length === 0) {
+		throw new FlightSearchError(
+			"The selected flight is missing its passenger references. Return to search and select it again.",
+			"INVALID_OFFER_PASSENGERS",
+		)
+	}
+	if (!Array.isArray(offer.slices) || offer.slices.length === 0) {
+		throw new FlightSearchError(
+			"The selected flight is missing its itinerary. Return to search and select it again.",
+			"INVALID_OFFER_ITINERARY",
+		)
+	}
+
+	const passengers = offer.passengers.map((passenger) => {
+		if (!passenger.id) {
+			throw new FlightSearchError("The selected flight contains an invalid passenger reference.", "INVALID_OFFER_PASSENGERS")
+		}
+		return { id: passenger.id }
+	})
+	const slices = offer.slices.map((slice) => {
+		if (!slice.originCode || !slice.destinationCode || !Array.isArray(slice.segments) || !slice.segments.length) {
+			throw new FlightSearchError("The selected flight contains an invalid itinerary.", "INVALID_OFFER_ITINERARY")
+		}
+		return {
+			originCode: slice.originCode,
+			destinationCode: slice.destinationCode,
+			segments: slice.segments.map((segment) => {
+				if (
+					!segment.id ||
+					!segment.departureAt ||
+					!Number.isFinite(Date.parse(segment.departureAt)) ||
+					!segment.arrivalAt ||
+					!Number.isFinite(Date.parse(segment.arrivalAt))
+				) {
+					throw new FlightSearchError("The selected flight contains an invalid segment.", "INVALID_OFFER_ITINERARY")
+				}
+				return {
+					id: segment.id,
+					departureAt: segment.departureAt,
+					arrivalAt: segment.arrivalAt,
+				}
+			}),
+		}
+	})
+
+	return {
+		id: offer.id,
+		totalAmount: offer.priceAmount,
+		totalCurrency: offer.currency,
+		passengers,
+		slices,
+	}
+}
+
+export async function refreshOffer(offer: FlightOffer): Promise<OfferRefreshResponse> {
+	const expectedOffer = buildOfferRefreshSnapshot(offer)
+	const { endpoint, projectId, functionId } = getConfig()
+	let response: Response
+	try {
+		response = await fetch(
+			`${endpoint}/functions/${encodeURIComponent(functionId)}/executions`,
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"X-Appwrite-Project": projectId,
+				},
+				body: JSON.stringify({
+					async: false,
+					method: "POST",
+					path: "/",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						action: "refresh-offer",
+						offerId: offer.id,
+						expectedOffer,
+					}),
+				}),
+			},
+		)
+	} catch {
+		throw new FlightSearchError(
+			"We couldn't reach the flight provider to verify this offer. Please try again.",
+			"OFFER_REFRESH_NETWORK_ERROR",
+		)
+	}
+
+	if (!response.ok) {
+		throw new FlightSearchError(
+			response.status === 401 || response.status === 403
+				? "Appwrite rejected the offer refresh request. Check the function's execution permissions."
+				: "We couldn't verify this flight offer. Please try again.",
+			"APPWRITE_EXECUTION_FAILED",
+		)
+	}
+
+	let execution: { responseBody?: string; responseStatusCode?: number }
+	try {
+		execution = (await response.json()) as typeof execution
+	} catch {
+		throw new FlightSearchError("Offer refresh returned an unreadable execution.", "INVALID_RESPONSE")
+	}
+
+	let result: unknown
+	try {
+		result = JSON.parse(execution.responseBody ?? "")
+	} catch {
+		throw new FlightSearchError("Offer refresh returned an unreadable response.", "INVALID_RESPONSE")
+	}
+	if (!isRecord(result)) {
+		throw new FlightSearchError("Offer refresh returned an unexpected response.", "INVALID_RESPONSE")
+	}
+
+	if ((execution.responseStatusCode ?? 200) >= 400 || result.error) {
+		throw new FlightSearchError(
+			typeof result.error === "string"
+				? result.error
+				: "We couldn't verify this flight offer. Please try again.",
+			typeof result.code === "string" ? result.code : "OFFER_REFRESH_FAILED",
+		)
+	}
+
+	if (result.status === "unavailable") {
+		if (typeof result.code !== "string" || typeof result.message !== "string") {
+			throw new FlightSearchError("Offer refresh returned an unexpected response.", "INVALID_RESPONSE")
+		}
+		return { status: "unavailable", code: result.code, message: result.message }
+	}
+
+	if (
+		result.status === "valid" &&
+		isRefreshedOffer(result.offer, offer.id)
+	) {
+		return { status: "valid", offer: result.offer }
+	}
+
+	if (
+		result.status === "price_changed" &&
+		isRefreshPrice(result.previousPrice) &&
+		isRefreshPrice(result.currentPrice) &&
+		isRefreshedOffer(result.offer, offer.id)
+	) {
+		return {
+			status: "price_changed",
+			previousPrice: result.previousPrice,
+			currentPrice: result.currentPrice,
+			offer: result.offer,
+		}
+	}
+
+	if (
+		result.status === "itinerary_changed" &&
+		Array.isArray(result.materialDifferences) &&
+		result.materialDifferences.every((item) => typeof item === "string") &&
+		typeof result.priceChanged === "boolean" &&
+		isRefreshPrice(result.previousPrice) &&
+		isRefreshPrice(result.currentPrice) &&
+		isRefreshedOffer(result.offer, offer.id)
+	) {
+		return {
+			status: "itinerary_changed",
+			materialDifferences: result.materialDifferences,
+			priceChanged: result.priceChanged,
+			previousPrice: result.previousPrice,
+			currentPrice: result.currentPrice,
+			offer: result.offer,
+		}
+	}
+
+	throw new FlightSearchError("Offer refresh returned an unexpected response.", "INVALID_RESPONSE")
 }
