@@ -50,6 +50,10 @@ function createInternalPassengerId() {
 	return `passenger-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
 }
 
+function createCheckoutReviewSessionId() {
+	return `review-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+}
+
 function getPassengerCategory(type: string | null): Passenger["category"] {
 	if (type === "adult") return "adult"
 	if (type === "child") return "child"
@@ -165,7 +169,7 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 			state.activeBookingSession,
 			state.checkoutReviewSession,
 			offerId,
-			createInternalPassengerId,
+			createCheckoutReviewSessionId,
 		)
 		if (next && next !== state.checkoutReviewSession) set({ checkoutReviewSession: next })
 		return next
