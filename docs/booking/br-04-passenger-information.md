@@ -1,6 +1,6 @@
 # BR-04: Passenger Information Contract
 
-**Status:** Approved design direction; implementation not started  
+**Status:** Approved; BR-04A and BR-04B implementation complete and integrated into `main`. BR-04C and BR-04D are tracked in their respective contracts.
 **Scope:** Provider-agnostic passenger domain model and passenger-information collection for the current one-way booking flow  
 **Depends on:** BR-01 checkout contract, BR-02 offer refresh/validation, BR-03 seat-service validation  
 **Explicitly excludes:** Order creation, payment processing, booking confirmation, saved-traveller profiles, and persistent passenger-data storage
