@@ -431,8 +431,10 @@ flowchart TD
     M -- Technical error --> H
     M -- Business issue --> O["Present seat issues for resolution"]
     M -- Yes --> N
-    O --> P["Customer resolves or removes seats"]
-    P --> E
+    O --> P["Customer changes or removes seat selection"]
+    P --> R{"Offer unchanged and unexpired?"}
+    R -- Yes --> L
+    R -- No --> E
     N --> Q["Present updated checkout review"]
     Q --> R["Customer reviews changes"]
     R --> S["Proceed when all conditions are satisfied"]
@@ -442,7 +444,7 @@ The sequence establishes that the selected offer must be successfully refreshed 
 
 If the flight offer is unavailable or the itinerary has materially changed, seat validation must not continue.
 
-If there are no selected seats, the seat-validation request can be skipped. If the customer changes only seat selections, revalidate the current complete seat-selection set; do not loop back through offer refresh unless the offer itself changed or its refreshed expiry has passed. If the customer resolves a seat issue by changing or removing a selection while the offer and active booking session remain unchanged, revalidate the current complete selected-seat set without automatically refreshing the flight offer again. If the selected offer changes, or the prior offer validation has expired, restart the offer-refresh step before validating seats.
+If there are no selected seats, the seat-validation request can be skipped. If the customer changes only seat selections, revalidate the current complete seat-selection set; do not repeat offer refresh unless the selected offer changes or the refreshed offer expires. If the customer changes passenger information, re-evaluate passenger readiness without repeating provider validation whose inputs remain unchanged.
 
 ### 5.2 Offer refresh
 
@@ -513,11 +515,11 @@ This is necessary because a customer may accept a flight-price change but subseq
 
 Acceptance must be tracked separately for:
 
-- Flight fare.
-- Seat selection.
-- Additional services, if supported and included.
+- The refreshed flight fare for the selected offer.
+- Each selected seat-service component, identified by offer, segment, passenger, service and seat.
+- Each additional service component, if supported and included.
 
-A single generic `accepted: true` flag for the entire review is insufficient.
+The UI may group all seat services into one seat subtotal, but acceptance must remain attached to the individual changed service so one seat's change does not invalidate an unrelated seat or the flight fare. A single generic `accepted: true` flag for the entire review is insufficient.
 
 ### 6.2 Flight price acceptance
 
@@ -535,13 +537,14 @@ If the refreshed flight fare changes again, previous acceptance becomes invalid.
 
 The same rules apply to selected seat services.
 
-If a seat is replaced or its price changes:
+If a seat is replaced or its provider-validated price/currency changes:
 
-- The relevant seat selection must be validated again.
-- Its current price must be displayed.
-- Acceptance must be requested for the new price.
+- The current complete seat-selection set must be validated again.
+- The current price must be displayed against the relevant passenger and segment.
+- Acceptance must be requested for a new or changed price component that differs from the previously reviewed/accepted component.
+- Acceptance for an unrelated seat or previous seat-service identity must not carry over.
 
-Acceptance for an unrelated seat or previous seat selection must not carry over.
+If the provider reports a changed disclosure, require disclosure acknowledgement separately from price acceptance. If both the disclosure and price changed, both actions are required.
 
 ### 6.4 Independent acceptance preservation
 
@@ -861,18 +864,18 @@ These are the proposed completion criteria for BR-05.
 
 | ID      | Acceptance criterion                                                                                                    |
 | ------- | ----------------------------------------------------------------------------------------------------------------------- |
-| BR05-01 | Customer cannot enter Checkout Review with incomplete or invalid required passenger information.                        |
+| BR05-01 | Customer cannot enter Checkout Review with incomplete or invalid required passenger information; Personal Information exposes a forward action only when `getBookingReadiness()` returns `ready_for_order_preparation`. |
 | BR05-02 | Checkout Review displays the complete itinerary.                                                                        |
 | BR05-03 | Connecting flights display their individual segments and layovers.                                                      |
 | BR05-04 | Passenger information is displayed individually and accurately.                                                         |
 | BR05-05 | Selected seats appear under the correct passenger and flight segment.                                                   |
 | BR05-06 | Passengers without selected seats do not display unnecessary seat information.                                          |
-| BR05-07 | Entering Checkout Review triggers a fresh offer refresh.                                                                |
+| BR05-07 | First entry into Checkout Review for an active booking session triggers a fresh offer refresh; unchanged review results may be reused on return while the offer remains unexpired. |
 | BR05-08 | An unavailable offer blocks review progression and offers a return to search.                                           |
 | BR05-09 | Material itinerary changes block progression and require flight reselection.                                            |
 | BR05-10 | Harmless offer-description changes do not unnecessarily invalidate the offer.                                           |
 | BR05-11 | Selected seats are revalidated after successful offer validation.                                                       |
-| BR05-12 | Unavailable seats require customer intervention.                                                                        |
+| BR05-12 | Unavailable seats require customer intervention; unavailable seats are distinguished from changed disclosures using per-selection `current` data and reason. |
 | BR05-13 | Changed seat prices are displayed and require explicit acceptance.                                                      |
 | BR05-14 | Flight price changes are displayed with original and updated amounts and require explicit acceptance.                   |
 | BR05-15 | Acceptance of one price component does not automatically accept another.                                                |
