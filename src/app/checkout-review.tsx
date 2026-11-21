@@ -108,7 +108,7 @@ export default function CheckoutReviewScreen() {
 			router.replace("/flight-results")
 			return
 		}
-		router.push({ pathname: "/choose-seat", params: { flightId, returnToReview: "true" } })
+		router.push({ pathname: "/personal-information", params: { flightId, returnToReview: "true" } })
 	}
 
 	const returnToSearch = () => {
