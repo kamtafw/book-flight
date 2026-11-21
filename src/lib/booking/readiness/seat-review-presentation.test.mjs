@@ -153,6 +153,28 @@ test("does not guess passenger ownership when provider references are missing or
 	assert.equal(groups[0].seats[0].passengerLabel, "Passenger association needs attention")
 })
 
+test("presents unavailable seats with the provider's specific reason", () => {
+	const selected = seat()
+	const groups = buildSeatReviewPresentation(
+		{
+			status: "action_required",
+			selections: [
+				{
+					status: "unavailable",
+					selection: selected,
+					reason: "service_unavailable",
+				},
+			],
+		},
+		[selected],
+		{ passengers: [passenger("p1", "pas_1")], relationships: [] },
+		offer(),
+	)
+	assert.equal(groups[0].seats[0].status, "unavailable")
+	assert.equal(groups[0].seats[0].unavailableReason, "service_unavailable")
+	assert.equal(groups[0].seats[0].currentAmount, null)
+})
+
 test("returns no seat rows for an explicit not-selected outcome", () => {
 	assert.deepEqual(
 		buildSeatReviewPresentation(
