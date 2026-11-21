@@ -348,7 +348,7 @@ export default function CheckoutReviewScreen() {
 		return (
 			<SafeAreaView className="flex-1 items-center justify-center bg-background px-8">
 				<Text className="font-inter-semibold text-lg text-black">
-					{exhausted ? "Seat verification unavailable" : "We couldn&apos;t verify your seats"}
+					{exhausted ? "Seat verification unavailable" : "We couldn't verify your seats"}
 				</Text>
 				<Text className="mt-2 text-center font-inter text-sm leading-5 text-gray-200">
 					{currentSeatLifecycle.errorMessage ?? "A temporary problem prevented seat verification."}
@@ -375,7 +375,7 @@ export default function CheckoutReviewScreen() {
 				<Text className="mt-2 text-center font-inter text-sm leading-5 text-gray-200">
 					One or more selected seats are unavailable or have changed price or conditions. Return to seat selection to review them.
 				</Text>
-				<Pressable onPress={() => router.replace({ pathname: "/choose-seat", params: { flightId } })} className="mt-6 rounded-xl bg-primary px-8 py-3">
+				<Pressable onPress={() => flightId ? router.replace({ pathname: "/choose-seat", params: { flightId } }) : router.replace("/flight-results")} className="mt-6 rounded-xl bg-primary px-8 py-3">
 					<Text className="font-inter-semibold text-sm text-white">Review seat selection</Text>
 				</Pressable>
 			</SafeAreaView>
