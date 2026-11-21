@@ -256,7 +256,10 @@ function EmptyState({
 }
 
 export default function ChooseSeatScreen() {
-	const { flightId } = useLocalSearchParams<{ flightId?: string }>()
+	const { flightId, returnToReview } = useLocalSearchParams<{
+		flightId?: string
+		returnToReview?: string
+	}>()
 	const flight = useFlightOffersStore((state) => state.offers.find((item) => item.id === flightId))
 	const passengers = useFlightSearchStore((state) => state.passengers)
 	const selectedSeats = useFlightBookingStore((state) => state.selectedOutboundSeatServices)
@@ -368,7 +371,7 @@ export default function ChooseSeatScreen() {
 
 	const handleContinue = () => {
 		if (!flightId || !flight) return
-		router.push({ pathname: "/personal-information", params: { flightId } })
+		router.push({ pathname: "/personal-information", params: { flightId, returnToReview } })
 	}
 
 	return (
