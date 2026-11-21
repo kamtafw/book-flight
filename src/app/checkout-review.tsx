@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context"
 
 import { isCheckoutReviewSessionCurrent } from "@/lib/booking/readiness/booking-session"
 import { getCheckoutReviewEntryState } from "@/lib/booking/readiness/checkout-review"
+import { createOfferReviewOutcome } from "@/lib/booking/readiness/offer-review"
 import {
 	isOfferReviewLifecycleForSession,
 	shouldStartOfferReviewRefresh,
@@ -14,7 +15,6 @@ import {
 import { refreshOffer } from "@/lib/flights/api"
 import { useFlightBookingStore } from "@/store/flight-booking.store"
 import { useFlightOffersStore } from "@/store/flight-offers.store"
-import { createOfferReviewOutcome } from "@/lib/booking/readiness/offer-review"
 
 function formatProviderAmount(amount: string, currency: string) {
 	return `${currency} ${amount}`
@@ -220,8 +220,8 @@ export default function CheckoutReviewScreen() {
 					Flight verification unavailable
 				</Text>
 				<Text className="mt-2 text-center font-inter text-sm leading-5 text-gray-200">
-					We couldn&apos;t verify this flight after three attempts. Your booking details have not been
-					deleted. Return to search to select a flight and begin a fresh review.
+					We couldn&apos;t verify this flight after three attempts. Your booking details have not
+					been deleted. Return to search to select a flight and begin a fresh review.
 				</Text>
 				<Pressable onPress={returnToSearch} className="mt-6 rounded-xl bg-primary px-6 py-3">
 					<Text className="font-inter-medium text-white">Return to search</Text>
@@ -254,8 +254,8 @@ export default function CheckoutReviewScreen() {
 					Your flight itinerary has changed
 				</Text>
 				<Text className="mt-2 text-center font-inter text-sm leading-5 text-gray-200">
-					The provider returned a materially different itinerary. We won&apos;t replace your original
-					selection automatically. Return to search and select a flight again.
+					The provider returned a materially different itinerary. We won&apos;t replace your
+					original selection automatically. Return to search and select a flight again.
 				</Text>
 				<Pressable onPress={returnToSearch} className="mt-6 rounded-xl bg-primary px-6 py-3">
 					<Text className="font-inter-medium text-white">Choose another flight</Text>

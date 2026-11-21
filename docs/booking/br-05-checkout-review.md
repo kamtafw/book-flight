@@ -931,39 +931,36 @@ P2 is limited to offer refresh and its review lifecycle. Seat validation remains
    - Build the expected snapshot from the selected offer's ID, original decimal amount, currency, provider passenger IDs, slices, segment IDs and timestamps.
    - Parse Appwrite execution status and response body; validate response shape and distinguish business outcomes from technical failures.
    - Reject missing or malformed original decimal amounts; never reconstruct them from numeric `price`.
+  
+   **P2-01 implementation checkpoint — complete and locally verified**
+   - Added the nullable `FlightOffer.priceAmount` field and typed BR-02 request/response contracts.
+   - Added `buildOfferRefreshSnapshot()` and `refreshOffer()` to the mobile flight API.
+   - The helper sends the original decimal amount, currency, provider passenger IDs and complete slice/segment identity to the existing Appwrite action.
+   - Appwrite execution errors remain technical `FlightSearchError` failures; `valid`, `price_changed`, `itinerary_changed` and `unavailable` are typed business outcomes.
+   - Refreshed offer payloads are shape-checked, including the provider decimal amount and expiry. No price is reconstructed from the numeric display value.
+   - Added focused client tests for snapshot construction, missing original price, request payload, valid response, changed fare, itinerary-change precedence, unavailable offers, technical failures and malformed responses.
 
-**P2-01 implementation checkpoint — complete and locally verified**
+   **P2-01 verification:** focused offer-refresh tests (8/8 passed), full test suite (103/103 passed), `npx tsc --noEmit` and `npx expo lint` all passed. The implementation is integrated into `main`.
 
-- Added the nullable `FlightOffer.priceAmount` field and typed BR-02 request/response contracts.
-- Added `buildOfferRefreshSnapshot()` and `refreshOffer()` to the mobile flight API.
-- The helper sends the original decimal amount, currency, provider passenger IDs and complete slice/segment identity to the existing Appwrite action.
-- Appwrite execution errors remain technical `FlightSearchError` failures; `valid`, `price_changed`, `itinerary_changed` and `unavailable` are typed business outcomes.
-- Refreshed offer payloads are shape-checked, including the provider decimal amount and expiry. No price is reconstructed from the numeric display value.
-- Added focused client tests for snapshot construction, missing original price, request payload, valid response, changed fare, itinerary-change precedence, unavailable offers, technical failures and malformed responses.
-
-**P2-01 verification:** focused offer-refresh tests (8/8 passed), full test suite (103/103 passed), `npx tsc --noEmit` and `npx expo lint` all passed. The implementation is integrated into `main`.
-
-1. **P2-02 — Offer comparison and outcome model**
+2. **P2-02 — Offer comparison and outcome model**
    - Represent `valid`, `price_changed`, `itinerary_changed`, and `unavailable` as explicit typed outcomes.
    - Preserve BR-02 precedence: `itinerary_changed` blocks progression even when `priceChanged` is also true.
    - Keep technical/network/Appwrite/provider errors separate from business outcomes.
    - Retain the original offer snapshot independently from the refreshed offer.
 
-**P2-02 implementation checkpoint — complete and locally verified**
+   **P2-02 implementation checkpoint — complete and locally verified**
+   - Added `createOfferReviewOutcome()` and a discriminated `OfferReviewOutcome` model.
+   - Kept the original selected offer as an independent snapshot, including cloned nested passenger and itinerary data.
+   - Normalized all four BR-02 business outcomes into review-facing states.
+   - Allowed progression to seat validation for valid and price-changed offers, while retaining an explicit price-acceptance requirement for the latter.
+   - Blocked seat validation for unavailable offers and material itinerary changes. An itinerary change remains the blocking outcome even when the fare also changed; no fare acceptance is requested for an itinerary the customer cannot use.
+   - Kept technical failures outside the business-outcome union. `refreshOffer()` continues to reject them as `FlightSearchError`.
+   - Added focused tests for all four outcomes and original-snapshot isolation.
+   - Added `test:offer-review` and included the new tests in `npm test`.
 
-- Added `createOfferReviewOutcome()` and a discriminated `OfferReviewOutcome` model.
-- Kept the original selected offer as an independent snapshot, including cloned nested passenger and itinerary data.
-- Normalized all four BR-02 business outcomes into review-facing states.
-- Allowed progression to seat validation for valid and price-changed offers, while retaining an explicit price-acceptance requirement for the latter.
-- Blocked seat validation for unavailable offers and material itinerary changes. An itinerary change remains the blocking outcome even when the fare also changed; no fare acceptance is requested for an itinerary the customer cannot use.
-- Kept technical failures outside the business-outcome union. `refreshOffer()` continues to reject them as `FlightSearchError`.
-- Added focused tests for all four outcomes and original-snapshot isolation.
-- Added `test:offer-review` and included the new tests in `npm test`.
-- **Verification:** focused offer-review tests (5/5 passed), full test suite (108/108 passed), `npx tsc --noEmit` and `npx expo lint` all passed.
+   **P2-02 verification:** focused offer-review tests (5/5 passed), full test suite (108/108 passed), `npx tsc --noEmit` and `npx expo lint` all passed. The implementation is committed and pushed on `feat/br-05-p2-offer-outcome-model`. P2-02 is closed.
 
-  The implementation is committed and pushed on `feat/br-05-p2-offer-outcome-model`. P2-02 is closed.
-
-1. **P2-03 — Review refresh lifecycle and recovery**
+3. **P2-03 — Review refresh lifecycle and recovery**
    - Trigger offer refresh on the first entry for the active review session.
    - Show loading, successful refresh, price-change, itinerary-change, unavailable and retryable-error states.
    - Do not proceed to seat validation or a completed review on unavailable offers, material itinerary changes or technical failures.
@@ -971,22 +968,23 @@ P2 is limited to offer refresh and its review lifecycle. Seat validation remains
    - Associate each request with the active review-session ID, booking-session ID, original offer ID and attempt identity; ignore stale responses after navigation, a new attempt, or a changed booking.
    - Reuse a successful result on return only while the same review session and offer remain valid; do not introduce an arbitrary freshness TTL.
 
-**P2-03 implementation checkpoint — committed and pushed; local verification pending**
+   **P2-03 implementation checkpoint — committed and pushed; local verification pending**
+   - Added an offer-review lifecycle model that scopes every attempt to the exact review session, booking session and selected offer.
+   - Connected the Checkout Review route to the existing `refreshOffer()` client helper. The first entry starts a refresh; a still-valid result is reused when returning to the same review session.
+   - Preserved the originally selected offer as the comparison baseline. Refreshed provider data remains in the normalized review outcome and does not silently overwrite the selected offer in the flight-results store.
+   - Added distinct loading, verified, fare-changed, itinerary-changed, unavailable, retryable-error and retry-exhausted screen states.
+   - Technical failures can be retried up to three times for the review attempt. Exhaustion blocks progression and offers return to search without clearing passenger or seat selections. Explicitly leaving review for search clears only the refresh lifecycle, allowing a fresh review attempt to start a new retry cycle.
+   - Store completion/failure actions verify the attempt ID and exact session/offer identity before accepting an asynchronous response. Starting a different booking session and abandoning/completing a booking clears the lifecycle.
+   - Successful offer validation is reused only while its provider expiry remains in the future. The review checks this again whenever the route regains focus, including after passenger edits. No arbitrary freshness TTL was introduced.
+   - Added focused lifecycle tests for session isolation, attempt identity, successful-result reuse, expiry and blocked/error states.
+   - Follow-up fix: convert the raw `OfferRefreshResponse` through `createOfferReviewOutcome()` before storing it in the lifecycle. This ensures the lifecycle receives the normalized `currentOffer` / `refreshedOffer` fields it expects, rather than the raw response's `offer` field.
+   - Added `test:offer-review-lifecycle` and included the tests in `npm test`.
+   - Manual verification confirmed the initial refresh flow, successful review state, retry after a network failure, blocking after the third failed attempt, and preservation of passenger information. A provider fare change was not encountered and remains unverified manually.
+   - Navigation correction: editing passenger details from Checkout Review opens Personal Information directly. In this review-edit path, Android hardware back is intercepted, and the screen back arrow, error-state back actions and Save and return explicitly replace Personal Information with Choose Seat; these actions do not depend on the navigator's previous route. The customer can then continue from Choose Seat back into Personal Information. Continuing to review dismisses the edit path to the existing Checkout Review route. Passenger and seat selections remain in the booking store.
 
-- Added an offer-review lifecycle model that scopes every attempt to the exact review session, booking session and selected offer.
-- Connected the Checkout Review route to the existing `refreshOffer()` client helper. The first entry starts a refresh; a still-valid result is reused when returning to the same review session.
-- Preserved the originally selected offer as the comparison baseline. Refreshed provider data remains in the normalized review outcome and does not silently overwrite the selected offer in the flight-results store.
-- Added distinct loading, verified, fare-changed, itinerary-changed, unavailable, retryable-error and retry-exhausted screen states.
-- Technical failures can be retried up to three times for the review attempt. Exhaustion blocks progression and offers return to search without clearing passenger or seat selections. Explicitly leaving review for search clears only the refresh lifecycle, allowing a fresh review attempt to start a new retry cycle.
-- Store completion/failure actions verify the attempt ID and exact session/offer identity before accepting an asynchronous response. Starting a different booking session and abandoning/completing a booking clears the lifecycle.
-- Successful offer validation is reused only while its provider expiry remains in the future. The review checks this again whenever the route regains focus, including after passenger edits. No arbitrary freshness TTL was introduced.
-- Added focused lifecycle tests for session isolation, attempt identity, successful-result reuse, expiry and blocked/error states.
-- Follow-up fix: convert the raw `OfferRefreshResponse` through `createOfferReviewOutcome()` before storing it in the lifecycle. This ensures the lifecycle receives the normalized `currentOffer` / `refreshedOffer` fields it expects, rather than the raw response's `offer` field.
-- Added `test:offer-review-lifecycle` and included the tests in `npm test`.
+   The revised navigation correction is committed and pushed; local verification is pending. P2-03 does not yet validate seats, calculate the complete checkout total, implement fare acceptance, or permit final checkout progression.
 
-  Local verification is pending. P2-03 does not yet validate seats, calculate the complete checkout total, implement fare acceptance, or permit final checkout progression.
-
-1. **P2-04 — Focused verification**
+4. **P2-04 — Focused verification**
    - Test request snapshot construction and decimal-string handling.
    - Test all BR-02 business outcomes, including price changes alongside itinerary changes.
    - Test malformed responses, Appwrite failures, network/provider errors and retry.
