@@ -97,6 +97,9 @@ export default function CheckoutReviewScreen() {
 		if (!flightId || !currentLifecycle?.outcome) return
 		const offerOutcome = currentLifecycle.outcome
 		if (offerOutcome.status !== "valid" && offerOutcome.status !== "price_changed") return
+		const offerExpiry = offerOutcome.currentOffer.expiresAt
+		const offerExpiryTime = offerExpiry ? Date.parse(offerExpiry) : Number.NaN
+		if (!Number.isFinite(offerExpiryTime) || offerExpiryTime <= Date.now()) return
 		const start = startSeatReviewValidation(offerOutcome.currentOffer.expiresAt, retry)
 		if (start.kind !== "started" || !start.attempt) return
 
@@ -372,7 +375,7 @@ export default function CheckoutReviewScreen() {
 				<Text className="mt-2 text-center font-inter text-sm leading-5 text-gray-200">
 					One or more selected seats are unavailable or have changed price or conditions. Return to seat selection to review them.
 				</Text>
-				<Pressable onPress={() => router.back()} className="mt-6 rounded-xl bg-primary px-8 py-3">
+				<Pressable onPress={() => router.replace({ pathname: "/choose-seat", params: { flightId } })} className="mt-6 rounded-xl bg-primary px-8 py-3">
 					<Text className="font-inter-semibold text-sm text-white">Review seat selection</Text>
 				</Pressable>
 			</SafeAreaView>
