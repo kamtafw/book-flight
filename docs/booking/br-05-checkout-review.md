@@ -1048,8 +1048,8 @@ Integrate existing BR-03 validation with the review experience.
 
 ---
 
-**P3-01 implementation checkpoint — implemented and pushed; local verification pending**
 
+**P3-01 implementation checkpoint — complete and locally verified**
 - Added a pure seat-review outcome normalizer in `src/lib/booking/readiness/seat-review.ts`.
 - Each normalized outcome retains the original selected-seat snapshot and current provider details separately. Results are associated by the composite provider identity of service, passenger, segment and seat designator, never by response array order or passenger index.
 - Normalized outcomes distinguish valid seats, changed seat prices, unavailable segment/seat/service selections, changed disclosures, and simultaneous disclosure-plus-price changes.
@@ -1058,7 +1058,21 @@ Integrate existing BR-03 validation with the review experience.
 - Reuses the existing BR-03 backend action and request contract. No backend action, booking/order operation, or customer acceptance flow was added.
 - Added focused domain and API tests covering response ordering, passenger/segment association, mixed results, unavailable seats, price changes, disclosure changes, combined changes and malformed provider responses.
 - Added `npm run test:seat-review` and included the domain tests in `npm test`.
-  P3-01 code and tests are committed on `feat/br-05-p3-seat-validation`. The user must run the focused and full verification commands before this checkpoint is considered locally verified.
+
+P3-01 code and tests are committed on `feat/br-05-p3-seat-validation`. The user confirmed that the focused and full test suites passed and that `npx tsc --noEmit` passed after a small response-cast correction. P3-01 is locally verified.
+
+**P3-02 implementation checkpoint — implemented and pushed; local verification pending**
+- Added a seat-review lifecycle scoped to the exact review session, booking session, offer and canonical selected-seat snapshot. Snapshot identity includes service, provider passenger, segment, seat designator, amount, currency and disclosures; selection ordering does not affect identity.
+- Connected Checkout Review to the existing validateSeatServices() action only after a fresh offer refresh returns valid or price_changed. Invalid, missing or expired offer expiry prevents seat validation from starting.
+- Empty seat selections are represented as not_selected; the API helper returns this result without making an Appwrite/provider request.
+- Reuses completed validation only for the same seat snapshot while the refreshed offer remains unexpired. Passenger profile/contact/document edits do not change the seat snapshot and therefore do not cause unnecessary seat validation.
+- Seat additions, replacements and removals produce a new snapshot and trigger validation of the complete current selection set. A changed snapshot starts a new attempt cycle.
+- Technical errors are separate from business outcomes. Each exact snapshot allows up to three attempts; retries after a failure are explicit. A new seat snapshot or newly refreshed offer can establish a fresh validation cycle.
+- Async completion and failure are accepted only when attempt ID, attempt number, review session, booking session, offer ID and current seat snapshot still match. Old results are ignored after a seat or session change.
+- Checkout Review now presents seat-verification loading, retryable error, retry exhaustion and customer-action-required states. Changed/unavailable seats route back to seat selection; no seat price or disclosure acceptance was added.
+- Added deterministic lifecycle tests for empty selections, snapshot identity, reuse, expiry, retries, exhaustion, session isolation and stale responses.
+
+P3-02 is implemented and pushed. Local verification is pending. The checkpoint does not implement price acceptance, disclosure acknowledgement, final checkout readiness, order creation or payment.
 
 ### Checkpoint 4: Pricing and customer acceptance (P4)
 
