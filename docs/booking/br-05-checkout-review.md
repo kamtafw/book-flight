@@ -949,7 +949,7 @@ P2 is limited to offer refresh and its review lifecycle. Seat validation remains
    - Keep technical/network/Appwrite/provider errors separate from business outcomes.
    - Retain the original offer snapshot independently from the refreshed offer.
 
-**P2-02 implementation checkpoint — committed and pushed; local verification pending**
+**P2-02 implementation checkpoint — complete, locally verified and integrated into `main`**
 
 - Added `createOfferReviewOutcome()` and a discriminated `OfferReviewOutcome` model.
 - Kept the original selected offer as an independent snapshot, including cloned nested passenger and itinerary data.
