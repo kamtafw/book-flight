@@ -488,6 +488,15 @@ export default function CheckoutReviewScreen() {
 		)
 	}
 
+	if (!currentSeatLifecycle) {
+		return (
+			<SafeAreaView className="flex-1 items-center justify-center bg-background px-8">
+				<ActivityIndicator size="large" color="#EC441E" />
+				<Text className="mt-3 font-inter text-sm text-gray-200">Preparing seat review…</Text>
+			</SafeAreaView>
+		)
+	}
+
 	if (currentSeatLifecycle?.status === "validating") {
 		return (
 			<SafeAreaView className="flex-1 items-center justify-center bg-background px-8">
@@ -634,9 +643,9 @@ export default function CheckoutReviewScreen() {
 				<View className="mt-4 rounded-xl border border-orange-100 bg-orange-50 p-4">
 					<Text className="font-inter-medium text-sm text-black">What happens next</Text>
 					<Text className="mt-1 font-inter text-xs leading-5 text-gray-200">
-						Flight verification is complete. Selected seats, full booking details and the final
-						pricing breakdown are handled by the next Checkout Review checkpoints. No booking or
-						payment has been created.
+						Flight and selected-seat verification are complete. Passenger details and the consolidated pricing
+						breakdown will be presented in the next Checkout Review checkpoints. No booking or payment has
+						been created.
 					</Text>
 				</View>
 
