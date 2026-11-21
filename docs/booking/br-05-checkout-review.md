@@ -981,6 +981,7 @@ P2 is limited to offer refresh and its review lifecycle. Seat validation remains
 - Store completion/failure actions verify the attempt ID and exact session/offer identity before accepting an asynchronous response. Starting a different booking session and abandoning/completing a booking clears the lifecycle.
 - Successful offer validation is reused only while its provider expiry remains in the future. The review checks this again whenever the route regains focus, including after passenger edits. No arbitrary freshness TTL was introduced.
 - Added focused lifecycle tests for session isolation, attempt identity, successful-result reuse, expiry and blocked/error states.
+- Follow-up fix: convert the raw `OfferRefreshResponse` through `createOfferReviewOutcome()` before storing it in the lifecycle. This ensures the lifecycle receives the normalized `currentOffer` / `refreshedOffer` fields it expects, rather than the raw response's `offer` field.
 - Added `test:offer-review-lifecycle` and included the tests in `npm test`.
 
 Local verification is pending. P2-03 does not yet validate seats, calculate the complete checkout total, implement fare acceptance, or permit final checkout progression.
