@@ -425,7 +425,7 @@ export async function validateSeatServices(
 		throw new FlightSearchError("Seat validation returned an inconsistent aggregate outcome.", "INVALID_RESPONSE")
 	}
 
-	return result as SeatServiceValidationResponse
+	return result as unknown as SeatServiceValidationResponse
 }
 
 function isValidCurrentSeatDetails(
