@@ -187,6 +187,19 @@ test("returns no seat rows for an explicit not-selected outcome", () => {
 	)
 })
 
+test("rejects an inconsistent not-selected outcome with existing selections", () => {
+	assert.throws(
+		() =>
+			buildSeatReviewPresentation(
+				{ status: "not_selected", selections: [] },
+				[seat()],
+				{ passengers: [passenger("p1", "pas_1")], relationships: [] },
+				offer(),
+			),
+		/not-selected seat outcome cannot contain/,
+	)
+})
+
 test("fails closed when an outcome or segment is missing", () => {
 	const selected = seat()
 	assert.throws(
