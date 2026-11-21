@@ -307,9 +307,9 @@ export async function validateSeatServices(
 		responseStatusCode?: number
 		status?: string
 	}
-	let result: SeatServiceValidationResponse & { error?: string; code?: string }
+	let result: unknown
 	try {
-		result = JSON.parse(execution.responseBody ?? "") as typeof result
+		result = JSON.parse(execution.responseBody ?? "")
 	} catch {
 		throw new FlightSearchError(
 			"Seat validation returned an unreadable response.",
@@ -317,7 +317,7 @@ export async function validateSeatServices(
 		)
 	}
 
-	if (!result || typeof result !== "object" || Array.isArray(result)) {
+	if (!isRecord(result)) {
 		throw new FlightSearchError(
 			"Seat validation returned an unexpected response.",
 			"INVALID_RESPONSE",
@@ -325,20 +325,126 @@ export async function validateSeatServices(
 	}
 	if ((execution.responseStatusCode ?? 200) >= 400 || result.error) {
 		throw new FlightSearchError(
-			result.error ?? "Seat validation failed. Please try again.",
-			result.code ?? "SEAT_VALIDATION_FAILED",
+			typeof result.error === "string" ? result.error : "Seat validation failed. Please try again.",
+			typeof result.code === "string" ? result.code : "SEAT_VALIDATION_FAILED",
 		)
 	}
 	if (
-		!["valid", "price_changed", "selection_changed", "not_selected"].includes(result.status) ||
-		!Array.isArray(result.selections)
+		!["valid", "price_changed", "selection_changed"].includes(String(result.status)) ||
+		!Array.isArray(result.selections) ||
+		result.selections.length !== selectedSeats.length
 	) {
 		throw new FlightSearchError(
 			"Seat validation returned an unexpected response.",
 			"INVALID_RESPONSE",
 		)
 	}
-	return result
+
+	const expectedByIdentity = new Map(
+		selectedSeats.map((seat) => [
+			[seat.id, seat.passengerId, seat.segmentId, seat.seatDesignator].join("|"),
+			seat,
+		]),
+	)
+	const seen = new Set<string>()
+	let hasPriceChange = false
+	let hasSelectionChange = false
+
+	for (const candidate of result.selections) {
+		if (
+			!isRecord(candidate) ||
+			typeof candidate.serviceId !== "string" ||
+			typeof candidate.passengerId !== "string" ||
+			typeof candidate.segmentId !== "string" ||
+			typeof candidate.seatDesignator !== "string"
+		) {
+			throw new FlightSearchError("Seat validation returned an invalid selection.", "INVALID_RESPONSE")
+		}
+		const identity = [
+			candidate.serviceId,
+			candidate.passengerId,
+			candidate.segmentId,
+			candidate.seatDesignator,
+		].join("|")
+		const expected = expectedByIdentity.get(identity)
+		if (
+			!expected ||
+			seen.has(identity) ||
+			candidate.expectedAmount !== expected.totalAmount ||
+			candidate.expectedCurrency !== expected.totalCurrency ||
+			!Array.isArray(candidate.expectedDisclosures) ||
+			JSON.stringify(candidate.expectedDisclosures) !== JSON.stringify(expected.disclosures)
+		) {
+			throw new FlightSearchError(
+				"Seat validation returned missing, duplicate or mismatched selection details.",
+				"INVALID_RESPONSE",
+			)
+		}
+		seen.add(identity)
+
+		if (
+			!["valid", "price_changed", "selection_changed"].includes(String(candidate.status)) ||
+			(candidate.reason !== null && typeof candidate.reason !== "string") ||
+			(candidate.priceChanged !== undefined && typeof candidate.priceChanged !== "boolean")
+		) {
+			throw new FlightSearchError("Seat validation returned an invalid outcome.", "INVALID_RESPONSE")
+		}
+
+		if (candidate.status === "selection_changed") {
+			hasSelectionChange = true
+			const unavailableReasons = ["segment_unavailable", "seat_unavailable", "service_unavailable"]
+			if (candidate.current === null) {
+				if (!unavailableReasons.includes(String(candidate.reason))) {
+					throw new FlightSearchError("Seat validation returned an unknown unavailable reason.", "INVALID_RESPONSE")
+				}
+			} else if (
+				candidate.reason !== "seat_disclosures_changed" ||
+				!isValidCurrentSeatDetails(candidate.current, expected)
+			) {
+				throw new FlightSearchError("Seat validation returned invalid changed-seat details.", "INVALID_RESPONSE")
+			}
+		} else {
+			if (
+				candidate.reason !== null ||
+				!isValidCurrentSeatDetails(candidate.current, expected) ||
+				(candidate.status === "price_changed" && candidate.priceChanged !== true) ||
+				(candidate.status === "valid" && candidate.priceChanged === true)
+			) {
+				throw new FlightSearchError("Seat validation returned inconsistent current-seat details.", "INVALID_RESPONSE")
+			}
+			if (candidate.status === "price_changed") hasPriceChange = true
+		}
+	}
+
+	const expectedAggregate = hasSelectionChange
+		? "selection_changed"
+		: hasPriceChange
+			? "price_changed"
+			: "valid"
+	if (result.status !== expectedAggregate) {
+		throw new FlightSearchError("Seat validation returned an inconsistent aggregate outcome.", "INVALID_RESPONSE")
+	}
+
+	return result as SeatServiceValidationResponse
+}
+
+function isValidCurrentSeatDetails(
+	value: unknown,
+	expected: SelectedSeatService,
+): boolean {
+	return (
+		isRecord(value) &&
+		value.serviceId === expected.id &&
+		value.passengerId === expected.passengerId &&
+		value.segmentId === expected.segmentId &&
+		value.seatDesignator === expected.seatDesignator &&
+		typeof value.seatName === "string" &&
+		isDecimalAmount(value.amount) &&
+		typeof value.currency === "string" &&
+		/^[A-Z]{3}$/.test(value.currency) &&
+		Array.isArray(value.disclosures) &&
+		value.disclosures.every((disclosure) => typeof disclosure === "string")
+	)
 }
 
 const DECIMAL_AMOUNT_PATTERN = /^\d+(?:\.\d+)?$/
