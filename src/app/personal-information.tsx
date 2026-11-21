@@ -599,6 +599,14 @@ export default function PersonalInformationScreen() {
 		activeBookingSession?.offerId === flightId &&
 		bookingReadiness.status === "ready_for_order_preparation"
 
+	const handleBack = () => {
+		if (returnToReview === "true" && flightId) {
+			router.replace({ pathname: "/choose-seat", params: { flightId, returnToReview: "true" } })
+			return
+		}
+		handleBack()
+	}
+
 	const validationResult = useMemo<PassengerValidationResult>(() => {
 		if (!flight || !activeCollection) {
 			return { status: "draft", issues: [] }
@@ -748,7 +756,7 @@ export default function PersonalInformationScreen() {
 				<Text className="mt-2 text-center font-inter text-sm leading-5 text-gray-200">
 					Return to your search and select an available flight before entering passenger details.
 				</Text>
-				<Pressable onPress={() => router.back()} className="mt-5 rounded-xl bg-primary px-6 py-3">
+				<Pressable onPress={() => handleBack()} className="mt-5 rounded-xl bg-primary px-6 py-3">
 					<Text className="font-inter-medium text-white">Go back</Text>
 				</Pressable>
 			</SafeAreaView>
@@ -764,7 +772,7 @@ export default function PersonalInformationScreen() {
 				<Text className="mt-2 text-center font-inter text-sm leading-5 text-gray-200">
 					This offer did not include passenger identities. Go back and select another offer.
 				</Text>
-				<Pressable onPress={() => router.back()} className="mt-5 rounded-xl bg-primary px-6 py-3">
+				<Pressable onPress={() => handleBack()} className="mt-5 rounded-xl bg-primary px-6 py-3">
 					<Text className="font-inter-medium text-white">Go back</Text>
 				</Pressable>
 			</SafeAreaView>
@@ -784,7 +792,7 @@ export default function PersonalInformationScreen() {
 		<SafeAreaView className="flex-1 bg-background">
 			<View className="flex-row items-center px-5 py-4">
 				<Pressable
-					onPress={() => router.back()}
+					onPress={() => handleBack()}
 					className="h-10 w-10 items-center justify-center"
 					hitSlop={8}
 					accessibilityRole="button"
@@ -910,7 +918,7 @@ export default function PersonalInformationScreen() {
 					</Pressable>
 
 					<Pressable
-						onPress={() => router.back()}
+						onPress={() => handleBack()}
 						className="mt-3 h-14 items-center justify-center rounded-xl border border-primary active:opacity-90"
 					>
 						<Text className="font-inter-semibold text-base text-primary">Save and return</Text>
