@@ -604,7 +604,7 @@ export default function PersonalInformationScreen() {
 			router.replace({ pathname: "/choose-seat", params: { flightId, returnToReview: "true" } })
 			return
 		}
-		handleBack()
+		router.back()
 	}
 
 	const validationResult = useMemo<PassengerValidationResult>(() => {
