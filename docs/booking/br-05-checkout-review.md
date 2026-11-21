@@ -977,7 +977,7 @@ P2 is limited to offer refresh and its review lifecycle. Seat validation remains
 - Connected the Checkout Review route to the existing `refreshOffer()` client helper. The first entry starts a refresh; a still-valid result is reused when returning to the same review session.
 - Preserved the originally selected offer as the comparison baseline. Refreshed provider data remains in the normalized review outcome and does not silently overwrite the selected offer in the flight-results store.
 - Added distinct loading, verified, fare-changed, itinerary-changed, unavailable, retryable-error and retry-exhausted screen states.
-- Technical failures can be retried up to three times for the review attempt. Exhaustion blocks progression and offers return to search without clearing passenger or seat selections.
+- Technical failures can be retried up to three times for the review attempt. Exhaustion blocks progression and offers return to search without clearing passenger or seat selections. Explicitly leaving review for search clears only the refresh lifecycle, allowing a fresh review attempt to start a new retry cycle.
 - Store completion/failure actions verify the attempt ID and exact session/offer identity before accepting an asynchronous response. Starting a different booking session and abandoning/completing a booking clears the lifecycle.
 - Successful offer validation is reused only while its provider expiry remains in the future. No arbitrary freshness TTL was introduced.
 - Added focused lifecycle tests for session isolation, attempt identity, successful-result reuse, expiry and blocked/error states.
