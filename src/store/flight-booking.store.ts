@@ -242,8 +242,15 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 		return attempt
 	},
 	completeOfferReviewRefresh: (attempt, outcome) => {
-		const current = get().offerReviewLifecycle
-		if (!isOfferReviewAttemptCurrent(current, attempt)) return false
+		const state = get()
+		if (
+			state.checkoutReviewSession?.id !== attempt.reviewSessionId ||
+			state.activeBookingSession?.id !== attempt.bookingSessionId ||
+			!isCheckoutReviewSessionCurrent(state.checkoutReviewSession, state.activeBookingSession, attempt.offerId) ||
+			!isOfferReviewAttemptCurrent(state.offerReviewLifecycle, attempt)
+		) {
+			return false
+		}
 		set({
 			offerReviewLifecycle: {
 				...attempt,
@@ -255,8 +262,15 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 		return true
 	},
 	failOfferReviewRefresh: (attempt, message) => {
-		const current = get().offerReviewLifecycle
-		if (!isOfferReviewAttemptCurrent(current, attempt)) return false
+		const state = get()
+		if (
+			state.checkoutReviewSession?.id !== attempt.reviewSessionId ||
+			state.activeBookingSession?.id !== attempt.bookingSessionId ||
+			!isCheckoutReviewSessionCurrent(state.checkoutReviewSession, state.activeBookingSession, attempt.offerId) ||
+			!isOfferReviewAttemptCurrent(state.offerReviewLifecycle, attempt)
+		) {
+			return false
+		}
 		set({
 			offerReviewLifecycle: {
 				...attempt,
