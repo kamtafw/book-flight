@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, Text, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
 import { getCheckoutReviewEntryState } from "@/lib/booking/readiness/checkout-review"
+import { createOfferReviewOutcome } from "@/lib/booking/readiness/offer-review"
 import { isCheckoutReviewSessionCurrent } from "@/lib/booking/readiness/booking-session"
 import {
 	isOfferReviewLifecycleForSession,
@@ -76,7 +77,8 @@ export default function CheckoutReviewScreen() {
 
 		try {
 			const response = await refreshOffer(flight)
-			completeOfferReviewRefresh(attempt, response)
+			const outcome = createOfferReviewOutcome(flight, response)
+			completeOfferReviewRefresh(attempt, outcome)
 		} catch (error) {
 			const message =
 				error instanceof Error
