@@ -971,7 +971,7 @@ P2 is limited to offer refresh and its review lifecycle. Seat validation remains
    - Reuse a successful result on return only while the same review session and offer remain valid; do not introduce an arbitrary freshness TTL.
 
 
-**P2-03 implementation checkpoint — committed and pushed; local verification pending**
+**P2-03 implementation checkpoint — complete, committed, pushed and locally verified**
 
 - Added an offer-review lifecycle model that scopes every attempt to the exact review session, booking session and selected offer.
 - Connected the Checkout Review route to the existing `refreshOffer()` client helper. The first entry starts a refresh; a still-valid result is reused when returning to the same review session.
@@ -983,16 +983,21 @@ P2 is limited to offer refresh and its review lifecycle. Seat validation remains
 - Added focused lifecycle tests for session isolation, attempt identity, successful-result reuse, expiry and blocked/error states. Additional deterministic coverage now verifies that a `price_changed` outcome is reused only until the refreshed offer expires, and that missing or invalid expiry forces a new refresh.
 - Follow-up fix: convert the raw `OfferRefreshResponse` through `createOfferReviewOutcome()` before storing it in the lifecycle. This ensures the lifecycle receives the normalized `currentOffer` / `refreshedOffer` fields it expects, rather than the raw response's `offer` field.
 - Added `test:offer-review-lifecycle` and included the tests in `npm test`.
-- Manual verification confirmed the initial refresh flow, successful review state, retry after a network failure, blocking after the third failed attempt, and preservation of passenger information. A live provider fare change was not encountered; the changed-fare API, normalized outcome and lifecycle paths are covered with deterministic mocked responses and fixtures. The added lifecycle coverage still requires local execution.
+- Manual verification confirmed the initial refresh flow, successful review state, retry after a network failure, blocking after the third failed attempt, and preservation of passenger information. A live provider fare change was not encountered; the changed-fare API, normalized outcome and lifecycle paths are covered with deterministic mocked responses and fixtures.
 - Navigation correction (revised): editing passenger details from Checkout Review opens Personal Information directly. In this review-edit path, Android hardware back is intercepted, and the screen back arrow, error-state back actions and Save and return explicitly replace Personal Information with Choose Seat; these actions do not depend on the navigator's previous route. The customer can then continue from Choose Seat back into Personal Information. Continuing to review dismisses the edit path to the existing Checkout Review route. Passenger and seat selections remain in the booking store.
 
-The revised navigation correction is committed, pushed and locally verified by the user. The expected flow is confirmed: Checkout Review opens Personal Information directly; all supported back actions in this review-edit path return to Choose Seat; continuing through Personal Information returns to the existing Checkout Review route. P2-03 does not yet validate seats, calculate the complete checkout total, implement fare acceptance, or permit final checkout progression.
+The revised navigation correction is committed, pushed and locally verified by the user. The expected flow is confirmed: Checkout Review opens Personal Information directly; all supported back actions in this review-edit path return to Choose Seat; continuing through Personal Information returns to the existing Checkout Review route.
+
+**P2-03 verification:** The user ran `npm run test:offer-review-lifecycle`, `npm test`, `npx tsc --noEmit` and `npx expo lint`; all four passed. P2-03 is complete on this branch. It does not yet validate seats, calculate the complete checkout total, implement fare acceptance, or permit final checkout progression.
+
 2. **P2-04 — Focused verification**
    - Test request snapshot construction and decimal-string handling.
    - Test all BR-02 business outcomes, including price changes alongside itinerary changes.
    - Test malformed responses, Appwrite failures, network/provider errors and retry.
    - Test stale-response protection and review-session isolation.
    - Run the full test suite, TypeScript check, Expo lint and manual review-flow verification.
+
+**P2-04 verification checkpoint — complete and locally verified.** The focused lifecycle suite, full test suite, TypeScript check and Expo lint all passed. The manual review-flow checks are also confirmed above.
 
 **P2 exit condition:** Checkout Review uses a successfully refreshed offer for the active booking/review session; safely blocks unavailable or materially changed itineraries; clearly identifies fare changes for the customer; and offers retry for technical failures without losing the booking draft. P2 does not yet validate seats or allow final checkout progression where a fare change still requires acceptance.
 
