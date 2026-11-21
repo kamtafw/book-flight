@@ -12,7 +12,9 @@ import {
 	shouldStartOfferReviewRefresh,
 	type OfferReviewLifecycleIdentity,
 } from "@/lib/booking/readiness/offer-review-lifecycle"
-import { refreshOffer } from "@/lib/flights/api"
+import { createSeatReviewOutcome } from "@/lib/booking/readiness/seat-review"
+import { isSeatReviewLifecycleForSession } from "@/lib/booking/readiness/seat-review-lifecycle"
+import { refreshOffer, validateSeatServices } from "@/lib/flights/api"
 import { useFlightBookingStore } from "@/store/flight-booking.store"
 import { useFlightOffersStore } from "@/store/flight-offers.store"
 
@@ -29,6 +31,8 @@ export default function CheckoutReviewScreen() {
 	const passengerCollection = useFlightBookingStore((state) => state.passengerCollection)
 	const checkoutReviewSession = useFlightBookingStore((state) => state.checkoutReviewSession)
 	const offerReviewLifecycle = useFlightBookingStore((state) => state.offerReviewLifecycle)
+	const selectedSeats = useFlightBookingStore((state) => state.selectedOutboundSeatServices)
+	const seatReviewLifecycle = useFlightBookingStore((state) => state.seatReviewLifecycle)
 	const getOrCreateCheckoutReviewSession = useFlightBookingStore(
 		(state) => state.getOrCreateCheckoutReviewSession,
 	)
@@ -37,6 +41,13 @@ export default function CheckoutReviewScreen() {
 		(state) => state.completeOfferReviewRefresh,
 	)
 	const failOfferReviewRefresh = useFlightBookingStore((state) => state.failOfferReviewRefresh)
+	const startSeatReviewValidation = useFlightBookingStore(
+		(state) => state.startSeatReviewValidation,
+	)
+	const completeSeatReviewValidation = useFlightBookingStore(
+		(state) => state.completeSeatReviewValidation,
+	)
+	const failSeatReviewValidation = useFlightBookingStore((state) => state.failSeatReviewValidation)
 	const clearOfferReviewLifecycle = useFlightBookingStore(
 		(state) => state.clearOfferReviewLifecycle,
 	)
@@ -86,6 +97,44 @@ export default function CheckoutReviewScreen() {
 		}
 	}, [completeOfferReviewRefresh, failOfferReviewRefresh, flight, startOfferReviewRefresh])
 
+	const runSeatValidation = useCallback(
+		async (retry = false) => {
+			if (!flightId || !currentLifecycle?.outcome) return
+			const offerOutcome = currentLifecycle.outcome
+			if (offerOutcome.status !== "valid" && offerOutcome.status !== "price_changed") return
+			const offerExpiry = offerOutcome.currentOffer.expiresAt
+			const offerExpiryTime = offerExpiry ? Date.parse(offerExpiry) : Number.NaN
+			if (!Number.isFinite(offerExpiryTime) || offerExpiryTime <= Date.now()) return
+			const start = startSeatReviewValidation(offerOutcome.currentOffer.expiresAt, retry)
+			if (start.kind !== "started" || !start.attempt) return
+
+			try {
+				const response = await validateSeatServices(flightId, selectedSeats)
+				const outcome = createSeatReviewOutcome(selectedSeats, response)
+				completeSeatReviewValidation(start.attempt, outcome)
+			} catch (error) {
+				const message =
+					error instanceof Error
+						? error.message
+						: "We couldn't verify your selected seats. Please try again."
+				failSeatReviewValidation(start.attempt, message)
+			}
+		},
+		[
+			completeSeatReviewValidation,
+			currentLifecycle,
+			failSeatReviewValidation,
+			flightId,
+			selectedSeats,
+			startSeatReviewValidation,
+		],
+	)
+
+	const seatLifecycleMatchesSession = Boolean(
+		reviewIdentity && isSeatReviewLifecycleForSession(seatReviewLifecycle, reviewIdentity),
+	)
+	const currentSeatLifecycle = seatLifecycleMatchesSession ? seatReviewLifecycle : null
+
 	useFocusEffect(
 		useCallback(() => {
 			if (!canOpenReview || !hasReviewSession || !flight || !reviewIdentity) return
@@ -99,6 +148,18 @@ export default function CheckoutReviewScreen() {
 			reviewIdentity,
 			runOfferRefresh,
 		]),
+	)
+
+	useFocusEffect(
+		useCallback(() => {
+			if (!currentLifecycle?.outcome || !reviewIdentity) return
+			if (
+				currentLifecycle.outcome.status !== "valid" &&
+				currentLifecycle.outcome.status !== "price_changed"
+			)
+				return
+			void runSeatValidation()
+		}, [currentLifecycle, reviewIdentity, runSeatValidation]),
 	)
 
 	const returnToPassengers = () => {
@@ -274,6 +335,78 @@ export default function CheckoutReviewScreen() {
 				</Text>
 				<Pressable onPress={returnToSearch} className="mt-6 rounded-xl bg-primary px-6 py-3">
 					<Text className="font-inter-medium text-white">Back to search</Text>
+				</Pressable>
+			</SafeAreaView>
+		)
+	}
+
+	if (currentSeatLifecycle?.status === "validating") {
+		return (
+			<SafeAreaView className="flex-1 items-center justify-center bg-background px-8">
+				<ActivityIndicator size="large" color="#EC441E" />
+				<Text className="mt-4 font-inter-semibold text-base text-black">
+					Verifying selected seats
+				</Text>
+				<Text className="mt-2 text-center font-inter text-sm leading-5 text-gray-200">
+					We&apos;re checking each selected seat against the current flight offer.
+				</Text>
+				<Text className="mt-2 font-inter text-xs text-gray-200">
+					Attempt {currentSeatLifecycle.attemptNumber} of 3
+				</Text>
+			</SafeAreaView>
+		)
+	}
+
+	if (
+		currentSeatLifecycle?.status === "error" ||
+		currentSeatLifecycle?.status === "retry_exhausted"
+	) {
+		const exhausted = currentSeatLifecycle.status === "retry_exhausted"
+		return (
+			<SafeAreaView className="flex-1 items-center justify-center bg-background px-8">
+				<Text className="font-inter-semibold text-lg text-black">
+					{exhausted ? "Seat verification unavailable" : "We couldn't verify your seats"}
+				</Text>
+				<Text className="mt-2 text-center font-inter text-sm leading-5 text-gray-200">
+					{currentSeatLifecycle.errorMessage ?? "A temporary problem prevented seat verification."}
+				</Text>
+				<Text className="mt-2 font-inter text-xs text-gray-200">
+					Attempt {currentSeatLifecycle.attemptNumber} of 3. Your seat selections are still saved.
+				</Text>
+				{!exhausted ? (
+					<Pressable
+						onPress={() => void runSeatValidation(true)}
+						className="mt-6 rounded-xl bg-primary px-8 py-3"
+					>
+						<Text className="font-inter-semibold text-sm text-white">Retry seat verification</Text>
+					</Pressable>
+				) : null}
+				<Pressable onPress={returnToSearch} className="mt-4 px-6 py-2">
+					<Text className="font-inter-medium text-sm text-primary">Return to search</Text>
+				</Pressable>
+			</SafeAreaView>
+		)
+	}
+
+	if (currentSeatLifecycle?.status === "action_required") {
+		return (
+			<SafeAreaView className="flex-1 items-center justify-center bg-background px-8">
+				<Text className="font-inter-semibold text-lg text-black">
+					Your seat selection needs attention
+				</Text>
+				<Text className="mt-2 text-center font-inter text-sm leading-5 text-gray-200">
+					One or more selected seats are unavailable or have changed price or conditions. Return to
+					seat selection to review them.
+				</Text>
+				<Pressable
+					onPress={() =>
+						flightId
+							? router.replace({ pathname: "/choose-seat", params: { flightId } })
+							: router.replace("/flight-results")
+					}
+					className="mt-6 rounded-xl bg-primary px-8 py-3"
+				>
+					<Text className="font-inter-semibold text-sm text-white">Review seat selection</Text>
 				</Pressable>
 			</SafeAreaView>
 		)

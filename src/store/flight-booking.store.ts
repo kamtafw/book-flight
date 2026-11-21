@@ -22,6 +22,16 @@ import {
 	type OfferReviewLifecycle,
 	type OfferReviewLifecycleIdentity,
 } from "@/lib/booking/readiness/offer-review-lifecycle"
+import type { SeatReviewOutcome } from "@/lib/booking/readiness/seat-review"
+import {
+	completeSeatReviewValidation,
+	createSeatReviewSnapshotKey,
+	failSeatReviewValidation,
+	type SeatReviewAttempt,
+	type SeatReviewLifecycle,
+	type SeatReviewLifecycleIdentity,
+	startSeatReviewValidation,
+} from "@/lib/booking/readiness/seat-review-lifecycle"
 import type { FlightOffer, SelectedSeatService } from "@/lib/flights/types"
 import { create } from "zustand"
 
@@ -32,6 +42,7 @@ interface FlightBookingState {
 	activeBookingSession: ActiveBookingSession | null
 	checkoutReviewSession: CheckoutReviewSession | null
 	offerReviewLifecycle: OfferReviewLifecycle | null
+	seatReviewLifecycle: SeatReviewLifecycle | null
 
 	setOutboundSeats: (seats: string[]) => void
 	toggleOutboundSeat: (seat: string) => void
@@ -45,6 +56,12 @@ interface FlightBookingState {
 	completeOfferReviewRefresh: (attempt: OfferReviewAttempt, outcome: OfferReviewOutcome) => boolean
 	failOfferReviewRefresh: (attempt: OfferReviewAttempt, message: string) => boolean
 	clearOfferReviewLifecycle: () => void
+	startSeatReviewValidation: (
+		offerExpiresAt: string | null,
+		retry?: boolean,
+	) => { kind: "not_selected" | "reuse" | "blocked" | "started"; attempt?: SeatReviewAttempt }
+	completeSeatReviewValidation: (attempt: SeatReviewAttempt, outcome: SeatReviewOutcome) => boolean
+	failSeatReviewValidation: (attempt: SeatReviewAttempt, message: string) => boolean
 	abandonBookingSession: () => void
 	completeBookingSession: () => void
 	initializePassengerCollection: (offer: FlightOffer) => void
@@ -100,6 +117,7 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 	activeBookingSession: null,
 	checkoutReviewSession: null,
 	offerReviewLifecycle: null,
+	seatReviewLifecycle: null,
 
 	setOutboundSeats: (seats) => {
 		set({ selectedOutboundSeats: seats })
@@ -175,7 +193,7 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 		if (current?.offerId === offer.id) return current.id
 
 		const next = transitionBookingSession(get(), offer.id, createInternalPassengerId)
-		set({ ...next, offerReviewLifecycle: null })
+		set({ ...next, offerReviewLifecycle: null, seatReviewLifecycle: null })
 		return next.activeBookingSession!.id
 	},
 
@@ -289,11 +307,82 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 		})
 		return true
 	},
-	clearOfferReviewLifecycle: () => set({ offerReviewLifecycle: null }),
+	clearOfferReviewLifecycle: () => set({ offerReviewLifecycle: null, seatReviewLifecycle: null }),
+	startSeatReviewValidation: (offerExpiresAt, retry = false) => {
+		const state = get()
+		const reviewSession = state.checkoutReviewSession
+		const bookingSession = state.activeBookingSession
+		if (!reviewSession || !bookingSession || reviewSession.offerId !== bookingSession.offerId) {
+			return { kind: "blocked" }
+		}
+		const identity: SeatReviewLifecycleIdentity = {
+			reviewSessionId: reviewSession.id,
+			bookingSessionId: bookingSession.id,
+			offerId: reviewSession.offerId,
+		}
+		const result = startSeatReviewValidation(
+			state.seatReviewLifecycle,
+			identity,
+			state.selectedOutboundSeatServices,
+			offerExpiresAt,
+			Date.now(),
+			retry,
+		)
+		set({ seatReviewLifecycle: result.lifecycle })
+		return result.kind === "started"
+			? { kind: "started", attempt: result.attempt }
+			: { kind: result.kind }
+	},
+	completeSeatReviewValidation: (attempt, outcome) => {
+		const state = get()
+		if (
+			state.checkoutReviewSession?.id !== attempt.reviewSessionId ||
+			state.activeBookingSession?.id !== attempt.bookingSessionId ||
+			state.checkoutReviewSession.offerId !== attempt.offerId ||
+			state.activeBookingSession.offerId !== attempt.offerId
+		)
+			return false
+		const next = completeSeatReviewValidation(
+			state.seatReviewLifecycle,
+			attempt,
+			createSeatReviewSnapshotKey(state.selectedOutboundSeatServices),
+			outcome,
+		)
+		if (!next) return false
+		set({ seatReviewLifecycle: next })
+		return true
+	},
+	failSeatReviewValidation: (attempt, message) => {
+		const state = get()
+		if (
+			state.checkoutReviewSession?.id !== attempt.reviewSessionId ||
+			state.activeBookingSession?.id !== attempt.bookingSessionId ||
+			state.checkoutReviewSession.offerId !== attempt.offerId ||
+			state.activeBookingSession.offerId !== attempt.offerId
+		)
+			return false
+		const next = failSeatReviewValidation(
+			state.seatReviewLifecycle,
+			attempt,
+			createSeatReviewSnapshotKey(state.selectedOutboundSeatServices),
+			message,
+		)
+		if (!next) return false
+		set({ seatReviewLifecycle: next })
+		return true
+	},
 	abandonBookingSession: () =>
-		set((state) => ({ ...clearBookingSessionState(state), offerReviewLifecycle: null })),
+		set((state) => ({
+			...clearBookingSessionState(state),
+			offerReviewLifecycle: null,
+			seatReviewLifecycle: null,
+		})),
 	completeBookingSession: () =>
-		set((state) => ({ ...clearBookingSessionState(state), offerReviewLifecycle: null })),
+		set((state) => ({
+			...clearBookingSessionState(state),
+			offerReviewLifecycle: null,
+			seatReviewLifecycle: null,
+		})),
 
 	initializePassengerCollection: (offer) =>
 		set((state) => {
