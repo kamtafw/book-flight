@@ -24,7 +24,7 @@ import {
 	type OfferReviewLifecycle,
 	type OfferReviewLifecycleIdentity,
 } from "@/lib/booking/readiness/offer-review-lifecycle"
-import type { FlightOffer, SelectedSeatService, SeatServiceValidationResponse } from "@/lib/flights/types"
+import type { FlightOffer, SelectedSeatService } from "@/lib/flights/types"
 import { create } from "zustand"
 
 interface FlightBookingState {
@@ -49,7 +49,7 @@ interface FlightBookingState {
 	failOfferReviewRefresh: (attempt: OfferReviewAttempt, message: string) => boolean
 	clearOfferReviewLifecycle: () => void
 	startSeatReviewValidation: (offerExpiresAt: string | null) => { kind: "not_selected" | "reuse" | "blocked" | "started"; attempt?: SeatReviewAttempt }
-	completeSeatReviewValidation: (attempt: SeatReviewAttempt, response: SeatServiceValidationResponse, outcome: SeatReviewOutcome) => boolean
+	completeSeatReviewValidation: (attempt: SeatReviewAttempt, outcome: SeatReviewOutcome) => boolean
 	failSeatReviewValidation: (attempt: SeatReviewAttempt, message: string) => boolean
 	abandonBookingSession: () => void
 	completeBookingSession: () => void
@@ -320,7 +320,7 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 			? { kind: "started", attempt: result.attempt }
 			: { kind: result.kind }
 	},
-	completeSeatReviewValidation: (attempt, _response, outcome) => {
+	completeSeatReviewValidation: (attempt, outcome) => {
 		const state = get()
 		const next = completeSeatReviewValidation(
 			state.seatReviewLifecycle,
