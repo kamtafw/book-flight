@@ -62,7 +62,8 @@
 		"test:offer-review": "tsx --test src/lib/booking/readiness/offer-review.test.mjs",
 		"test:offer-review-lifecycle": "tsx --test src/lib/booking/readiness/offer-review-lifecycle.test.mjs",
 		"test:seat-review": "tsx --test src/lib/booking/readiness/seat-review.test.mjs",
-		"test:seat-review-lifecycle": "tsx --test src/lib/booking/readiness/seat-review-lifecycle.test.mjs"
+		"test:seat-review-lifecycle": "tsx --test src/lib/booking/readiness/seat-review-lifecycle.test.mjs",
+		"test:seat-review-presentation": "tsx --test src/lib/booking/readiness/seat-review-presentation.test.mjs"
 	},
 	"private": true
 }
