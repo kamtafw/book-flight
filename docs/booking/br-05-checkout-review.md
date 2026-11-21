@@ -1048,6 +1048,18 @@ Integrate existing BR-03 validation with the review experience.
 
 ---
 
+**P3-01 implementation checkpoint — implemented and pushed; local verification pending**
+
+- Added a pure seat-review outcome normalizer in `src/lib/booking/readiness/seat-review.ts`.
+- Each normalized outcome retains the original selected-seat snapshot and current provider details separately. Results are associated by the composite provider identity of service, passenger, segment and seat designator, never by response array order or passenger index.
+- Normalized outcomes distinguish valid seats, changed seat prices, unavailable segment/seat/service selections, changed disclosures, and simultaneous disclosure-plus-price changes.
+- A no-seat review is represented explicitly as `not_selected`; it does not require a provider lookup.
+- Strengthened the existing `validateSeatServices()` API boundary. It now rejects missing, extra, duplicate and mismatched result identities; changed expected selection snapshots; malformed current provider details; inconsistent per-selection statuses; and inconsistent aggregate status. These are technical invalid-response failures, not customer-facing seat changes.
+- Reuses the existing BR-03 backend action and request contract. No backend action, booking/order operation, or customer acceptance flow was added.
+- Added focused domain and API tests covering response ordering, passenger/segment association, mixed results, unavailable seats, price changes, disclosure changes, combined changes and malformed provider responses.
+- Added `npm run test:seat-review` and included the domain tests in `npm test`.
+  P3-01 code and tests are committed on `feat/br-05-p3-seat-validation`. The user must run the focused and full verification commands before this checkpoint is considered locally verified.
+
 ### Checkpoint 4: Pricing and customer acceptance (P4)
 
 Implement the complete pricing and acceptance contract.

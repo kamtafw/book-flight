@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { buildOfferRefreshSnapshot, refreshOffer } from "./api"
+import { buildOfferRefreshSnapshot, refreshOffer, validateSeatServices } from "./api"
 
 function makeOffer() {
 	return {
@@ -209,4 +209,116 @@ test("returns changed fare details without treating them as an itinerary failure
 			}
 		},
 	)
+})
+
+
+function selectedSeat(overrides = {}) {
+	return {
+		id: "ase_api1",
+		passengerId: "pas_adult",
+		totalAmount: "25.00",
+		totalCurrency: "USD",
+		offerId: "off_refresh123",
+		segmentId: "seg_example",
+		seatDesignator: "12A",
+		seatName: "Window",
+		disclosures: [],
+		...overrides,
+	}
+}
+
+function seatValidationResult(selection, overrides = {}) {
+	return {
+		serviceId: selection.id,
+		passengerId: selection.passengerId,
+		segmentId: selection.segmentId,
+		seatDesignator: selection.seatDesignator,
+		expectedAmount: selection.totalAmount,
+		expectedCurrency: selection.totalCurrency,
+		expectedDisclosures: selection.disclosures,
+		status: "valid",
+		reason: null,
+		current: {
+			serviceId: selection.id,
+			passengerId: selection.passengerId,
+			segmentId: selection.segmentId,
+			seatDesignator: selection.seatDesignator,
+			seatName: selection.seatName,
+			disclosures: [],
+			amount: selection.totalAmount,
+			currency: selection.totalCurrency,
+		},
+		...overrides,
+	}
+}
+
+test("validates seat response shape and returns the provider result for the submitted identity", async () => {
+	const selection = selectedSeat()
+	await withFetch(
+		mockExecution({ status: "valid", selections: [seatValidationResult(selection)] }),
+		async () => {
+			const response = await validateSeatServices(selection.offerId, [selection])
+			assert.equal(response.status, "valid")
+			assert.equal(response.selections[0].current?.passengerId, "pas_adult")
+		},
+	)
+})
+
+test("rejects missing, duplicate, extra or mismatched seat validation results", async () => {
+	const selection = selectedSeat()
+	const valid = seatValidationResult(selection)
+	const invalidBodies = [
+		{ status: "valid", selections: [] },
+		{ status: "valid", selections: [valid, valid] },
+		{ status: "valid", selections: [{ ...valid, passengerId: "pas_child" }] },
+		{ status: "valid", selections: [{ ...valid, expectedAmount: "99.00" }] },
+	]
+	for (const body of invalidBodies) {
+		await withFetch(mockExecution(body), async () => {
+			await assert.rejects(
+				validateSeatServices(selection.offerId, [selection]),
+				(error) => error?.name === "FlightSearchError" && error.code === "INVALID_RESPONSE",
+			)
+		})
+	}
+})
+
+test("rejects malformed or internally inconsistent current seat details", async () => {
+	const selection = selectedSeat()
+	const invalid = seatValidationResult(selection, {
+		current: { ...seatValidationResult(selection).current, currency: "US" },
+	})
+	await withFetch(mockExecution({ status: "valid", selections: [invalid] }), async () => {
+		await assert.rejects(
+			validateSeatServices(selection.offerId, [selection]),
+			(error) => error?.name === "FlightSearchError" && error.code === "INVALID_RESPONSE",
+		)
+	})
+})
+
+test("preserves disclosure and simultaneous disclosure-plus-price changes", async () => {
+	const selection = selectedSeat()
+	for (const priceChanged of [false, true]) {
+		const current = {
+			...seatValidationResult(selection).current,
+			disclosures: ["Exit row seat"],
+			amount: priceChanged ? "30.00" : "25.00",
+		}
+		const body = {
+			status: "selection_changed",
+			selections: [
+				seatValidationResult(selection, {
+					status: "selection_changed",
+					reason: "seat_disclosures_changed",
+					priceChanged,
+					current,
+				}),
+			],
+		}
+		await withFetch(mockExecution(body), async () => {
+			const response = await validateSeatServices(selection.offerId, [selection])
+			assert.equal(response.selections[0].priceChanged, priceChanged)
+			assert.deepEqual(response.selections[0].current?.disclosures, ["Exit row seat"])
+		})
+	}
 })
