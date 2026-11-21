@@ -87,106 +87,90 @@ export function buildSeatReviewPresentation(
 	if (outcome.status === "not_selected" || selections.length === 0) return []
 
 	const segmentLabels = getSegmentLabels(offer)
-	const groups: SeatReviewPresentationGroup[] = passengerCollection.passengers.map(
-		(passenger, index) => {
-			const referenceMatches = passenger.providerReferences.filter(
-				(reference) =>
-					reference.provider === "duffel" &&
-					reference.offerId === offer.id &&
-					selections.some(
-						(selection) => selection.passengerId === reference.providerPassengerId,
-					),
-			)
-			const providerIds = new Set(referenceMatches.map((reference) => reference.providerPassengerId))
+	const passengerMatchesForSelection = (selection: SelectedSeatService) =>
+		passengerCollection.passengers
+			.map((passenger, index) => ({
+				passenger,
+				index,
+				matches: passenger.providerReferences.some(
+					(reference) =>
+						reference.provider === "duffel" &&
+						reference.offerId === offer.id &&
+						reference.providerPassengerId === selection.passengerId,
+				),
+			}))
+			.filter((entry) => entry.matches)
+
+	const createRow = (
+		selection: SelectedSeatService,
+		passengerId: string | null,
+		passengerLabel: string,
+		passengerCategory: string | null,
+	): SeatReviewPresentationRow => {
+		const selectionOutcome = selectionForOutcome(outcome, selection)
+		const segmentLabel = segmentLabels.get(selection.segmentId)
+		if (!selectionOutcome || !segmentLabel) {
+			throw new Error("Seat review presentation is missing a validated seat or segment.")
+		}
+		const current = "current" in selectionOutcome ? selectionOutcome.current : null
+		return {
+			passengerId,
+			passengerLabel,
+			passengerCategory,
+			segmentId: selection.segmentId,
+			segmentLabel,
+			seatDesignator: selection.seatDesignator,
+			seatName: current?.seatName ?? selection.seatName,
+			status: selectionOutcome.status,
+			originalAmount: selection.totalAmount,
+			originalCurrency: selection.totalCurrency,
+			currentAmount: current?.amount ?? null,
+			currentCurrency: current?.currency ?? null,
+			disclosures: current ? [...current.disclosures] : [...selection.disclosures],
+			unavailableReason: selectionOutcome.status === "unavailable" ? selectionOutcome.reason : null,
+		}
+	}
+
+	const groups = passengerCollection.passengers
+		.map((passenger, index) => {
+			const passengerLabel = passengerDisplayName(passenger, index)
 			const seats = selections
-				.filter((selection) => providerIds.has(selection.passengerId))
-				.map((selection) => {
-					const selectionOutcome = selectionForOutcome(outcome, selection)
-					const segmentLabel = segmentLabels.get(selection.segmentId)
-					if (!selectionOutcome || !segmentLabel) {
-						throw new Error("Seat review presentation is missing a validated seat or segment.")
-					}
-					const current = "current" in selectionOutcome ? selectionOutcome.current : null
-					return {
-						passengerId: passenger.id,
-						passengerLabel: passengerDisplayName(passenger, index),
-						passengerCategory: passenger.category,
-						segmentId: selection.segmentId,
-						segmentLabel,
-						seatDesignator: selection.seatDesignator,
-						seatName: current?.seatName ?? selection.seatName,
-						status: selectionOutcome.status,
-						originalAmount: selection.totalAmount,
-						originalCurrency: selection.totalCurrency,
-						currentAmount: current?.amount ?? null,
-						currentCurrency: current?.currency ?? null,
-						disclosures: current ? [...current.disclosures] : [...selection.disclosures],
-						unavailableReason:
-							selectionOutcome.status === "unavailable" ? selectionOutcome.reason : null,
-					} satisfies SeatReviewPresentationRow
+				.filter((selection) => {
+					const matches = passengerMatchesForSelection(selection)
+					return matches.length === 1 && matches[0].passenger.id === passenger.id
 				})
+				.map((selection) =>
+					createRow(selection, passenger.id, passengerLabel, passenger.category),
+				)
 			return {
 				passengerId: passenger.id,
-				passengerLabel: passengerDisplayName(passenger, index),
+				passengerLabel,
 				passengerCategory: passenger.category,
 				associationWarning: false,
 				seats,
 			}
-		},
-	)
+		})
+		.filter((group) => group.seats.length > 0)
 
-	const assignedSelectionKeys = new Set(
-		groups.flatMap((group) =>
-			group.seats.map(
-				(row) => `${row.segmentId}|${row.seatDesignator}|${row.passengerId ?? ""}`,
-			),
-		),
+	const unmatched = selections.filter(
+		(selection) => passengerMatchesForSelection(selection).length !== 1,
 	)
-	const unmatched = selections.filter((selection) => {
-		const matches = passengerCollection.passengers.filter((passenger) =>
-			passenger.providerReferences.some(
-				(reference) =>
-					reference.provider === "duffel" &&
-					reference.offerId === offer.id &&
-					reference.providerPassengerId === selection.passengerId,
-			),
-		)
-		return matches.length !== 1
-	})
-
 	if (unmatched.length > 0) {
 		groups.push({
 			passengerId: null,
 			passengerLabel: "Passenger association needs attention",
 			passengerCategory: null,
 			associationWarning: true,
-			seats: unmatched.map((selection) => {
-				const selectionOutcome = selectionForOutcome(outcome, selection)
-				const segmentLabel = segmentLabels.get(selection.segmentId)
-				if (!selectionOutcome || !segmentLabel) {
-					throw new Error("Seat review presentation is missing a validated seat or segment.")
-				}
-				const current = "current" in selectionOutcome ? selectionOutcome.current : null
-				return {
-					passengerId: null,
-					passengerLabel: "Passenger association needs attention",
-					passengerCategory: null,
-					segmentId: selection.segmentId,
-					segmentLabel,
-					seatDesignator: selection.seatDesignator,
-					seatName: current?.seatName ?? selection.seatName,
-					status: selectionOutcome.status,
-					originalAmount: selection.totalAmount,
-					originalCurrency: selection.totalCurrency,
-					currentAmount: current?.amount ?? null,
-					currentCurrency: current?.currency ?? null,
-					disclosures: current ? [...current.disclosures] : [...selection.disclosures],
-					unavailableReason:
-						selectionOutcome.status === "unavailable" ? selectionOutcome.reason : null,
-				}
-			}),
+			seats: unmatched.map((selection) =>
+				createRow(
+					selection,
+					null,
+					"Passenger association needs attention",
+					null,
+				),
+			),
 		})
 	}
 
-	return groups.filter((group) => group.seats.length > 0)
+	return groups
 }
