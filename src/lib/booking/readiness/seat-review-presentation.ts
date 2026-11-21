@@ -94,6 +94,7 @@ export function buildSeatReviewPresentation(
 				matches: passenger.providerReferences.some(
 					(reference) =>
 						reference.provider === "duffel" &&
+						selection.offerId === offer.id &&
 						reference.offerId === offer.id &&
 						reference.providerPassengerId === selection.passengerId,
 				),
