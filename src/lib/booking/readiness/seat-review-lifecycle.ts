@@ -100,8 +100,10 @@ export function startSeatReviewValidation(
 	retry = false,
 ): SeatReviewStartResult {
 	const snapshotKey = selectionSnapshot(selections)
-	const matching = isSeatReviewLifecycleForSession(current, identity) &&
-		current.snapshotKey === snapshotKey
+	const matchingLifecycle =
+		isSeatReviewLifecycleForSession(current, identity) && current.snapshotKey === snapshotKey
+			? current
+			: null
 
 	if (selections.length === 0) {
 		const lifecycle: SeatReviewLifecycle = {
@@ -117,29 +119,28 @@ export function startSeatReviewValidation(
 		return { kind: "not_selected", lifecycle }
 	}
 
-	if (matching && current.status === "validating") return { kind: "blocked", lifecycle: current }
-	if (matching && current.status === "error" && !retry) return { kind: "blocked", lifecycle: current }
+	if (matchingLifecycle?.status === "validating") return { kind: "blocked", lifecycle: matchingLifecycle }
+	if (matchingLifecycle?.status === "error" && !retry) return { kind: "blocked", lifecycle: matchingLifecycle }
 	if (
-		matching &&
-		(current.status === "valid" || current.status === "action_required") &&
-		hasUnexpiredOffer(current.offerExpiresAt, now)
+		(matchingLifecycle?.status === "valid" || matchingLifecycle?.status === "action_required") &&
+		hasUnexpiredOffer(matchingLifecycle.offerExpiresAt, now)
 	) {
-		return { kind: "reuse", lifecycle: current }
+		return { kind: "reuse", lifecycle: matchingLifecycle }
 	}
-	if (matching && current.status === "retry_exhausted" && hasUnexpiredOffer(current.offerExpiresAt, now)) {
-		return { kind: "blocked", lifecycle: current }
+	if (matchingLifecycle?.status === "retry_exhausted" && hasUnexpiredOffer(matchingLifecycle.offerExpiresAt, now)) {
+		return { kind: "blocked", lifecycle: matchingLifecycle }
 	}
 
-	const attemptNumber = matching && current.status === "error" ? current.attemptNumber + 1 : 1
+	const attemptNumber = matchingLifecycle?.status === "error" ? matchingLifecycle.attemptNumber + 1 : 1
 	if (attemptNumber > 3) {
 		const lifecycle: SeatReviewLifecycle = {
 			...identity,
-			attemptId: current?.attemptId ?? "seat-review-exhausted",
+			attemptId: matchingLifecycle?.attemptId ?? "seat-review-exhausted",
 			attemptNumber: 3,
 			snapshotKey,
 			status: "retry_exhausted",
 			outcome: null,
-			errorMessage: current?.errorMessage ?? "Seat validation failed after three attempts.",
+			errorMessage: matchingLifecycle?.errorMessage ?? "Seat validation failed after three attempts.",
 			offerExpiresAt,
 		}
 		return { kind: "blocked", lifecycle }
