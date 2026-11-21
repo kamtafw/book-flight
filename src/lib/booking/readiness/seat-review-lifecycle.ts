@@ -1,4 +1,4 @@
-import type { SelectedSeatService, SeatServiceValidationResponse } from "@/lib/flights/types"
+import type { SelectedSeatService } from "@/lib/flights/types"
 import type { SeatReviewOutcome } from "./seat-review"
 
 export interface SeatReviewLifecycleIdentity {
@@ -161,7 +161,6 @@ export function completeSeatReviewValidation(
 	lifecycle: SeatReviewLifecycle | null,
 	attempt: SeatReviewAttempt,
 	currentSnapshotKey: string,
-	response: SeatServiceValidationResponse,
 	outcome: SeatReviewOutcome,
 ): SeatReviewLifecycle | null {
 	if (!isSeatReviewAttemptCurrent(lifecycle, attempt, currentSnapshotKey)) return null
