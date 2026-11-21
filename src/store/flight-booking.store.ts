@@ -314,6 +314,8 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 			identity,
 			state.selectedOutboundSeatServices,
 			offerExpiresAt,
+			Date.now(),
+			retry,
 		)
 		set({ seatReviewLifecycle: result.lifecycle })
 		return result.kind === "started"
@@ -359,7 +361,7 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 	abandonBookingSession: () =>
 		set((state) => ({ ...clearBookingSessionState(state), offerReviewLifecycle: null, seatReviewLifecycle: null })),
 	completeBookingSession: () =>
-		set((state) => ({ ...clearBookingSessionState(state), offerReviewLifecycle: null })),
+		set((state) => ({ ...clearBookingSessionState(state), offerReviewLifecycle: null, seatReviewLifecycle: null })),
 
 	initializePassengerCollection: (offer) =>
 		set((state) => {
