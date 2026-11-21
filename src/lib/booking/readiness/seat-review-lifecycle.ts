@@ -184,7 +184,7 @@ export function failSeatReviewValidation(
 	currentSnapshotKey: string,
 	message: string,
 ): SeatReviewLifecycle | null {
-	if (!isSeatReviewAttemptCurrent(lifecycle, attempt, currentSnapshotKey)) return null
+	if (!lifecycle || !isSeatReviewAttemptCurrent(lifecycle, attempt, currentSnapshotKey)) return null
 	return {
 		...attempt,
 		status: attempt.attemptNumber >= 3 ? "retry_exhausted" : "error",
