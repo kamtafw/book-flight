@@ -1137,6 +1137,9 @@ The following scenarios should be represented in the test suite.
 | Seat becomes unavailable                           | Customer must resolve the selection                        |
 | Seat price increases                               | New seat price displayed; acceptance required              |
 | Seat disclosure changes                            | Customer must review changed disclosure                    |
+| Selected seats across connecting segments           | Each seat is shown under the exact passenger and segment   |
+| Ambiguous provider passenger reference              | Seat is flagged; passenger ownership is never guessed      |
+| No selected seats                                   | No empty seat rows are displayed                           |
 | Flight accepted, seat later changed                | Flight acceptance preserved if its offer remains unchanged |
 | Flight offer changes again                         | Previous flight-price acceptance invalidated               |
 | Offer refresh fails                                | Retry offered                                              |
