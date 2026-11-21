@@ -5,9 +5,7 @@ import {
 	isOfferReviewAttemptCurrent,
 	isOfferReviewLifecycleForSession,
 	shouldStartOfferReviewRefresh,
-	type OfferReviewLifecycle,
 } from "./offer-review-lifecycle.ts"
-import type { OfferReviewOutcome } from "./offer-review.ts"
 
 const identity = {
 	reviewSessionId: "review-1",
@@ -50,7 +48,7 @@ const originalOffer = {
 	}],
 }
 
-const validOutcome: OfferReviewOutcome = {
+const validOutcome = {
 	status: "valid",
 	originalOffer,
 	currentOffer: { ...originalOffer, expiresAt: "2026-12-01T07:00:00+00:00" },
@@ -58,9 +56,7 @@ const validOutcome: OfferReviewOutcome = {
 	priceAcceptanceRequired: false,
 }
 
-function lifecycle(
-	patch: Partial<OfferReviewLifecycle> = {},
-): OfferReviewLifecycle {
+function lifecycle(patch = {}) {
 	return {
 		...identity,
 		attemptId: "attempt-1",
