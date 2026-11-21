@@ -949,7 +949,7 @@ P2 is limited to offer refresh and its review lifecycle. Seat validation remains
    - Keep technical/network/Appwrite/provider errors separate from business outcomes.
    - Retain the original offer snapshot independently from the refreshed offer.
 
-**P2-02 implementation checkpoint — committed and pushed; local verification pending**
+**P2-02 implementation checkpoint — complete and locally verified**
 
 - Added `createOfferReviewOutcome()` and a discriminated `OfferReviewOutcome` model.
 - Kept the original selected offer as an independent snapshot, including cloned nested passenger and itinerary data.
@@ -959,7 +959,9 @@ P2 is limited to offer refresh and its review lifecycle. Seat validation remains
 - Kept technical failures outside the business-outcome union. `refreshOffer()` continues to reject them as `FlightSearchError`.
 - Added focused tests for all four outcomes and original-snapshot isolation.
 - Added `test:offer-review` and included the new tests in `npm test`.
-  The implementation is on `feat/br-05-p2-offer-outcome-model`. Local verification is still required before P2-02 is considered complete.
+- **Verification:** focused offer-review tests (5/5 passed), full test suite (108/108 passed), `npx tsc --noEmit` and `npx expo lint` all passed.
+
+  The implementation is committed and pushed on `feat/br-05-p2-offer-outcome-model`. P2-02 is closed.
 
 1. **P2-03 — Review refresh lifecycle and recovery**
    - Trigger offer refresh on the first entry for the active review session.
@@ -969,7 +971,22 @@ P2 is limited to offer refresh and its review lifecycle. Seat validation remains
    - Associate each request with the active review-session ID, booking-session ID, original offer ID and attempt identity; ignore stale responses after navigation, a new attempt, or a changed booking.
    - Reuse a successful result on return only while the same review session and offer remain valid; do not introduce an arbitrary freshness TTL.
 
-2. **P2-04 — Focused verification**
+**P2-03 implementation checkpoint — committed and pushed; local verification pending**
+
+- Added an offer-review lifecycle model that scopes every attempt to the exact review session, booking session and selected offer.
+- Connected the Checkout Review route to the existing `refreshOffer()` client helper. The first entry starts a refresh; a still-valid result is reused when returning to the same review session.
+- Preserved the originally selected offer as the comparison baseline. Refreshed provider data remains in the normalized review outcome and does not silently overwrite the selected offer in the flight-results store.
+- Added distinct loading, verified, fare-changed, itinerary-changed, unavailable, retryable-error and retry-exhausted screen states.
+- Technical failures can be retried up to three times for the review attempt. Exhaustion blocks progression and offers return to search without clearing passenger or seat selections. Explicitly leaving review for search clears only the refresh lifecycle, allowing a fresh review attempt to start a new retry cycle.
+- Store completion/failure actions verify the attempt ID and exact session/offer identity before accepting an asynchronous response. Starting a different booking session and abandoning/completing a booking clears the lifecycle.
+- Successful offer validation is reused only while its provider expiry remains in the future. The review checks this again whenever the route regains focus, including after passenger edits. No arbitrary freshness TTL was introduced.
+- Added focused lifecycle tests for session isolation, attempt identity, successful-result reuse, expiry and blocked/error states.
+- Follow-up fix: convert the raw `OfferRefreshResponse` through `createOfferReviewOutcome()` before storing it in the lifecycle. This ensures the lifecycle receives the normalized `currentOffer` / `refreshedOffer` fields it expects, rather than the raw response's `offer` field.
+- Added `test:offer-review-lifecycle` and included the tests in `npm test`.
+
+  Local verification is pending. P2-03 does not yet validate seats, calculate the complete checkout total, implement fare acceptance, or permit final checkout progression.
+
+1. **P2-04 — Focused verification**
    - Test request snapshot construction and decimal-string handling.
    - Test all BR-02 business outcomes, including price changes alongside itinerary changes.
    - Test malformed responses, Appwrite failures, network/provider errors and retry.
