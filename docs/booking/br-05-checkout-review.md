@@ -983,8 +983,10 @@ P2 is limited to offer refresh and its review lifecycle. Seat validation remains
 - Added focused lifecycle tests for session isolation, attempt identity, successful-result reuse, expiry and blocked/error states.
 - Follow-up fix: convert the raw `OfferRefreshResponse` through `createOfferReviewOutcome()` before storing it in the lifecycle. This ensures the lifecycle receives the normalized `currentOffer` / `refreshedOffer` fields it expects, rather than the raw response's `offer` field.
 - Added `test:offer-review-lifecycle` and included the tests in `npm test`.
+- Manual verification confirmed the initial refresh flow, successful review state, retry after a network failure, blocking after the third failed attempt, and preservation of passenger information. A provider fare change was not encountered and remains unverified manually.
+- Navigation correction: editing passenger details from Checkout Review now opens Choose Seat first, then Personal Information. The device back action, screen back arrow and Save and return action from Personal Information return to Choose Seat. Continuing from Personal Information dismisses the edit path back to the existing Checkout Review route, rather than revealing a stale review screen through a normal stack pop. Passenger and seat selections remain in the booking store.
 
-Local verification is pending. P2-03 does not yet validate seats, calculate the complete checkout total, implement fare acceptance, or permit final checkout progression.
+The navigation correction is committed and pushed; local verification of this correction is pending. P2-03 does not yet validate seats, calculate the complete checkout total, implement fare acceptance, or permit final checkout progression.
 2. **P2-04 — Focused verification**
    - Test request snapshot construction and decimal-string handling.
    - Test all BR-02 business outcomes, including price changes alongside itinerary changes.
