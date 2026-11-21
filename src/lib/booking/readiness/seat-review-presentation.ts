@@ -89,9 +89,8 @@ export function buildSeatReviewPresentation(
 	const segmentLabels = getSegmentLabels(offer)
 	const passengerMatchesForSelection = (selection: SelectedSeatService) =>
 		passengerCollection.passengers
-			.map((passenger, index) => ({
+			.map((passenger) => ({
 				passenger,
-				index,
 				matches: passenger.providerReferences.some(
 					(reference) =>
 						reference.provider === "duffel" &&
