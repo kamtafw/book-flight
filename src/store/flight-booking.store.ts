@@ -322,6 +322,12 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 	},
 	completeSeatReviewValidation: (attempt, outcome) => {
 		const state = get()
+		if (
+			state.checkoutReviewSession?.id !== attempt.reviewSessionId ||
+			state.activeBookingSession?.id !== attempt.bookingSessionId ||
+			state.checkoutReviewSession.offerId !== attempt.offerId ||
+			state.activeBookingSession.offerId !== attempt.offerId
+		) return false
 		const next = completeSeatReviewValidation(
 			state.seatReviewLifecycle,
 			attempt,
@@ -334,6 +340,12 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 	},
 	failSeatReviewValidation: (attempt, message) => {
 		const state = get()
+		if (
+			state.checkoutReviewSession?.id !== attempt.reviewSessionId ||
+			state.activeBookingSession?.id !== attempt.bookingSessionId ||
+			state.checkoutReviewSession.offerId !== attempt.offerId ||
+			state.activeBookingSession.offerId !== attempt.offerId
+		) return false
 		const next = failSeatReviewValidation(
 			state.seatReviewLifecycle,
 			attempt,
