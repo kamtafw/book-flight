@@ -84,7 +84,15 @@ export function buildSeatReviewPresentation(
 	passengerCollection: PassengerCollection,
 	offer: FlightOffer,
 ): SeatReviewPresentationGroup[] {
-	if (outcome.status === "not_selected" || selections.length === 0) return []
+	if (outcome.status === "not_selected") {
+		if (selections.length !== 0 || outcome.selections.length !== 0) {
+			throw new Error("A not-selected seat outcome cannot contain seat selections.")
+		}
+		return []
+	}
+	if (selections.length === 0) {
+		throw new Error("A seat validation outcome requires at least one selected seat.")
+	}
 
 	const segmentLabels = getSegmentLabels(offer)
 	const passengerMatchesForSelection = (selection: SelectedSeatService) =>
