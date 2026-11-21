@@ -97,6 +97,7 @@ export function startSeatReviewValidation(
 	selections: SelectedSeatService[],
 	offerExpiresAt: string | null,
 	now = Date.now(),
+	retry = false,
 ): SeatReviewStartResult {
 	const snapshotKey = selectionSnapshot(selections)
 	const matching = isSeatReviewLifecycleForSession(current, identity) &&
@@ -117,6 +118,7 @@ export function startSeatReviewValidation(
 	}
 
 	if (matching && current.status === "validating") return { kind: "blocked", lifecycle: current }
+	if (matching && current.status === "error" && !retry) return { kind: "blocked", lifecycle: current }
 	if (
 		matching &&
 		(current.status === "valid" || current.status === "action_required") &&
