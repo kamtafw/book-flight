@@ -931,7 +931,7 @@ P2 is limited to offer refresh and its review lifecycle. Seat validation remains
    - Build the expected snapshot from the selected offer's ID, original decimal amount, currency, provider passenger IDs, slices, segment IDs and timestamps.
    - Parse Appwrite execution status and response body; validate response shape and distinguish business outcomes from technical failures.
    - Reject missing or malformed original decimal amounts; never reconstruct them from numeric `price`.
-  
+
    **P2-01 implementation checkpoint — complete and locally verified**
    - Added the nullable `FlightOffer.priceAmount` field and typed BR-02 request/response contracts.
    - Added `buildOfferRefreshSnapshot()` and `refreshOffer()` to the mobile flight API.
@@ -976,13 +976,13 @@ P2 is limited to offer refresh and its review lifecycle. Seat validation remains
    - Technical failures can be retried up to three times for the review attempt. Exhaustion blocks progression and offers return to search without clearing passenger or seat selections. Explicitly leaving review for search clears only the refresh lifecycle, allowing a fresh review attempt to start a new retry cycle.
    - Store completion/failure actions verify the attempt ID and exact session/offer identity before accepting an asynchronous response. Starting a different booking session and abandoning/completing a booking clears the lifecycle.
    - Successful offer validation is reused only while its provider expiry remains in the future. The review checks this again whenever the route regains focus, including after passenger edits. No arbitrary freshness TTL was introduced.
-   - Added focused lifecycle tests for session isolation, attempt identity, successful-result reuse, expiry and blocked/error states.
+   - Added focused lifecycle tests for session isolation, attempt identity, successful-result reuse, expiry and blocked/error states. Additional deterministic coverage now verifies that a `price_changed` outcome is reused only until the refreshed offer expires, and that missing or invalid expiry forces a new refresh.
    - Follow-up fix: convert the raw `OfferRefreshResponse` through `createOfferReviewOutcome()` before storing it in the lifecycle. This ensures the lifecycle receives the normalized `currentOffer` / `refreshedOffer` fields it expects, rather than the raw response's `offer` field.
    - Added `test:offer-review-lifecycle` and included the tests in `npm test`.
-   - Manual verification confirmed the initial refresh flow, successful review state, retry after a network failure, blocking after the third failed attempt, and preservation of passenger information. A provider fare change was not encountered and remains unverified manually.
+   - Manual verification confirmed the initial refresh flow, successful review state, retry after a network failure, blocking after the third failed attempt, and preservation of passenger information. A live provider fare change was not encountered; the changed-fare API, normalized outcome and lifecycle paths are covered with deterministic mocked responses and fixtures. The added lifecycle coverage still requires local execution.
    - Navigation correction: editing passenger details from Checkout Review opens Personal Information directly. In this review-edit path, Android hardware back is intercepted, and the screen back arrow, error-state back actions and Save and return explicitly replace Personal Information with Choose Seat; these actions do not depend on the navigator's previous route. The customer can then continue from Choose Seat back into Personal Information. Continuing to review dismisses the edit path to the existing Checkout Review route. Passenger and seat selections remain in the booking store.
 
-   The revised navigation correction is committed and pushed; local verification is pending. P2-03 does not yet validate seats, calculate the complete checkout total, implement fare acceptance, or permit final checkout progression.
+   The revised navigation correction is committed, pushed and locally verified by the user. The expected flow is confirmed: Checkout Review opens Personal Information directly; all supported back actions in this review-edit path return to Choose Seat; continuing through Personal Information returns to the existing Checkout Review route. P2-03 does not yet validate seats, calculate the complete checkout total, implement fare acceptance, or permit final checkout progression.
 
 4. **P2-04 — Focused verification**
    - Test request snapshot construction and decimal-string handling.
