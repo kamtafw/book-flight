@@ -130,7 +130,7 @@ export function buildSeatReviewPresentation(
 		}
 	}
 
-	const groups = passengerCollection.passengers
+	const groups: SeatReviewPresentationGroup[] = passengerCollection.passengers
 		.map((passenger, index) => {
 			const passengerLabel = passengerDisplayName(passenger, index)
 			const seats = selections
