@@ -75,7 +75,7 @@ test("starts validation for a new review, booking, offer or seat snapshot", () =
 test("blocks duplicate in-flight requests and reuses an unexpired completed result", () => {
 	const first = started()
 	assert.equal(startSeatReviewValidation(first.lifecycle, identity, [seat()], "2026-12-01T10:00:00Z").kind, "blocked")
-	const completed = completeSeatReviewValidation(first.lifecycle, first.attempt, first.attempt.snapshotKey, {
+	const completed = completeSeatReviewValidation(changed.lifecycle, first.attempt, first.attempt.snapshotKey, {
 		status: "valid",
 		selections: [{ status: "valid", selection: seat(), current: {
 			serviceId: "service-1", passengerId: "pas_1", segmentId: "seg_1",
@@ -140,7 +140,7 @@ test("does not accept a stale result after review or booking session changes", (
 	const result = startSeatReviewValidation(first.lifecycle, changedIdentity, [seat()], "2026-12-01T10:00:00Z")
 	assert.equal(result.kind, "started")
 	assert.equal(
-		completeSeatReviewValidation(first.lifecycle, first.attempt, first.attempt.snapshotKey, {
+		completeSeatReviewValidation(result.lifecycle, first.attempt, first.attempt.snapshotKey, {
 			status: "not_selected",
 			selections: [],
 		}),
