@@ -979,7 +979,7 @@ P2 is limited to offer refresh and its review lifecycle. Seat validation remains
 - Added distinct loading, verified, fare-changed, itinerary-changed, unavailable, retryable-error and retry-exhausted screen states.
 - Technical failures can be retried up to three times for the review attempt. Exhaustion blocks progression and offers return to search without clearing passenger or seat selections. Explicitly leaving review for search clears only the refresh lifecycle, allowing a fresh review attempt to start a new retry cycle.
 - Store completion/failure actions verify the attempt ID and exact session/offer identity before accepting an asynchronous response. Starting a different booking session and abandoning/completing a booking clears the lifecycle.
-- Successful offer validation is reused only while its provider expiry remains in the future. No arbitrary freshness TTL was introduced.
+- Successful offer validation is reused only while its provider expiry remains in the future. The review checks this again whenever the route regains focus, including after passenger edits. No arbitrary freshness TTL was introduced.
 - Added focused lifecycle tests for session isolation, attempt identity, successful-result reuse, expiry and blocked/error states.
 - Added `test:offer-review-lifecycle` and included the tests in `npm test`.
 
