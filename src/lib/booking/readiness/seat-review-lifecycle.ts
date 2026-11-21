@@ -100,10 +100,9 @@ export function startSeatReviewValidation(
 	retry = false,
 ): SeatReviewStartResult {
 	const snapshotKey = selectionSnapshot(selections)
+	const sessionLifecycle = isSeatReviewLifecycleForSession(current, identity) ? current : null
 	const matchingLifecycle =
-		isSeatReviewLifecycleForSession(current, identity) && current.snapshotKey === snapshotKey
-			? current
-			: null
+		sessionLifecycle?.snapshotKey === snapshotKey ? sessionLifecycle : null
 
 	if (selections.length === 0) {
 		const lifecycle: SeatReviewLifecycle = {
