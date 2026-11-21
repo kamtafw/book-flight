@@ -948,7 +948,7 @@ P2 is limited to offer refresh and its review lifecycle. Seat validation remains
    - Keep technical/network/Appwrite/provider errors separate from business outcomes.
    - Retain the original offer snapshot independently from the refreshed offer.
 
-**P2-02 implementation checkpoint — committed and pushed; local verification pending**
+**P2-02 implementation checkpoint — complete and locally verified**
 
 - Added `createOfferReviewOutcome()` and a discriminated `OfferReviewOutcome` model.
 - Kept the original selected offer as an independent snapshot, including cloned nested passenger and itinerary data.
@@ -958,8 +958,9 @@ P2 is limited to offer refresh and its review lifecycle. Seat validation remains
 - Kept technical failures outside the business-outcome union. `refreshOffer()` continues to reject them as `FlightSearchError`.
 - Added focused tests for all four outcomes and original-snapshot isolation.
 - Added `test:offer-review` and included the new tests in `npm test`.
+- **Verification:** focused offer-review tests (5/5 passed), full test suite (108/108 passed), `npx tsc --noEmit` and `npx expo lint` all passed.
 
-The implementation is on `feat/br-05-p2-offer-outcome-model`. Local verification is still required before P2-02 is considered complete.
+The implementation is committed and pushed on `feat/br-05-p2-offer-outcome-model`. P2-02 is closed.
 
 2. **P2-03 — Review refresh lifecycle and recovery**
    - Trigger offer refresh on the first entry for the active review session.
