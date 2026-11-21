@@ -1,6 +1,6 @@
 # BR-05: Checkout Review Contract
 
-**Status:** Approved; P1 implementation merged into `main`; P2 in progress  
+**Status:** Approved; P1 and P2 complete; P3 in progress  
 **Scope:** Checkout Review for the current one-way booking flow, including connecting itineraries with multiple segments  
 **Depends on:** BR-01 checkout contract, BR-02 offer refresh/validation, BR-03 seat-service validation, and BR-04 passenger domain, provider-validation, readiness, and lifecycle work  
 **Current-flow boundary:** The current search implementation creates one-way offers. BR-05 must display every segment within the selected journey, including connections, but must not introduce round-trip or multi-city search support.
@@ -1061,7 +1061,7 @@ Integrate existing BR-03 validation with the review experience.
 
 P3-01 code and tests are committed on `feat/br-05-p3-seat-validation`. The user confirmed that the focused and full test suites passed and that `npx tsc --noEmit` passed after a small response-cast correction. P3-01 is locally verified.
 
-**P3-02 implementation checkpoint — implemented and pushed; local verification pending**
+**P3-02 implementation checkpoint — complete and locally verified**
 
 - Added a seat-review lifecycle scoped to the exact review session, booking session, offer and canonical selected-seat snapshot. Snapshot identity includes service, provider passenger, segment, seat designator, amount, currency and disclosures; selection ordering does not affect identity.
 - Connected Checkout Review to the existing validateSeatServices() action only after a fresh offer refresh returns valid or price_changed. Invalid, missing or expired offer expiry prevents seat validation from starting.
@@ -1073,7 +1073,21 @@ P3-01 code and tests are committed on `feat/br-05-p3-seat-validation`. The user 
 - Checkout Review now presents seat-verification loading, retryable error, retry exhaustion and customer-action-required states. Changed/unavailable seats route back to seat selection; no seat price or disclosure acceptance was added.
 - Added deterministic lifecycle tests for empty selections, snapshot identity, reuse, expiry, retries, exhaustion, session isolation and stale responses.
 
-P3-02 is implemented and pushed. Local verification is pending. The checkpoint does not implement price acceptance, disclosure acknowledgement, final checkout readiness, order creation or payment.
+P3-02 was committed and pushed to `main`. The user confirmed that the focused lifecycle tests, full test suite, TypeScript check and Expo lint all passed. The checkpoint does not implement price acceptance, disclosure acknowledgement, final checkout readiness, order creation or payment.
+
+**P3-03 implementation checkpoint — seat review presentation**
+
+- Added `src/lib/booking/readiness/seat-review-presentation.ts` to build the review display model from the validated seat outcome, canonical seat selections, passenger collection and active offer.
+- Each seat is associated with a passenger only through an exact Duffel provider reference for the active offer. Ambiguous or missing provider references are shown in a separate attention group rather than guessed from passenger or selection order.
+- Each seat is associated with its flight segment by the provider segment ID. Connecting-flight selections remain separate and are labelled with their segment sequence and airport pair.
+- The presentation retains the originally selected seat amount and current provider amount separately. It displays current seat names, prices and disclosures when returned by validation.
+- Valid seats are displayed as available. Changed prices, unavailable seats, changed disclosures and combined price/disclosure changes are shown as distinct states with the appropriate explanation.
+- Technical validation errors remain on the retry/recovery path and are not presented as seat availability changes. Customer-action outcomes show the exact affected seats before routing the customer back to seat selection.
+- An explicit `not_selected` outcome displays that no seats were selected without creating empty passenger seat rows.
+- Added focused presentation tests for passenger/segment association, provider-current details, ambiguous passenger references, no-seat outcomes and incomplete presentation data. Registered the tests in the focused and full test commands.
+- No price acceptance, disclosure acknowledgement, final pricing total, order creation or payment behaviour is introduced in this checkpoint.
+
+P3-03 implementation is pushed on `feat/br-05-p3-03-seat-review-presentation`. Local verification is pending.
 
 ### Checkpoint 4: Pricing and customer acceptance (P4)
 
