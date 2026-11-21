@@ -36,6 +36,9 @@ export default function CheckoutReviewScreen() {
 		(state) => state.completeOfferReviewRefresh,
 	)
 	const failOfferReviewRefresh = useFlightBookingStore((state) => state.failOfferReviewRefresh)
+	const clearOfferReviewLifecycle = useFlightBookingStore(
+		(state) => state.clearOfferReviewLifecycle,
+	)
 
 	const entryState = useMemo(
 		() => getCheckoutReviewEntryState(flightId, flight, activeBookingSession, passengerCollection),
@@ -104,7 +107,10 @@ export default function CheckoutReviewScreen() {
 		router.push({ pathname: "/personal-information", params: { flightId, returnToReview: "true" } })
 	}
 
-	const returnToSearch = () => router.replace("/flight-results")
+	const returnToSearch = () => {
+		clearOfferReviewLifecycle()
+		router.replace("/flight-results")
+	}
 
 	if (entryState === "flight_unavailable") {
 		return (
