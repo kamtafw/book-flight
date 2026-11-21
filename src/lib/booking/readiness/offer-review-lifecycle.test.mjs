@@ -48,6 +48,22 @@ const originalOffer = {
 	}],
 }
 
+
+const priceChangedOutcome = {
+	status: "price_changed",
+	originalOffer,
+	currentOffer: {
+		...originalOffer,
+		price: 140,
+		priceAmount: "140.00",
+		expiresAt: "2026-12-01T08:00:00+00:00",
+	},
+	previousPrice: { amount: "100.00", currency: "USD" },
+	currentPrice: { amount: "140.00", currency: "USD" },
+	canContinueToSeatValidation: true,
+	priceAcceptanceRequired: true,
+}
+
 const validOutcome = {
 	status: "valid",
 	originalOffer,
@@ -114,6 +130,44 @@ test("reuses successful results only while the provider offer is unexpired", () 
 		shouldStartOfferReviewRefresh(lifecycle(), identity, Date.parse("2026-12-01T07:00:00Z")),
 		true,
 	)
+})
+
+
+test("reuses a price-changed result only while the refreshed offer remains unexpired", () => {
+	const priceChangedLifecycle = lifecycle({
+		status: "price_changed",
+		outcome: priceChangedOutcome,
+	})
+
+	assert.equal(
+		shouldStartOfferReviewRefresh(
+			priceChangedLifecycle,
+			identity,
+			Date.parse("2026-12-01T07:59:59Z"),
+		),
+		false,
+	)
+	assert.equal(
+		shouldStartOfferReviewRefresh(
+			priceChangedLifecycle,
+			identity,
+			Date.parse("2026-12-01T08:00:00Z"),
+		),
+		true,
+	)
+})
+
+test("does not reuse a price-changed result when refreshed expiry is missing or invalid", () => {
+	for (const expiresAt of [null, "not-a-date"]) {
+		const priceChangedLifecycle = lifecycle({
+			status: "price_changed",
+			outcome: {
+				...priceChangedOutcome,
+				currentOffer: { ...priceChangedOutcome.currentOffer, expiresAt },
+			},
+		})
+		assert.equal(shouldStartOfferReviewRefresh(priceChangedLifecycle, identity), true)
+	}
 })
 
 test("does not auto-loop after a technical error or restart a blocked business outcome", () => {
