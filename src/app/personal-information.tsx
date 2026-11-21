@@ -893,7 +893,7 @@ export default function PersonalInformationScreen() {
 						onPress={() => {
 							if (!canContinueToReview || !flightId) return
 							if (returnToReview === "true") {
-								router.back()
+								router.dismissTo({ pathname: "/checkout-review", params: { flightId } })
 								return
 							}
 							router.push({ pathname: "/checkout-review", params: { flightId } })
