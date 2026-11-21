@@ -18,10 +18,11 @@ import { useFlightBookingStore } from "@/store/flight-booking.store"
 import { useFlightOffersStore } from "@/store/flight-offers.store"
 import { Feather, FontAwesome5, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons"
 import { clsx } from "clsx"
-import { router, useLocalSearchParams } from "expo-router"
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
 	ActivityIndicator,
+	BackHandler,
 	KeyboardAvoidingView,
 	Platform,
 	Pressable,
@@ -606,6 +607,19 @@ export default function PersonalInformationScreen() {
 		}
 		router.back()
 	}
+
+	useFocusEffect(
+		useCallback(() => {
+			if (returnToReview !== "true" || !flightId) return
+
+			const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+				router.replace({ pathname: "/choose-seat", params: { flightId, returnToReview: "true" } })
+				return true
+			})
+
+			return () => subscription.remove()
+		}, [flightId, returnToReview]),
+	)
 
 	const validationResult = useMemo<PassengerValidationResult>(() => {
 		if (!flight || !activeCollection) {
