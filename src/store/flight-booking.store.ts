@@ -16,7 +16,6 @@ import {
 import type { OfferReviewOutcome } from "@/lib/booking/readiness/offer-review"
 import { createSeatReviewSnapshotKey, startSeatReviewValidation, completeSeatReviewValidation, failSeatReviewValidation, type SeatReviewAttempt, type SeatReviewLifecycle, type SeatReviewLifecycleIdentity } from "@/lib/booking/readiness/seat-review-lifecycle"
 import type { SeatReviewOutcome } from "@/lib/booking/readiness/seat-review"
-import type { SeatServiceValidationResponse } from "@/lib/flights/types"
 import {
 	getOfferReviewOutcomeStatus,
 	isOfferReviewAttemptCurrent,
@@ -25,7 +24,7 @@ import {
 	type OfferReviewLifecycle,
 	type OfferReviewLifecycleIdentity,
 } from "@/lib/booking/readiness/offer-review-lifecycle"
-import type { FlightOffer, SelectedSeatService } from "@/lib/flights/types"
+import type { FlightOffer, SelectedSeatService, SeatServiceValidationResponse } from "@/lib/flights/types"
 import { create } from "zustand"
 
 interface FlightBookingState {
@@ -321,13 +320,12 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 			? { kind: "started", attempt: result.attempt }
 			: { kind: result.kind }
 	},
-	completeSeatReviewValidation: (attempt, response, outcome) => {
+	completeSeatReviewValidation: (attempt, _response, outcome) => {
 		const state = get()
 		const next = completeSeatReviewValidation(
 			state.seatReviewLifecycle,
 			attempt,
 			createSeatReviewSnapshotKey(state.selectedOutboundSeatServices),
-			response,
 			outcome,
 		)
 		if (!next) return false
