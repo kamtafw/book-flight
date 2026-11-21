@@ -48,7 +48,7 @@ interface FlightBookingState {
 	completeOfferReviewRefresh: (attempt: OfferReviewAttempt, outcome: OfferReviewOutcome) => boolean
 	failOfferReviewRefresh: (attempt: OfferReviewAttempt, message: string) => boolean
 	clearOfferReviewLifecycle: () => void
-	startSeatReviewValidation: (offerExpiresAt: string | null) => { kind: "not_selected" | "reuse" | "blocked" | "started"; attempt?: SeatReviewAttempt }
+	startSeatReviewValidation: (offerExpiresAt: string | null, retry?: boolean) => { kind: "not_selected" | "reuse" | "blocked" | "started"; attempt?: SeatReviewAttempt }
 	completeSeatReviewValidation: (attempt: SeatReviewAttempt, outcome: SeatReviewOutcome) => boolean
 	failSeatReviewValidation: (attempt: SeatReviewAttempt, message: string) => boolean
 	abandonBookingSession: () => void
@@ -297,7 +297,7 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 		return true
 	},
 	clearOfferReviewLifecycle: () => set({ offerReviewLifecycle: null, seatReviewLifecycle: null }),
-	startSeatReviewValidation: (offerExpiresAt) => {
+	startSeatReviewValidation: (offerExpiresAt, retry = false) => {
 		const state = get()
 		const reviewSession = state.checkoutReviewSession
 		const bookingSession = state.activeBookingSession
