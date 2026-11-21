@@ -10,8 +10,18 @@ import {
 	type CheckoutReviewSession,
 	clearBookingSessionState,
 	getOrCreateCheckoutReviewSession as resolveCheckoutReviewSession,
+	isCheckoutReviewSessionCurrent,
 	transitionBookingSession,
 } from "@/lib/booking/readiness/booking-session"
+import {
+	isOfferReviewAttemptCurrent,
+	isOfferReviewLifecycleForSession,
+	type OfferReviewAttempt,
+	type OfferReviewLifecycle,
+	type OfferReviewLifecycleIdentity,
+	getOfferReviewOutcomeStatus,
+} from "@/lib/booking/readiness/offer-review-lifecycle"
+import type { OfferReviewOutcome } from "@/lib/booking/readiness/offer-review"
 import type { FlightOffer,SelectedSeatService } from "@/lib/flights/types"
 import { create } from "zustand"
 
@@ -21,6 +31,7 @@ interface FlightBookingState {
 	passengerCollection: PassengerCollection | null
 	activeBookingSession: ActiveBookingSession | null
 	checkoutReviewSession: CheckoutReviewSession | null
+	offerReviewLifecycle: OfferReviewLifecycle | null
 
 	setOutboundSeats: (seats: string[]) => void
 	toggleOutboundSeat: (seat: string) => void
@@ -30,6 +41,10 @@ interface FlightBookingState {
 
 	beginBookingSession: (offer: Pick<FlightOffer, "id">) => string
 	getOrCreateCheckoutReviewSession: (offerId: string) => CheckoutReviewSession | null
+	startOfferReviewRefresh: () => OfferReviewAttempt | null
+	completeOfferReviewRefresh: (attempt: OfferReviewAttempt, outcome: OfferReviewOutcome) => boolean
+	failOfferReviewRefresh: (attempt: OfferReviewAttempt, message: string) => boolean
+	clearOfferReviewLifecycle: () => void
 	abandonBookingSession: () => void
 	completeBookingSession: () => void
 	initializePassengerCollection: (offer: FlightOffer) => void
@@ -84,6 +99,7 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 	passengerCollection: null,
 	activeBookingSession: null,
 	checkoutReviewSession: null,
+	offerReviewLifecycle: null,
 
 	setOutboundSeats: (seats) => {
 		set({ selectedOutboundSeats: seats })
@@ -159,7 +175,7 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 		if (current?.offerId === offer.id) return current.id
 
 		const next = transitionBookingSession(get(), offer.id, createInternalPassengerId)
-		set(next)
+		set({ ...next, offerReviewLifecycle: null })
 		return next.activeBookingSession!.id
 	},
 
@@ -175,8 +191,87 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 		return next
 	},
 
-	abandonBookingSession: () => set((state) => clearBookingSessionState(state)),
-	completeBookingSession: () => set((state) => clearBookingSessionState(state)),
+	startOfferReviewRefresh: () => {
+		const state = get()
+		const reviewSession = state.checkoutReviewSession
+		const bookingSession = state.activeBookingSession
+		if (
+			!reviewSession ||
+			!bookingSession ||
+			!isCheckoutReviewSessionCurrent(reviewSession, bookingSession, reviewSession.offerId)
+		) {
+			return null
+		}
+
+		const identity: OfferReviewLifecycleIdentity = {
+			reviewSessionId: reviewSession.id,
+			bookingSessionId: bookingSession.id,
+			offerId: reviewSession.offerId,
+		}
+		const current = state.offerReviewLifecycle
+		if (isOfferReviewLifecycleForSession(current, identity)) {
+			if (
+				current.status === "refreshing" ||
+				current.status === "retry_exhausted" ||
+				current.status === "itinerary_changed" ||
+				current.status === "unavailable"
+			) {
+				return null
+			}
+		}
+
+		const attemptNumber =
+			isOfferReviewLifecycleForSession(current, identity) && current.status === "error"
+				? current.attemptNumber + 1
+				: 1
+		if (attemptNumber > 3) return null
+
+		const attempt: OfferReviewAttempt = {
+			...identity,
+			attemptId: `offer-review-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`,
+			attemptNumber,
+		}
+		set({
+			offerReviewLifecycle: {
+				...attempt,
+				status: "refreshing",
+				outcome: null,
+				errorMessage: null,
+			},
+		})
+		return attempt
+	},
+	completeOfferReviewRefresh: (attempt, outcome) => {
+		const current = get().offerReviewLifecycle
+		if (!isOfferReviewAttemptCurrent(current, attempt)) return false
+		set({
+			offerReviewLifecycle: {
+				...attempt,
+				status: getOfferReviewOutcomeStatus(outcome),
+				outcome,
+				errorMessage: null,
+			},
+		})
+		return true
+	},
+	failOfferReviewRefresh: (attempt, message) => {
+		const current = get().offerReviewLifecycle
+		if (!isOfferReviewAttemptCurrent(current, attempt)) return false
+		set({
+			offerReviewLifecycle: {
+				...attempt,
+				status: attempt.attemptNumber >= 3 ? "retry_exhausted" : "error",
+				outcome: null,
+				errorMessage: message,
+			},
+		})
+		return true
+	},
+	clearOfferReviewLifecycle: () => set({ offerReviewLifecycle: null }),
+	abandonBookingSession: () =>
+		set((state) => ({ ...clearBookingSessionState(state), offerReviewLifecycle: null })),
+	completeBookingSession: () =>
+		set((state) => ({ ...clearBookingSessionState(state), offerReviewLifecycle: null })),
 
 	initializePassengerCollection: (offer) =>
 		set((state) => {
