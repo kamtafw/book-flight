@@ -126,7 +126,9 @@ export function startSeatReviewValidation(
 	) {
 		return { kind: "reuse", lifecycle: current }
 	}
-	if (matching && current.status === "retry_exhausted") return { kind: "blocked", lifecycle: current }
+	if (matching && current.status === "retry_exhausted" && hasUnexpiredOffer(current.offerExpiresAt, now)) {
+		return { kind: "blocked", lifecycle: current }
+	}
 
 	const attemptNumber = matching && current.status === "error" ? current.attemptNumber + 1 : 1
 	if (attemptNumber > 3) {
@@ -165,7 +167,7 @@ export function completeSeatReviewValidation(
 	currentSnapshotKey: string,
 	outcome: SeatReviewOutcome,
 ): SeatReviewLifecycle | null {
-	if (!isSeatReviewAttemptCurrent(lifecycle, attempt, currentSnapshotKey)) return null
+	if (!lifecycle || !isSeatReviewAttemptCurrent(lifecycle, attempt, currentSnapshotKey)) return null
 	return {
 		...attempt,
 		status: outcome.status === "action_required" ? "action_required" : "valid",
