@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons"
-import { router, useLocalSearchParams } from "expo-router"
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router"
 import { useCallback, useEffect, useMemo } from "react"
 import { ActivityIndicator, Pressable, Text, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
@@ -86,18 +86,20 @@ export default function CheckoutReviewScreen() {
 		}
 	}, [completeOfferReviewRefresh, failOfferReviewRefresh, flight, startOfferReviewRefresh])
 
-	useEffect(() => {
-		if (!canOpenReview || !hasReviewSession || !flight || !reviewIdentity) return
-		if (!shouldStartOfferReviewRefresh(offerReviewLifecycle, reviewIdentity)) return
-		void runOfferRefresh()
-	}, [
-		canOpenReview,
-		flight,
-		hasReviewSession,
-		offerReviewLifecycle,
-		reviewIdentity,
-		runOfferRefresh,
-	])
+	useFocusEffect(
+		useCallback(() => {
+			if (!canOpenReview || !hasReviewSession || !flight || !reviewIdentity) return
+			if (!shouldStartOfferReviewRefresh(offerReviewLifecycle, reviewIdentity)) return
+			void runOfferRefresh()
+		}, [
+			canOpenReview,
+			flight,
+			hasReviewSession,
+			offerReviewLifecycle,
+			reviewIdentity,
+			runOfferRefresh,
+		]),
+	)
 
 	const returnToPassengers = () => {
 		if (!flightId) {
