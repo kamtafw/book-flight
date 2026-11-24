@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons"
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router"
 import { useCallback, useEffect, useMemo } from "react"
-import { ActivityIndicator, Pressable, Text, View } from "react-native"
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
 import { isCheckoutReviewSessionCurrent } from "@/lib/booking/readiness/booking-session"
@@ -13,6 +13,7 @@ import {
 	type OfferReviewLifecycleIdentity,
 } from "@/lib/booking/readiness/offer-review-lifecycle"
 import { createSeatReviewOutcome } from "@/lib/booking/readiness/seat-review"
+import { buildSeatReviewPresentation, type SeatReviewPresentationGroup } from "@/lib/booking/readiness/seat-review-presentation"
 import { isSeatReviewLifecycleForSession } from "@/lib/booking/readiness/seat-review-lifecycle"
 import { refreshOffer, validateSeatServices } from "@/lib/flights/api"
 import { useFlightBookingStore } from "@/store/flight-booking.store"
@@ -20,6 +21,136 @@ import { useFlightOffersStore } from "@/store/flight-offers.store"
 
 function formatProviderAmount(amount: string, currency: string) {
 	return `${currency} ${amount}`
+}
+
+const seatStatusLabels = {
+	valid: "Available",
+	price_changed: "Price changed",
+	unavailable: "Unavailable",
+	disclosures_changed: "Conditions changed",
+	disclosures_and_price_changed: "Price and conditions changed",
+} as const
+
+function SeatReviewSection({
+	groups,
+	notSelected = false,
+}: {
+	groups: SeatReviewPresentationGroup[]
+	notSelected?: boolean
+}) {
+	return (
+		<View className="mt-5 rounded-2xl border border-border bg-white p-4">
+			<Text className="font-inter-semibold text-base text-black">Selected seats</Text>
+			{notSelected ? (
+				<Text className="mt-2 font-inter text-sm leading-5 text-gray-200">
+					No seats selected. You can continue without seat selections.
+				</Text>
+			) : groups.length === 0 ? (
+				<Text className="mt-2 font-inter text-sm leading-5 text-gray-200">
+					Seat details are not available for this review.
+				</Text>
+			) : (
+				groups.map((group) => (
+					<View key={group.passengerId ?? "unmatched"} className="mt-4 border-t border-border pt-4">
+						<Text className="font-inter-semibold text-sm text-black">
+							{group.passengerLabel}
+							{group.passengerCategory ? ` · ${group.passengerCategory}` : ""}
+						</Text>
+						{group.associationWarning ? (
+							<Text className="mt-1 font-inter text-xs leading-5 text-orange-700">
+								This seat could not be matched to exactly one passenger. Do not rely on this
+								association until the passenger details are corrected.
+							</Text>
+						) : null}
+						{group.seats.map((seat) => (
+							<View
+								key={`${seat.segmentId}-${seat.seatDesignator}-${seat.passengerId ?? "unknown"}`}
+								className="mt-3 rounded-xl bg-gray-50 p-3"
+							>
+								<View className="flex-row items-start justify-between">
+									<View className="flex-1 pr-3">
+										<Text className="font-inter-semibold text-sm text-black">
+											Seat {seat.seatDesignator} · {seat.seatName}
+										</Text>
+										<Text className="mt-1 font-inter text-xs text-gray-200">
+											{seat.segmentLabel}
+										</Text>
+									</View>
+									<Text
+										className={`font-inter-semibold text-xs ${
+											seat.status === "valid" ? "text-green-700" : "text-orange-700"
+										}`}
+									>
+										{seatStatusLabels[seat.status]}
+									</Text>
+								</View>
+
+								{seat.status === "price_changed" ||
+								seat.status === "disclosures_and_price_changed" ? (
+									<View className="mt-3">
+										<View className="flex-row justify-between">
+											<Text className="font-inter text-xs text-gray-200">Previously selected</Text>
+											<Text className="font-inter text-xs text-black">
+												{formatProviderAmount(seat.originalAmount, seat.originalCurrency)}
+											</Text>
+										</View>
+										<View className="mt-1 flex-row justify-between">
+											<Text className="font-inter-medium text-xs text-gray-200">Current provider price</Text>
+											<Text className="font-inter-semibold text-xs text-black">
+												{seat.currentAmount && seat.currentCurrency
+													? formatProviderAmount(seat.currentAmount, seat.currentCurrency)
+													: "Unavailable"}
+											</Text>
+										</View>
+									</View>
+								) : seat.status === "unavailable" ? (
+									<Text className="mt-2 font-inter text-xs leading-5 text-orange-800">
+										{seat.unavailableReason === "segment_unavailable"
+											? "This flight segment is no longer available."
+											: seat.unavailableReason === "service_unavailable"
+												? "The selected seat service is no longer available."
+												: "This seat is no longer available."}
+									</Text>
+								) : seat.currentAmount && seat.currentCurrency ? (
+									<Text className="mt-2 font-inter text-xs text-gray-200">
+										Current price: {formatProviderAmount(seat.currentAmount, seat.currentCurrency)}
+									</Text>
+								) : null}
+
+								{seat.disclosures.length > 0 ? (
+									<View className="mt-3">
+										<Text className="font-inter-medium text-xs text-black">Seat conditions</Text>
+										{seat.disclosures.map((disclosure, index) => (
+											<Text
+												key={`${index}-${disclosure}`}
+												className="mt-1 font-inter text-xs leading-5 text-gray-200"
+											>
+												• {disclosure}
+											</Text>
+										))}
+									</View>
+								) : null}
+
+								{seat.status === "price_changed" ? (
+									<Text className="mt-2 font-inter text-xs leading-5 text-orange-800">
+										The updated seat price will require your explicit acceptance before checkout can
+										continue.
+									</Text>
+								) : null}
+								{seat.status === "disclosures_changed" ||
+								seat.status === "disclosures_and_price_changed" ? (
+									<Text className="mt-2 font-inter text-xs leading-5 text-orange-800">
+										The provider returned updated seat conditions. They must be reviewed and
+										acknowledged before checkout can continue.
+									</Text>
+								) : null}
+							</View>
+						))}
+					</View>
+				))
+			)}
+		</View>
+	)
 }
 
 export default function CheckoutReviewScreen() {
@@ -134,6 +265,23 @@ export default function CheckoutReviewScreen() {
 		reviewIdentity && isSeatReviewLifecycleForSession(seatReviewLifecycle, reviewIdentity),
 	)
 	const currentSeatLifecycle = seatLifecycleMatchesSession ? seatReviewLifecycle : null
+
+	const seatReviewGroups = useMemo(() => {
+		if (
+			!currentSeatLifecycle?.outcome ||
+			!passengerCollection ||
+			!flight ||
+			currentSeatLifecycle.outcome.status === "not_selected"
+		) {
+			return []
+		}
+		return buildSeatReviewPresentation(
+			currentSeatLifecycle.outcome,
+			selectedSeats,
+			passengerCollection,
+			flight,
+		)
+	}, [currentSeatLifecycle, flight, passengerCollection, selectedSeats])
 
 	useFocusEffect(
 		useCallback(() => {
@@ -340,6 +488,15 @@ export default function CheckoutReviewScreen() {
 		)
 	}
 
+	if (!currentSeatLifecycle) {
+		return (
+			<SafeAreaView className="flex-1 items-center justify-center bg-background px-8">
+				<ActivityIndicator size="large" color="#EC441E" />
+				<Text className="mt-3 font-inter text-sm text-gray-200">Preparing seat review…</Text>
+			</SafeAreaView>
+		)
+	}
+
 	if (currentSeatLifecycle?.status === "validating") {
 		return (
 			<SafeAreaView className="flex-1 items-center justify-center bg-background px-8">
@@ -390,24 +547,30 @@ export default function CheckoutReviewScreen() {
 
 	if (currentSeatLifecycle?.status === "action_required") {
 		return (
-			<SafeAreaView className="flex-1 items-center justify-center bg-background px-8">
-				<Text className="font-inter-semibold text-lg text-black">
-					Your seat selection needs attention
-				</Text>
-				<Text className="mt-2 text-center font-inter text-sm leading-5 text-gray-200">
-					One or more selected seats are unavailable or have changed price or conditions. Return to
-					seat selection to review them.
-				</Text>
-				<Pressable
-					onPress={() =>
-						flightId
-							? router.replace({ pathname: "/choose-seat", params: { flightId } })
-							: router.replace("/flight-results")
-					}
-					className="mt-6 rounded-xl bg-primary px-8 py-3"
-				>
-					<Text className="font-inter-semibold text-sm text-white">Review seat selection</Text>
-				</Pressable>
+			<SafeAreaView className="flex-1 bg-background">
+				<ScrollView className="flex-1 px-6 pt-8" contentContainerStyle={{ paddingBottom: 32 }}>
+					<Text className="font-inter-semibold text-xl text-black">
+						Your seat selection needs attention
+					</Text>
+					<Text className="mt-2 font-inter text-sm leading-5 text-gray-200">
+						Review the provider&apos;s latest result for each selected seat. Unavailable seats must be
+						replaced or removed. Changed prices and conditions remain unaccepted at this stage.
+					</Text>
+					<SeatReviewSection groups={seatReviewGroups} />
+					<Pressable
+						onPress={() =>
+							flightId
+								? router.replace({ pathname: "/choose-seat", params: { flightId } })
+								: router.replace("/flight-results")
+						}
+						className="mt-6 h-14 items-center justify-center rounded-xl bg-primary"
+					>
+						<Text className="font-inter-semibold text-base text-white">Return to seat selection</Text>
+					</Pressable>
+					<Pressable onPress={returnToSearch} className="mt-3 items-center py-3">
+						<Text className="font-inter-medium text-sm text-primary">Return to search</Text>
+					</Pressable>
+				</ScrollView>
 			</SafeAreaView>
 		)
 	}
@@ -429,7 +592,7 @@ export default function CheckoutReviewScreen() {
 				</Text>
 			</View>
 
-			<View className="flex-1 px-6 pt-5">
+			<ScrollView className="flex-1 px-6 pt-5" contentContainerStyle={{ paddingBottom: 32 }}>
 				<View className="rounded-2xl border border-border bg-white p-5">
 					<View className="h-11 w-11 items-center justify-center rounded-full bg-green-50">
 						<Feather name="check" size={22} color="#15803D" />
@@ -472,12 +635,17 @@ export default function CheckoutReviewScreen() {
 					</View>
 				)}
 
+				<SeatReviewSection
+					groups={seatReviewGroups}
+					notSelected={currentSeatLifecycle?.status === "not_selected"}
+				/>
+
 				<View className="mt-4 rounded-xl border border-orange-100 bg-orange-50 p-4">
 					<Text className="font-inter-medium text-sm text-black">What happens next</Text>
 					<Text className="mt-1 font-inter text-xs leading-5 text-gray-200">
-						Flight verification is complete. Selected seats, full booking details and the final
-						pricing breakdown are handled by the next Checkout Review checkpoints. No booking or
-						payment has been created.
+						Flight and selected-seat verification are complete. Passenger details and the consolidated pricing
+						breakdown will be presented in the next Checkout Review checkpoints. No booking or payment has
+						been created.
 					</Text>
 				</View>
 
@@ -487,7 +655,7 @@ export default function CheckoutReviewScreen() {
 				>
 					<Text className="font-inter-semibold text-base text-primary">Edit passenger details</Text>
 				</Pressable>
-			</View>
+			</ScrollView>
 		</SafeAreaView>
 	)
 }
