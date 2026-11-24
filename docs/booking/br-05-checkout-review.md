@@ -1093,13 +1093,38 @@ P3-03 verification: the user confirmed all five verification commands passed, in
 
 Implement the complete pricing and acceptance contract.
 
-- Consolidate flight and seat costs.
-- Display original and updated amounts.
-- Calculate total payable safely.
-- Implement component-level price acceptance.
-- Preserve valid acceptance when unrelated components change.
+#### P4-01 — Pricing domain and exact calculation
 
-  Exit: Customer can understand and explicitly accept every applicable price change.
+- Introduce a provider-independent `Money` value represented by a decimal string and uppercase currency code.
+- Use exact base-10 arithmetic backed by `BigInt`; do not use JavaScript floating-point numbers for totals or differences.
+- Calculate flight fare, selected-seat subtotal, supported additional-service subtotal and total payable.
+- Preserve individual components and their stable identities for later component-level comparison and acceptance.
+- Reject malformed amounts, invalid currencies, unsupported component kinds and duplicate component IDs.
+- If components use different currencies, return their individual amounts and currencies without calculating a grand total. Do not perform implicit currency conversion.
+
+**P4-01 implementation checkpoint:** Added `src/lib/booking/readiness/pricing.ts` and focused tests. The pure pricing model currently covers exact addition/subtraction, component aggregation, zero-component subtotals, currency consistency and malformed input. Local verification is pending.
+
+#### P4-02 — Flight fare comparison and acceptance
+
+- Display original and updated flight fare amounts and the exact difference.
+- Require explicit acceptance for any fare change, including a decrease.
+- Bind acceptance to the exact offer identity and current amount/currency.
+- Invalidate acceptance when the accepted offer or price identity changes.
+
+#### P4-03 — Seat price and disclosure acceptance
+
+- Track price acceptance independently for each seat-service component.
+- Track disclosure acknowledgement independently from price acceptance.
+- Allow both requirements to apply to the same seat.
+- Preserve acceptance for unrelated unchanged components.
+
+#### P4-04 — Pricing presentation and integration
+
+- Present the consolidated pricing breakdown and individual changed components.
+- Show which changes have been accepted and which still require action.
+- Block progression until pricing is consistent and all applicable acceptances and acknowledgements are current.
+
+**P4 exit:** Customer can understand and explicitly accept every applicable price change and disclosure requirement.
 
 ---
 
