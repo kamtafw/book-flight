@@ -63,9 +63,17 @@ test("rejects malformed amounts, invalid currencies and cross-currency arithmeti
 	assert.throws(() => addMoney({ amount: "1.00", currency: "USD" }, { amount: "1.00", currency: "EUR" }))
 })
 
-test("rejects duplicate or malformed component identities", () => {
+test("rejects malformed component identities", () => {
 	assert.throws(() => calculateCheckoutPricing({
 		flightFare: { amount: "100", currency: "USD" },
 		seats: [{ id: " ", kind: "seat", label: "12A", money: { amount: "10", currency: "USD" } }],
+	}))
+})
+
+test("rejects duplicate component IDs across seat and add-on components", () => {
+	assert.throws(() => calculateCheckoutPricing({
+		flightFare: { amount: "100", currency: "USD" },
+		seats: [{ id: "same-id", kind: "seat", label: "12A", money: { amount: "10", currency: "USD" } }],
+		additionalServices: [{ id: "same-id", kind: "additional_service", label: "Bag", money: { amount: "15", currency: "USD" } }],
 	}))
 })
