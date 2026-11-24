@@ -1,6 +1,6 @@
 # BR-05: Checkout Review Contract
 
-**Status:** Approved; P1 and P2 complete; P3 in progress  
+**Status:** Approved; P1, P2 and P3 complete; P4 in progress  
 **Scope:** Checkout Review for the current one-way booking flow, including connecting itineraries with multiple segments  
 **Depends on:** BR-01 checkout contract, BR-02 offer refresh/validation, BR-03 seat-service validation, and BR-04 passenger domain, provider-validation, readiness, and lifecycle work  
 **Current-flow boundary:** The current search implementation creates one-way offers. BR-05 must display every segment within the selected journey, including connections, but must not introduce round-trip or multi-city search support.
@@ -1087,7 +1087,7 @@ P3-02 was committed and pushed to `main`. The user confirmed that the focused li
 - Added focused presentation tests for passenger/segment association, provider-current details, ambiguous passenger references, no-seat outcomes and incomplete presentation data. Registered the tests in the focused and full test commands.
 - No price acceptance, disclosure acknowledgement, final pricing total, order creation or payment behaviour is introduced in this checkpoint.
 
-P3-03 implementation is pushed on `feat/br-05-p3-03-seat-review-presentation`. Local verification is pending.
+P3-03 verification: the user confirmed all five verification commands passed, including the focused presentation suite, seat-review suite, full test suite, TypeScript check and Expo lint. Manual verification confirmed that each selected seat is displayed under the correct passenger and flight segment. A changed/unavailable provider response could not be reproduced manually during this run; the changed and unavailable presentation paths remain covered by deterministic tests. P3-03 is complete and locally verified.
 
 ### Checkpoint 4: Pricing and customer acceptance (P4)
 
