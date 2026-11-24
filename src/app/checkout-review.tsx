@@ -553,7 +553,7 @@ export default function CheckoutReviewScreen() {
 						Your seat selection needs attention
 					</Text>
 					<Text className="mt-2 font-inter text-sm leading-5 text-gray-200">
-						Review the provider's latest result for each selected seat. Unavailable seats must be
+						Review the provider&apos;s latest result for each selected seat. Unavailable seats must be
 						replaced or removed. Changed prices and conditions remain unaccepted at this stage.
 					</Text>
 					<SeatReviewSection groups={seatReviewGroups} />
