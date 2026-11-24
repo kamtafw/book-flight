@@ -1086,7 +1086,8 @@ P3-02 was committed and pushed to `main`. The user confirmed that the focused li
 - An explicit `not_selected` outcome displays that no seats were selected without creating empty passenger seat rows.
 - Added focused presentation tests for passenger/segment association, provider-current details, ambiguous passenger references, no-seat outcomes and incomplete presentation data. Registered the tests in the focused and full test commands.
 - No price acceptance, disclosure acknowledgement, final pricing total, order creation or payment behaviour is introduced in this checkpoint.
-  P3-03 implementation is pushed on `feat/br-05-p3-03-seat-review-presentation`. Local verification is pending.
+
+P3-03 verification: the user confirmed all five verification commands passed, including the focused presentation suite, seat-review suite, full test suite, TypeScript check and Expo lint. Manual verification confirmed that each selected seat is displayed under the correct passenger and flight segment. A changed/unavailable provider response could not be reproduced manually during this run; the changed and unavailable presentation paths remain covered by deterministic tests. P3-03 is complete and locally verified.
 
 ### Checkpoint 4: Pricing and customer acceptance (P4)
 
