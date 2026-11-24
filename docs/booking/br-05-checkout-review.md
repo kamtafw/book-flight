@@ -1,6 +1,6 @@
 # BR-05: Checkout Review Contract
 
-**Status:** Approved; P1 and P2 complete; P3 in progress  
+**Status:** Approved; P1, P2, and P3 complete; P4 in progress  
 **Scope:** Checkout Review for the current one-way booking flow, including connecting itineraries with multiple segments  
 **Depends on:** BR-01 checkout contract, BR-02 offer refresh/validation, BR-03 seat-service validation, and BR-04 passenger domain, provider-validation, readiness, and lifecycle work  
 **Current-flow boundary:** The current search implementation creates one-way offers. BR-05 must display every segment within the selected journey, including connections, but must not introduce round-trip or multi-city search support.
