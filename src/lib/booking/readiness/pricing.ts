@@ -156,6 +156,10 @@ export function calculateCheckoutPricing(input: CheckoutPricingInput): CheckoutP
 		...seats,
 		...additionalServices,
 	]
+	const componentIds = components.map((component) => component.id)
+	if (new Set(componentIds).size !== componentIds.length) {
+		throw new Error("Pricing component IDs must be unique.")
+	}
 	const currencies = [...new Set(components.map((component) => component.money.currency))].sort()
 	if (currencies.length !== 1) {
 		return { status: "mixed_currency", currencies, components }
