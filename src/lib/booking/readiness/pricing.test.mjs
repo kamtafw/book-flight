@@ -77,3 +77,15 @@ test("rejects duplicate component IDs across seat and add-on components", () => 
 		additionalServices: [{ id: "same-id", kind: "additional_service", label: "Bag", money: { amount: "15", currency: "USD" } }],
 	}))
 })
+
+test("returns zero subtotals at the flight fare precision when no optional components exist", () => {
+	const result = calculateCheckoutPricing({
+		flightFare: { amount: "100.00", currency: "NGN" },
+		seats: [],
+	})
+	assert.equal(result.status, "complete")
+	if (result.status !== "complete") return
+	assert.deepEqual(result.seatSubtotal, { amount: "0.00", currency: "NGN" })
+	assert.deepEqual(result.additionalServicesSubtotal, { amount: "0.00", currency: "NGN" })
+	assert.deepEqual(result.total, { amount: "100.00", currency: "NGN" })
+})
