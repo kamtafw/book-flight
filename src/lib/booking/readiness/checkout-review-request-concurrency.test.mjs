@@ -3,6 +3,7 @@ import test from "node:test"
 
 import { useFlightBookingStore } from "@/store/flight-booking.store"
 import { createOfferReviewOutcome } from "./offer-review"
+import { createSeatReviewSnapshotKey } from "./seat-review-lifecycle"
 
 function makeOffer(id, priceAmount = "100.00") {
 	return {
@@ -105,6 +106,64 @@ function startNewOfferReview(store, offer) {
 	store.getState().getOrCreateCheckoutReviewSession(offer.id)
 	return store.getState().startOfferReviewRefresh()
 }
+
+test("a stale offer-refresh callback cannot start work for a newer booking session", () => {
+	const { store } = prepareReview()
+	const capturedReview = store.getState().checkoutReviewSession
+	const capturedBooking = store.getState().activeBookingSession
+	const capturedIdentity = {
+		reviewSessionId: capturedReview.id,
+		bookingSessionId: capturedBooking.id,
+		offerId: capturedReview.offerId,
+	}
+
+	const nextOffer = makeOffer("offer-next")
+	const currentAttempt = startNewOfferReview(store, nextOffer)
+	assert.ok(currentAttempt)
+	assert.equal(store.getState().startOfferReviewRefresh(capturedIdentity), null)
+	assert.equal(store.getState().offerReviewLifecycle.attemptId, currentAttempt.attemptId)
+	assert.equal(store.getState().offerReviewLifecycle.status, "refreshing")
+})
+
+test("a stale seat-validation callback cannot start work for a replaced seat snapshot", () => {
+	const { store, offer } = prepareReview()
+	const originalSeat = makeSeat("12A")
+	store.getState().selectOutboundSeatService(originalSeat)
+	const state = store.getState()
+	const review = state.checkoutReviewSession
+	const booking = state.activeBookingSession
+	const offerLifecycle = state.offerReviewLifecycle
+	const capturedContext = {
+		reviewSessionId: review.id,
+		bookingSessionId: booking.id,
+		offerId: review.offerId,
+		snapshotKey: createSeatReviewSnapshotKey([originalSeat]),
+		offerReviewAttemptId: offerLifecycle.attemptId,
+	}
+
+	const replacementSeat = makeSeat("14C")
+	store.getState().selectOutboundSeatService(replacementSeat)
+	assert.equal(
+		store.getState().startSeatReviewValidation(offer.expiresAt, false, capturedContext).kind,
+		"blocked",
+	)
+	assert.equal(store.getState().seatReviewLifecycle, null)
+
+	const currentContext = {
+		...capturedContext,
+		snapshotKey: createSeatReviewSnapshotKey([replacementSeat]),
+	}
+	const currentStart = store.getState().startSeatReviewValidation(
+		offer.expiresAt,
+		false,
+		currentContext,
+	)
+	assert.equal(currentStart.kind, "started")
+	assert.equal(
+		currentStart.attempt.snapshotKey,
+		createSeatReviewSnapshotKey(store.getState().selectedOutboundSeatServices),
+	)
+})
 
 test("overlapping review focus events cannot start duplicate provider requests", () => {
 	const { store, offer } = prepareReview()
