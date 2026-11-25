@@ -1122,13 +1122,19 @@ Implement the complete pricing and acceptance contract.
 
 **P4-03 implementation checkpoint:** Added `src/lib/booking/readiness/seat-acceptance.ts` to derive per-seat requirements from the existing P3 seat-review outcome. Each requirement is bound to the review session, booking session, selected and refreshed offer IDs, service, provider passenger, segment and seat designator. A changed price and changed disclosures are separate acceptance requirements, so a seat can require both independently. Price acceptance is bound to the exact previous and current amount/currency; disclosure acknowledgement is bound to the exact previous and current disclosure content. Disclosure order alone does not invalidate acknowledgement.
 The Zustand store now keeps per-component price acceptances and disclosure acknowledgements, exposes actions to accept/acknowledge a specific current seat component, and reports whether all current seat requirements are satisfied. A new offer refresh, booking session, or cleared review lifecycle invalidates the relevant seat acceptances. A seat-only selection change does not discard acceptances for other components; they remain applicable only if the same exact component and current provider values are still present after validation. Unavailable seats cannot be accepted and continue to block review.
-Focused domain and store lifecycle suites are registered as `npm run test:seat-acceptance` and `npm run test:seat-booking-acceptance`. Local verification is pending.
+Focused domain and store lifecycle suites are registered as `npm run test:seat-acceptance` and `npm run test:seat-booking-acceptance`. The user confirmed both focused suites, the full test suite, TypeScript and Expo lint passed. Expo lint reported one non-blocking warning for an unused `disclosuresChanged` test helper; there were no lint errors. P4-03 is complete and locally verified.
 
 #### P4-04 — Pricing presentation and integration
 
 - Present the consolidated pricing breakdown and individual changed components.
 - Show which changes have been accepted and which still require action.
 - Block progression until pricing is consistent and all applicable acceptances and acknowledgements are current.
+
+**P4-04 implementation checkpoint — presentation and integration in progress:** Added `src/lib/booking/readiness/checkout-pricing-presentation.ts` to combine the current validated flight fare, current validated seat prices, per-seat price acceptance and disclosure acknowledgement state into one customer-facing pricing model. It calculates totals through the existing exact-money domain, refuses to calculate a grand total for mixed currencies, and fails closed while seat validation is pending or any seat is unavailable. It exposes current acceptance status independently for each changed fare/seat component.
+
+Checkout Review now presents passenger names, contact details and travel-document summaries with document numbers masked; the complete selected itinerary with segment sequence and derivable layover durations; current selected-seat details; explicit fare acceptance; independent per-seat price acceptance and condition acknowledgement; and a consolidated fare/seat/additional-service breakdown. The additional-services subtotal is currently zero because no additional services are in BR-05 scope. The Continue action is gated by current fare acceptance, all seat requirements, complete single-currency pricing and current passenger/review readiness. It navigates only to the existing payment placeholder. No order, reservation or payment operation is performed.
+
+The implementation deliberately allows seats with changed prices or disclosures to remain in Checkout Review for customer acceptance. Only unavailable seats route back to seat selection. Added `npm run test:checkout-pricing-presentation` and registered the focused suite in `npm test`. Local verification is pending.
 
 **P4 exit:** Customer can understand and explicitly accept every applicable price change and disclosure requirement.
 
