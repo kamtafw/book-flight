@@ -80,7 +80,7 @@ test("a new offer refresh invalidates the previous fare acceptance", () => {
 	store.getState().acceptCurrentFlightFareChange("2026-11-25T03:00:00.000Z")
 	assert.equal(store.getState().isCurrentFlightFareAccepted(), true)
 
-	const nextAttempt = store.getState().startOfferReviewRefresh()
+	const nextAttempt = store.getState().startOfferReviewRefresh(undefined, true)
 	assert.ok(nextAttempt)
 	assert.equal(store.getState().flightFareAcceptance, null)
 	assert.equal(store.getState().isCurrentFlightFareAccepted(), false)
