@@ -13,6 +13,13 @@ import {
 	getOrCreateCheckoutReviewSession as resolveCheckoutReviewSession,
 	transitionBookingSession,
 } from "@/lib/booking/readiness/booking-session"
+import {
+	acceptFlightFareChange as createFlightFareAcceptance,
+	createFlightFareReview,
+	type FlightFareAcceptance,
+	type FlightFareReview,
+	isFlightFareAcceptanceCurrent,
+} from "@/lib/booking/readiness/flight-fare-review"
 import type { OfferReviewOutcome } from "@/lib/booking/readiness/offer-review"
 import {
 	getOfferReviewOutcomeStatus,
@@ -43,6 +50,7 @@ interface FlightBookingState {
 	checkoutReviewSession: CheckoutReviewSession | null
 	offerReviewLifecycle: OfferReviewLifecycle | null
 	seatReviewLifecycle: SeatReviewLifecycle | null
+	flightFareAcceptance: FlightFareAcceptance | null
 
 	setOutboundSeats: (seats: string[]) => void
 	toggleOutboundSeat: (seat: string) => void
@@ -56,6 +64,9 @@ interface FlightBookingState {
 	completeOfferReviewRefresh: (attempt: OfferReviewAttempt, outcome: OfferReviewOutcome) => boolean
 	failOfferReviewRefresh: (attempt: OfferReviewAttempt, message: string) => boolean
 	clearOfferReviewLifecycle: () => void
+	getCurrentFlightFareReview: () => FlightFareReview | null
+	acceptCurrentFlightFareChange: (acceptedAt?: string) => boolean
+	isCurrentFlightFareAccepted: () => boolean
 	startSeatReviewValidation: (
 		offerExpiresAt: string | null,
 		retry?: boolean,
@@ -110,6 +121,61 @@ function collectionMatchesOffer(collection: PassengerCollection | null, offer: F
 	)
 }
 
+function resolveCurrentFlightFareReview(
+	state: Pick<
+		FlightBookingState,
+		"checkoutReviewSession" | "activeBookingSession" | "offerReviewLifecycle"
+	>,
+): FlightFareReview | null {
+	const reviewSession = state.checkoutReviewSession
+	const bookingSession = state.activeBookingSession
+	const lifecycle = state.offerReviewLifecycle
+	const outcome = lifecycle?.outcome
+	if (
+		!reviewSession ||
+		!bookingSession ||
+		!lifecycle ||
+		!outcome ||
+		reviewSession.bookingSessionId !== bookingSession.id ||
+		reviewSession.offerId !== bookingSession.offerId ||
+		lifecycle.reviewSessionId !== reviewSession.id ||
+		lifecycle.bookingSessionId !== bookingSession.id ||
+		lifecycle.offerId !== reviewSession.offerId ||
+		(outcome.status !== "valid" && outcome.status !== "price_changed")
+	) {
+		return null
+	}
+
+	const previousPrice =
+		outcome.status === "price_changed"
+			? outcome.previousPrice
+			: outcome.originalOffer.priceAmount
+				? { amount: outcome.originalOffer.priceAmount, currency: outcome.originalOffer.currency }
+				: null
+	const currentPrice =
+		outcome.status === "price_changed"
+			? outcome.currentPrice
+			: outcome.currentOffer.priceAmount
+				? { amount: outcome.currentOffer.priceAmount, currency: outcome.currentOffer.currency }
+				: null
+	if (!previousPrice || !currentPrice) return null
+
+	try {
+		return createFlightFareReview({
+			identity: {
+				reviewSessionId: reviewSession.id,
+				bookingSessionId: bookingSession.id,
+				selectedOfferId: reviewSession.offerId,
+			},
+			currentOfferId: outcome.currentOffer.id,
+			previousPrice,
+			currentPrice,
+		})
+	} catch {
+		return null
+	}
+}
+
 export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 	selectedOutboundSeats: [],
 	selectedOutboundSeatServices: [],
@@ -118,6 +184,7 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 	checkoutReviewSession: null,
 	offerReviewLifecycle: null,
 	seatReviewLifecycle: null,
+	flightFareAcceptance: null,
 
 	setOutboundSeats: (seats) => {
 		set({ selectedOutboundSeats: seats })
@@ -193,7 +260,12 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 		if (current?.offerId === offer.id) return current.id
 
 		const next = transitionBookingSession(get(), offer.id, createInternalPassengerId)
-		set({ ...next, offerReviewLifecycle: null, seatReviewLifecycle: null })
+		set({
+			...next,
+			offerReviewLifecycle: null,
+			seatReviewLifecycle: null,
+			flightFareAcceptance: null,
+		})
 		return next.activeBookingSession!.id
 	},
 
@@ -250,6 +322,7 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 			attemptNumber,
 		}
 		set({
+			flightFareAcceptance: null,
 			offerReviewLifecycle: {
 				...attempt,
 				status: "refreshing",
@@ -274,6 +347,7 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 			return false
 		}
 		set({
+			flightFareAcceptance: null,
 			offerReviewLifecycle: {
 				...attempt,
 				status: getOfferReviewOutcomeStatus(outcome),
@@ -307,7 +381,27 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 		})
 		return true
 	},
-	clearOfferReviewLifecycle: () => set({ offerReviewLifecycle: null, seatReviewLifecycle: null }),
+	clearOfferReviewLifecycle: () =>
+		set({ offerReviewLifecycle: null, seatReviewLifecycle: null, flightFareAcceptance: null }),
+	getCurrentFlightFareReview: () => resolveCurrentFlightFareReview(get()),
+	acceptCurrentFlightFareChange: (acceptedAt) => {
+		const review = resolveCurrentFlightFareReview(get())
+		if (!review || review.status !== "acceptance_required") return false
+		try {
+			const acceptance = createFlightFareAcceptance(review, acceptedAt)
+			set({ flightFareAcceptance: acceptance })
+			return true
+		} catch {
+			return false
+		}
+	},
+	isCurrentFlightFareAccepted: () => {
+		const state = get()
+		const review = resolveCurrentFlightFareReview(state)
+		if (!review) return false
+		if (review.status === "unchanged") return true
+		return isFlightFareAcceptanceCurrent(review, state.flightFareAcceptance)
+	},
 	startSeatReviewValidation: (offerExpiresAt, retry = false) => {
 		const state = get()
 		const reviewSession = state.checkoutReviewSession
@@ -376,12 +470,14 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 			...clearBookingSessionState(state),
 			offerReviewLifecycle: null,
 			seatReviewLifecycle: null,
+			flightFareAcceptance: null,
 		})),
 	completeBookingSession: () =>
 		set((state) => ({
 			...clearBookingSessionState(state),
 			offerReviewLifecycle: null,
 			seatReviewLifecycle: null,
+			flightFareAcceptance: null,
 		})),
 
 	initializePassengerCollection: (offer) =>
