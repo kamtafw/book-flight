@@ -230,6 +230,12 @@ function CheckoutPricingSection({
 			{presentation.seatLines.map((line) => (
 				<View key={line.componentKey} className="mt-3 rounded-xl border border-border p-3">
 					<Text className="font-inter-medium text-sm text-black">{line.label}</Text>
+					{!line.passengerAssociationResolved ? (
+						<Text className="mt-2 font-inter text-xs leading-5 text-orange-800">
+							This seat could not be matched to exactly one passenger. Checkout is blocked until the
+							passenger association can be established.
+						</Text>
+					) : null}
 					{line.status === "unavailable" ? (
 						<Text className="mt-2 font-inter text-xs text-orange-800">
 							This seat is unavailable and must be replaced or removed.
