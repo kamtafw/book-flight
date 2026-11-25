@@ -410,6 +410,22 @@ function CheckoutPricingSection({
 	)
 }
 
+function maskDocumentNumber(value: string | undefined): string {
+	if (!value?.trim()) return "Not supplied"
+	const normalized = value.trim()
+	return normalized.length <= 4 ? "••••" : `••••${normalized.slice(-4)}`
+}
+
+function formatLayoverDuration(arrivalAt: string, departureAt: string): string | null {
+	const arrival = Date.parse(arrivalAt)
+	const departure = Date.parse(departureAt)
+	if (!Number.isFinite(arrival) || !Number.isFinite(departure) || departure < arrival) return null
+	const minutes = Math.round((departure - arrival) / 60_000)
+	const hours = Math.floor(minutes / 60)
+	const remainingMinutes = minutes % 60
+	return hours > 0 ? `${hours}h ${remainingMinutes}m` : `${remainingMinutes}m`
+}
+
 function PassengerAndItinerarySection({
 	flight,
 	passengers,
@@ -429,26 +445,62 @@ function PassengerAndItinerarySection({
 		<View className="mt-5 rounded-2xl border border-border bg-white p-4">
 			<Text className="font-inter-semibold text-base text-black">Passengers</Text>
 			{passengers?.passengers.map((passenger) => (
-				<View key={passenger.id} className="mt-3 flex-row justify-between">
-					<Text className="font-inter-medium text-sm text-black">{passengerName(passenger)}</Text>
-					<Text className="font-inter text-xs capitalize text-gray-200">{passenger.category}</Text>
+				<View key={passenger.id} className="mt-3 rounded-xl bg-gray-50 p-3">
+					<View className="flex-row justify-between">
+						<Text className="font-inter-medium text-sm text-black">{passengerName(passenger)}</Text>
+						<Text className="font-inter text-xs capitalize text-gray-200">{passenger.category}</Text>
+					</View>
+					{passenger.contacts.map((contact) => (
+						<Text key={contact.id} className="mt-2 font-inter text-xs text-gray-200">
+							{contact.type === "email" ? "Email" : "Phone"}: {contact.value}
+							{contact.belongsTo === "other" ? " · supplied by another contact" : ""}
+						</Text>
+					))}
+					{passenger.travelDocuments.map((document) => (
+						<View key={document.id} className="mt-2 border-t border-border pt-2">
+							<Text className="font-inter-medium text-xs text-black">
+								{document.type || "Travel document"} · {maskDocumentNumber(document.documentNumber)}
+							</Text>
+							<Text className="mt-1 font-inter text-xs text-gray-200">
+								{document.issuingCountry ? `Issued by ${document.issuingCountry}` : "Issuing country not supplied"}
+								{document.expirationDate ? ` · Expires ${document.expirationDate}` : ""}
+							</Text>
+						</View>
+					))}
 				</View>
 			))}
 			<Text className="mt-5 font-inter-semibold text-base text-black">Flight itinerary</Text>
-			{flight?.slices.flatMap((slice) => slice.segments).map((segment, index) => (
-				<View key={segment.id} className="mt-3 rounded-lg bg-gray-50 p-3">
-					<Text className="font-inter-medium text-sm text-black">
-						{segment.departureAirportCode} → {segment.arrivalAirportCode}
-					</Text>
-					<Text className="mt-1 font-inter text-xs text-gray-200">
-						{segment.marketingCarrierName} · {segment.marketingCarrierCode} {segment.flightNumber}
-					</Text>
-					<Text className="mt-1 font-inter text-xs text-gray-200">
-						{new Date(segment.departureAt).toLocaleString()} – {new Date(segment.arrivalAt).toLocaleString()}
-					</Text>
-					<Text className="mt-1 font-inter text-xs text-gray-200">Flight segment {index + 1}</Text>
-				</View>
-			))}
+			{(() => {
+				const segments = flight?.slices.flatMap((slice) => slice.segments) ?? []
+				return segments.map((segment, index) => {
+					const nextSegment = segments[index + 1]
+					const layover =
+						nextSegment && segment.arrivalAirportCode === nextSegment.departureAirportCode
+							? formatLayoverDuration(segment.arrivalAt, nextSegment.departureAt)
+							: null
+					return (
+						<View key={segment.id}>
+							<View className="mt-3 rounded-lg bg-gray-50 p-3">
+								<Text className="font-inter-medium text-sm text-black">
+									{segment.departureAirportCode} → {segment.arrivalAirportCode}
+								</Text>
+								<Text className="mt-1 font-inter text-xs text-gray-200">
+									{segment.marketingCarrierName} · {segment.marketingCarrierCode} {segment.flightNumber}
+								</Text>
+								<Text className="mt-1 font-inter text-xs text-gray-200">
+									{new Date(segment.departureAt).toLocaleString()} – {new Date(segment.arrivalAt).toLocaleString()}
+								</Text>
+								<Text className="mt-1 font-inter text-xs text-gray-200">Flight segment {index + 1}</Text>
+							</View>
+							{layover ? (
+								<Text className="mt-2 text-center font-inter text-xs text-gray-200">
+									{layover} layover in {segment.arrivalAirportCode}
+								</Text>
+							) : null}
+						</View>
+					)
+				})
+			})()}
 		</View>
 	)
 }
@@ -504,6 +556,7 @@ export default function CheckoutReviewScreen() {
 	const seatDisclosureAcknowledgements = useFlightBookingStore(
 		(state) => state.seatDisclosureAcknowledgements,
 	)
+	const flightFareAcceptance = useFlightBookingStore((state) => state.flightFareAcceptance)
 	const entryState = useMemo(
 		() => getCheckoutReviewEntryState(flightId, flight, activeBookingSession, passengerCollection),
 		[activeBookingSession, flight, flightId, passengerCollection],
@@ -632,6 +685,7 @@ export default function CheckoutReviewScreen() {
 			currentSeatRequirements,
 			flightFareAccepted,
 			flightFareReview,
+			flightFareAcceptance,
 			passengerLabels,
 			seatDisclosureAcknowledgements,
 			seatPriceAcceptances,
