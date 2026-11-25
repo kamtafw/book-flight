@@ -198,7 +198,7 @@ test("a fresh offer refresh invalidates all seat price and disclosure acceptance
 	store.getState().acknowledgeCurrentSeatDisclosures(requirement.componentKey)
 	assert.equal(store.getState().areCurrentSeatRequirementsSatisfied(), true)
 
-	const attempt = store.getState().startOfferReviewRefresh()
+	const attempt = store.getState().startOfferReviewRefresh(undefined, true)
 	assert.ok(attempt)
 	assert.equal(store.getState().seatPriceAcceptances.length, 0)
 	assert.equal(store.getState().seatDisclosureAcknowledgements.length, 0)

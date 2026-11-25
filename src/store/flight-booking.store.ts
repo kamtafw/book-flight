@@ -28,6 +28,7 @@ import {
 	type OfferReviewAttempt,
 	type OfferReviewLifecycle,
 	type OfferReviewLifecycleIdentity,
+	shouldStartOfferReviewRefresh,
 } from "@/lib/booking/readiness/offer-review-lifecycle"
 import {
 	acceptSeatPriceChange,
@@ -72,7 +73,10 @@ interface FlightBookingState {
 
 	beginBookingSession: (offer: Pick<FlightOffer, "id">) => string
 	getOrCreateCheckoutReviewSession: (offerId: string) => CheckoutReviewSession | null
-	startOfferReviewRefresh: () => OfferReviewAttempt | null
+	startOfferReviewRefresh: (
+		expectedIdentity?: OfferReviewLifecycleIdentity,
+		force?: boolean,
+	) => OfferReviewAttempt | null
 	completeOfferReviewRefresh: (attempt: OfferReviewAttempt, outcome: OfferReviewOutcome) => boolean
 	failOfferReviewRefresh: (attempt: OfferReviewAttempt, message: string) => boolean
 	clearOfferReviewLifecycle: () => void
@@ -86,6 +90,7 @@ interface FlightBookingState {
 	startSeatReviewValidation: (
 		offerExpiresAt: string | null,
 		retry?: boolean,
+		expectedContext?: SeatReviewRequestContext,
 	) => { kind: "not_selected" | "reuse" | "blocked" | "started"; attempt?: SeatReviewAttempt }
 	completeSeatReviewValidation: (attempt: SeatReviewAttempt, outcome: SeatReviewOutcome) => boolean
 	failSeatReviewValidation: (attempt: SeatReviewAttempt, message: string) => boolean
@@ -103,6 +108,11 @@ interface FlightBookingState {
 	setPassengerTravelDocument: (passengerId: string, document: Omit<TravelDocument, "id">) => void
 	setResponsibleAdult: (infantPassengerId: string, adultPassengerId: string | null) => void
 	clearPassengerInformation: () => void
+}
+
+interface SeatReviewRequestContext extends SeatReviewLifecycleIdentity {
+	snapshotKey: string
+	offerReviewAttemptId: string
 }
 
 function createInternalPassengerId() {
@@ -360,7 +370,7 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 		return next
 	},
 
-	startOfferReviewRefresh: () => {
+	startOfferReviewRefresh: (expectedIdentity, force = false) => {
 		const state = get()
 		const reviewSession = state.checkoutReviewSession
 		const bookingSession = state.activeBookingSession
@@ -377,6 +387,14 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 			bookingSessionId: bookingSession.id,
 			offerId: reviewSession.offerId,
 		}
+		if (
+			expectedIdentity &&
+			(expectedIdentity.reviewSessionId !== identity.reviewSessionId ||
+				expectedIdentity.bookingSessionId !== identity.bookingSessionId ||
+				expectedIdentity.offerId !== identity.offerId)
+		) {
+			return null
+		}
 		const current = state.offerReviewLifecycle
 		if (isOfferReviewLifecycleForSession(current, identity)) {
 			if (
@@ -384,6 +402,13 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 				current.status === "retry_exhausted" ||
 				current.status === "itinerary_changed" ||
 				current.status === "unavailable"
+			) {
+				return null
+			}
+			if (
+				!force &&
+				(current.status === "ready" || current.status === "price_changed") &&
+				!shouldStartOfferReviewRefresh(current, identity)
 			) {
 				return null
 			}
@@ -542,7 +567,7 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 			state.seatDisclosureAcknowledgements,
 		)
 	},
-	startSeatReviewValidation: (offerExpiresAt, retry = false) => {
+	startSeatReviewValidation: (offerExpiresAt, retry = false, expectedContext) => {
 		const state = get()
 		const reviewSession = state.checkoutReviewSession
 		const bookingSession = state.activeBookingSession
@@ -553,6 +578,24 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 			reviewSessionId: reviewSession.id,
 			bookingSessionId: bookingSession.id,
 			offerId: reviewSession.offerId,
+		}
+		if (expectedContext) {
+			const offerLifecycle = state.offerReviewLifecycle
+			const offerOutcome = offerLifecycle?.outcome
+			const currentSnapshotKey = createSeatReviewSnapshotKey(state.selectedOutboundSeatServices)
+			if (
+				expectedContext.reviewSessionId !== identity.reviewSessionId ||
+				expectedContext.bookingSessionId !== identity.bookingSessionId ||
+				expectedContext.offerId !== identity.offerId ||
+				expectedContext.snapshotKey !== currentSnapshotKey ||
+				!isOfferReviewLifecycleForSession(offerLifecycle, identity) ||
+				offerLifecycle.attemptId !== expectedContext.offerReviewAttemptId ||
+				(offerLifecycle.status !== "ready" && offerLifecycle.status !== "price_changed") ||
+				!offerOutcome ||
+				(offerOutcome.status !== "valid" && offerOutcome.status !== "price_changed")
+			) {
+				return { kind: "blocked" }
+			}
 		}
 		const result = startSeatReviewValidation(
 			state.seatReviewLifecycle,

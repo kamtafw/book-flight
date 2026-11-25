@@ -1,7 +1,7 @@
+import { useFlightBookingStore } from "@/store/flight-booking.store"
 import assert from "node:assert/strict"
 import test from "node:test"
 import { createOfferReviewOutcome } from "./offer-review"
-import { useFlightBookingStore } from "@/store/flight-booking.store"
 
 function makeOffer(id, priceAmount, currency = "USD") {
 	return {
@@ -17,26 +17,30 @@ function makeOffer(id, priceAmount, currency = "USD") {
 		expiresAt: "2027-05-21T10:00:00Z",
 		operatingCarrierNames: ["Example Air"],
 		passengers: [{ id: "pas_adult", type: "adult", age: 30 }],
-		slices: [{
-			originCode: "LOS",
-			destinationCode: "ABV",
-			duration: "1h 15m",
-			segments: [{
-				id: "seg-1",
-				departureAirportCode: "LOS",
-				departureAirportName: "Lagos",
-				departureAt: "2027-05-21T08:30:00Z",
-				arrivalAirportCode: "ABV",
-				arrivalAirportName: "Abuja",
-				arrivalAt: "2027-05-21T09:45:00Z",
-				marketingCarrierName: "Example Air",
-				marketingCarrierCode: "EA",
-				operatingCarrierName: "Example Air",
-				operatingCarrierCode: "EA",
-				flightNumber: "101",
+		slices: [
+			{
+				originCode: "LOS",
+				destinationCode: "ABV",
 				duration: "1h 15m",
-			}],
-		}],
+				segments: [
+					{
+						id: "seg-1",
+						departureAirportCode: "LOS",
+						departureAirportName: "Lagos",
+						departureAt: "2027-05-21T08:30:00Z",
+						arrivalAirportCode: "ABV",
+						arrivalAirportName: "Abuja",
+						arrivalAt: "2027-05-21T09:45:00Z",
+						marketingCarrierName: "Example Air",
+						marketingCarrierCode: "EA",
+						operatingCarrierName: "Example Air",
+						operatingCarrierCode: "EA",
+						flightNumber: "101",
+						duration: "1h 15m",
+					},
+				],
+			},
+		],
 	}
 }
 
@@ -80,7 +84,7 @@ test("a new offer refresh invalidates the previous fare acceptance", () => {
 	store.getState().acceptCurrentFlightFareChange("2026-11-25T03:00:00.000Z")
 	assert.equal(store.getState().isCurrentFlightFareAccepted(), true)
 
-	const nextAttempt = store.getState().startOfferReviewRefresh()
+	const nextAttempt = store.getState().startOfferReviewRefresh(undefined, true)
 	assert.ok(nextAttempt)
 	assert.equal(store.getState().flightFareAcceptance, null)
 	assert.equal(store.getState().isCurrentFlightFareAccepted(), false)

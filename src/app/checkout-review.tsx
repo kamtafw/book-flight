@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo } from "react"
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
+import type { PassengerCollection } from "@/lib/booking/passengers/passenger-domain"
 import { isCheckoutReviewSessionCurrent } from "@/lib/booking/readiness/booking-session"
+import { buildCheckoutPricingPresentation } from "@/lib/booking/readiness/checkout-pricing-presentation"
 import { getCheckoutReviewEntryState } from "@/lib/booking/readiness/checkout-review"
 import { createOfferReviewOutcome } from "@/lib/booking/readiness/offer-review"
 import {
@@ -12,12 +14,16 @@ import {
 	shouldStartOfferReviewRefresh,
 	type OfferReviewLifecycleIdentity,
 } from "@/lib/booking/readiness/offer-review-lifecycle"
-import { buildCheckoutPricingPresentation } from "@/lib/booking/readiness/checkout-pricing-presentation"
 import { createSeatReviewOutcome } from "@/lib/booking/readiness/seat-review"
-import { buildSeatReviewPresentation, type SeatReviewPresentationGroup } from "@/lib/booking/readiness/seat-review-presentation"
-import { isSeatReviewLifecycleForSession } from "@/lib/booking/readiness/seat-review-lifecycle"
+import {
+	createSeatReviewSnapshotKey,
+	isSeatReviewLifecycleForSession,
+} from "@/lib/booking/readiness/seat-review-lifecycle"
+import {
+	buildSeatReviewPresentation,
+	type SeatReviewPresentationGroup,
+} from "@/lib/booking/readiness/seat-review-presentation"
 import { refreshOffer, validateSeatServices } from "@/lib/flights/api"
-import type { PassengerCollection } from "@/lib/booking/passengers/passenger-domain"
 import type { FlightOffer } from "@/lib/flights/types"
 import { useFlightBookingStore } from "@/store/flight-booking.store"
 import { useFlightOffersStore } from "@/store/flight-offers.store"
@@ -98,7 +104,9 @@ function SeatReviewSection({
 											</Text>
 										</View>
 										<View className="mt-1 flex-row justify-between">
-											<Text className="font-inter-medium text-xs text-gray-200">Current provider price</Text>
+											<Text className="font-inter-medium text-xs text-gray-200">
+												Current provider price
+											</Text>
 											<Text className="font-inter-semibold text-xs text-black">
 												{seat.currentAmount && seat.currentCurrency
 													? formatProviderAmount(seat.currentAmount, seat.currentCurrency)
@@ -185,7 +193,9 @@ function CheckoutPricingSection({
 								</Text>
 							</View>
 							<View className="mt-2 flex-row justify-between">
-								<Text className="font-inter-medium text-xs text-gray-200">Current provider fare</Text>
+								<Text className="font-inter-medium text-xs text-gray-200">
+									Current provider fare
+								</Text>
 								<Text className="font-inter-semibold text-sm text-black">
 									{formatProviderAmount(
 										presentation.flightFare.currentPrice.amount,
@@ -205,7 +215,9 @@ function CheckoutPricingSection({
 										presentation.flightFare.accepted ? "text-green-700" : "text-white"
 									}`}
 								>
-									{presentation.flightFare.accepted ? "Updated fare accepted" : "Accept updated flight fare"}
+									{presentation.flightFare.accepted
+										? "Updated fare accepted"
+										: "Accept updated flight fare"}
 								</Text>
 							</Pressable>
 						</>
@@ -248,12 +260,17 @@ function CheckoutPricingSection({
 										<Text className="font-inter text-xs text-gray-200">Previously selected</Text>
 										<Text className="font-inter text-xs text-black">
 											{line.previousPrice
-												? formatProviderAmount(line.previousPrice.amount, line.previousPrice.currency)
+												? formatProviderAmount(
+														line.previousPrice.amount,
+														line.previousPrice.currency,
+													)
 												: "Not available"}
 										</Text>
 									</View>
 									<View className="mt-1 flex-row justify-between">
-										<Text className="font-inter-medium text-xs text-gray-200">Current seat price</Text>
+										<Text className="font-inter-medium text-xs text-gray-200">
+											Current seat price
+										</Text>
 										<Text className="font-inter-semibold text-xs text-black">
 											{line.currentPrice
 												? formatProviderAmount(line.currentPrice.amount, line.currentPrice.currency)
@@ -278,7 +295,8 @@ function CheckoutPricingSection({
 								</>
 							) : (
 								<Text className="mt-2 font-inter text-xs text-gray-200">
-									Current price: {line.currentPrice
+									Current price:{" "}
+									{line.currentPrice
 										? formatProviderAmount(line.currentPrice.amount, line.currentPrice.currency)
 										: "Not available"}
 								</Text>
@@ -287,21 +305,36 @@ function CheckoutPricingSection({
 							{line.disclosureAcknowledgementRequired ? (
 								<View className="mt-3 border-t border-border pt-3">
 									<Text className="font-inter-medium text-xs text-black">Previous conditions</Text>
-									{line.previousDisclosures.length > 0 ? line.previousDisclosures.map((item, index) => (
-										<Text key={`old-${index}`} className="mt-1 font-inter text-xs leading-5 text-gray-200">
-											• {item}
-										</Text>
-									)) : (
-										<Text className="mt-1 font-inter text-xs text-gray-200">No previous conditions were supplied.</Text>
-									)}
-									<Text className="mt-3 font-inter-medium text-xs text-black">Updated conditions</Text>
-									{line.currentDisclosures.length > 0 ? line.currentDisclosures.map((item, index) => (
-										<Text key={`new-${index}`} className="mt-1 font-inter text-xs leading-5 text-gray-200">
-											• {item}
-										</Text>
-									)) : (
+									{line.previousDisclosures.length > 0 ? (
+										line.previousDisclosures.map((item, index) => (
+											<Text
+												key={`old-${index}`}
+												className="mt-1 font-inter text-xs leading-5 text-gray-200"
+											>
+												• {item}
+											</Text>
+										))
+									) : (
 										<Text className="mt-1 font-inter text-xs text-gray-200">
-											The provider removed the previous conditions. Acknowledgement is still required.
+											No previous conditions were supplied.
+										</Text>
+									)}
+									<Text className="mt-3 font-inter-medium text-xs text-black">
+										Updated conditions
+									</Text>
+									{line.currentDisclosures.length > 0 ? (
+										line.currentDisclosures.map((item, index) => (
+											<Text
+												key={`new-${index}`}
+												className="mt-1 font-inter text-xs leading-5 text-gray-200"
+											>
+												• {item}
+											</Text>
+										))
+									) : (
+										<Text className="mt-1 font-inter text-xs text-gray-200">
+											The provider removed the previous conditions. Acknowledgement is still
+											required.
 										</Text>
 									)}
 									<Pressable
@@ -330,19 +363,22 @@ function CheckoutPricingSection({
 
 			<View className="mt-4 border-t border-border pt-4">
 				<Text className="font-inter-semibold text-sm text-black">Price breakdown</Text>
-				{presentation.status === "mixed_currency" && presentation.pricing?.status === "mixed_currency" ? (
+				{presentation.status === "mixed_currency" &&
+				presentation.pricing?.status === "mixed_currency" ? (
 					<>
 						{presentation.pricing.components.map((component) => (
 							<View key={component.id} className="mt-2 flex-row justify-between">
-								<Text className="mr-3 flex-1 font-inter text-xs text-gray-200">{component.label}</Text>
+								<Text className="mr-3 flex-1 font-inter text-xs text-gray-200">
+									{component.label}
+								</Text>
 								<Text className="font-inter-medium text-xs text-black">
 									{formatProviderAmount(component.money.amount, component.money.currency)}
 								</Text>
 							</View>
 						))}
 						<Text className="mt-3 font-inter text-xs leading-5 text-orange-800">
-							These components use different currencies. No combined total can be calculated, so checkout
-							cannot continue.
+							These components use different currencies. No combined total can be calculated, so
+							checkout cannot continue.
 						</Text>
 					</>
 				) : presentation.status === "blocked" ? (
@@ -355,7 +391,9 @@ function CheckoutPricingSection({
 					<>
 						{presentation.pricing.components.map((component) => (
 							<View key={component.id} className="mt-2 flex-row justify-between">
-								<Text className="mr-3 flex-1 font-inter text-xs text-gray-200">{component.label}</Text>
+								<Text className="mr-3 flex-1 font-inter text-xs text-gray-200">
+									{component.label}
+								</Text>
 								<Text className="font-inter-medium text-xs text-black">
 									{formatProviderAmount(component.money.amount, component.money.currency)}
 								</Text>
@@ -446,7 +484,9 @@ function PassengerAndItinerarySection({
 			passenger.identity.givenName,
 			passenger.identity.middleName,
 			passenger.identity.familyName,
-		].filter((part): part is string => Boolean(part?.trim())).join(" ")
+		]
+			.filter((part): part is string => Boolean(part?.trim()))
+			.join(" ")
 		return name || "Name not supplied"
 	}
 	return (
@@ -456,7 +496,9 @@ function PassengerAndItinerarySection({
 				<View key={passenger.id} className="mt-3 rounded-xl bg-gray-50 p-3">
 					<View className="flex-row justify-between">
 						<Text className="font-inter-medium text-sm text-black">{passengerName(passenger)}</Text>
-						<Text className="font-inter text-xs capitalize text-gray-200">{passenger.category}</Text>
+						<Text className="font-inter text-xs capitalize text-gray-200">
+							{passenger.category}
+						</Text>
 					</View>
 					{passenger.contacts.map((contact) => (
 						<Text key={contact.id} className="mt-2 font-inter text-xs text-gray-200">
@@ -470,7 +512,9 @@ function PassengerAndItinerarySection({
 								{document.type || "Travel document"} · {maskDocumentNumber(document.documentNumber)}
 							</Text>
 							<Text className="mt-1 font-inter text-xs text-gray-200">
-								{document.issuingCountry ? `Issued by ${document.issuingCountry}` : "Issuing country not supplied"}
+								{document.issuingCountry
+									? `Issued by ${document.issuingCountry}`
+									: "Issuing country not supplied"}
 								{document.expirationDate ? ` · Expires ${document.expirationDate}` : ""}
 							</Text>
 						</View>
@@ -493,12 +537,16 @@ function PassengerAndItinerarySection({
 									{segment.departureAirportCode} → {segment.arrivalAirportCode}
 								</Text>
 								<Text className="mt-1 font-inter text-xs text-gray-200">
-									{segment.marketingCarrierName} · {segment.marketingCarrierCode} {segment.flightNumber}
+									{segment.marketingCarrierName} · {segment.marketingCarrierCode}{" "}
+									{segment.flightNumber}
 								</Text>
 								<Text className="mt-1 font-inter text-xs text-gray-200">
-									{new Date(segment.departureAt).toLocaleString()} – {new Date(segment.arrivalAt).toLocaleString()}
+									{new Date(segment.departureAt).toLocaleString()} –{" "}
+									{new Date(segment.arrivalAt).toLocaleString()}
 								</Text>
-								<Text className="mt-1 font-inter text-xs text-gray-200">Flight segment {index + 1}</Text>
+								<Text className="mt-1 font-inter text-xs text-gray-200">
+									Flight segment {index + 1}
+								</Text>
 							</View>
 							{layover ? (
 								<Text className="mt-2 text-center font-inter text-xs text-gray-200">
@@ -541,7 +589,7 @@ export default function CheckoutReviewScreen() {
 	const failSeatReviewValidation = useFlightBookingStore((state) => state.failSeatReviewValidation)
 	const clearOfferReviewLifecycle = useFlightBookingStore(
 		(state) => state.clearOfferReviewLifecycle,
-	);
+	)
 	const getCurrentFlightFareReview = useFlightBookingStore(
 		(state) => state.getCurrentFlightFareReview,
 	)
@@ -564,7 +612,6 @@ export default function CheckoutReviewScreen() {
 	const seatDisclosureAcknowledgements = useFlightBookingStore(
 		(state) => state.seatDisclosureAcknowledgements,
 	)
-	const flightFareAcceptance = useFlightBookingStore((state) => state.flightFareAcceptance)
 	const entryState = useMemo(
 		() => getCheckoutReviewEntryState(flightId, flight, activeBookingSession, passengerCollection),
 		[activeBookingSession, flight, flightId, passengerCollection],
@@ -595,8 +642,8 @@ export default function CheckoutReviewScreen() {
 	const currentLifecycle = lifecycleMatchesSession ? offerReviewLifecycle : null
 
 	const runOfferRefresh = useCallback(async () => {
-		if (!flight) return
-		const attempt = startOfferReviewRefresh()
+		if (!flight || !reviewIdentity || flight.id !== reviewIdentity.offerId) return
+		const attempt = startOfferReviewRefresh(reviewIdentity)
 		if (!attempt) return
 
 		try {
@@ -608,17 +655,27 @@ export default function CheckoutReviewScreen() {
 				error instanceof Error ? error.message : "We couldn't verify this flight. Please try again."
 			failOfferReviewRefresh(attempt, message)
 		}
-	}, [completeOfferReviewRefresh, failOfferReviewRefresh, flight, startOfferReviewRefresh])
+	}, [
+		completeOfferReviewRefresh,
+		failOfferReviewRefresh,
+		flight,
+		reviewIdentity,
+		startOfferReviewRefresh,
+	])
 
 	const runSeatValidation = useCallback(
 		async (retry = false) => {
-			if (!flightId || !currentLifecycle?.outcome) return
+			if (!flightId || !reviewIdentity || !currentLifecycle?.outcome) return
 			const offerOutcome = currentLifecycle.outcome
 			if (offerOutcome.status !== "valid" && offerOutcome.status !== "price_changed") return
 			const offerExpiry = offerOutcome.currentOffer.expiresAt
 			const offerExpiryTime = offerExpiry ? Date.parse(offerExpiry) : Number.NaN
 			if (!Number.isFinite(offerExpiryTime) || offerExpiryTime <= Date.now()) return
-			const start = startSeatReviewValidation(offerOutcome.currentOffer.expiresAt, retry)
+			const start = startSeatReviewValidation(offerOutcome.currentOffer.expiresAt, retry, {
+				...reviewIdentity,
+				snapshotKey: createSeatReviewSnapshotKey(selectedSeats),
+				offerReviewAttemptId: currentLifecycle.attemptId,
+			})
 			if (start.kind !== "started" || !start.attempt) return
 
 			try {
@@ -636,6 +693,7 @@ export default function CheckoutReviewScreen() {
 		[
 			completeSeatReviewValidation,
 			currentLifecycle,
+			reviewIdentity,
 			failSeatReviewValidation,
 			flightId,
 			selectedSeats,
@@ -658,7 +716,9 @@ export default function CheckoutReviewScreen() {
 				passenger.identity.givenName,
 				passenger.identity.middleName,
 				passenger.identity.familyName,
-			].filter((part): part is string => Boolean(part?.trim())).join(" ")
+			]
+				.filter((part): part is string => Boolean(part?.trim()))
+				.join(" ")
 			passenger.providerReferences
 				.filter((reference) => reference.provider === "duffel" && reference.offerId === flightId)
 				.forEach((reference) => {
@@ -673,7 +733,8 @@ export default function CheckoutReviewScreen() {
 		flight?.slices.forEach((slice) => {
 			slice.segments.forEach((segment) => {
 				index += 1
-				labels[segment.id] = `Segment ${index} · ${segment.departureAirportCode} → ${segment.arrivalAirportCode}`
+				labels[segment.id] =
+					`Segment ${index} · ${segment.departureAirportCode} → ${segment.arrivalAirportCode}`
 			})
 		})
 		return labels
@@ -693,7 +754,6 @@ export default function CheckoutReviewScreen() {
 			currentSeatRequirements,
 			flightFareAccepted,
 			flightFareReview,
-			flightFareAcceptance,
 			passengerLabels,
 			seatDisclosureAcknowledgements,
 			seatPriceAcceptances,
@@ -703,7 +763,7 @@ export default function CheckoutReviewScreen() {
 
 	const seatReviewGroups = useMemo(() => {
 		if (
-			selectedSeats.length===0||
+			selectedSeats.length === 0 ||
 			!currentSeatLifecycle?.outcome ||
 			!passengerCollection ||
 			!flight ||
@@ -1027,8 +1087,8 @@ export default function CheckoutReviewScreen() {
 						Your seat selection needs attention
 					</Text>
 					<Text className="mt-2 font-inter text-sm leading-5 text-gray-200">
-						Review the provider&apos;s latest result for each selected seat. Unavailable seats must be
-						replaced or removed. Changed prices and conditions remain unaccepted at this stage.
+						Review the provider&apos;s latest result for each selected seat. Unavailable seats must
+						be replaced or removed. Changed prices and conditions remain unaccepted at this stage.
 					</Text>
 					<SeatReviewSection groups={seatReviewGroups} />
 					<Pressable
@@ -1039,7 +1099,9 @@ export default function CheckoutReviewScreen() {
 						}
 						className="mt-6 h-14 items-center justify-center rounded-xl bg-primary"
 					>
-						<Text className="font-inter-semibold text-base text-white">Return to seat selection</Text>
+						<Text className="font-inter-semibold text-base text-white">
+							Return to seat selection
+						</Text>
 					</Pressable>
 					<Pressable onPress={returnToSearch} className="mt-3 items-center py-3">
 						<Text className="font-inter-medium text-sm text-primary">Return to search</Text>
@@ -1110,10 +1172,7 @@ export default function CheckoutReviewScreen() {
 
 				<PassengerAndItinerarySection flight={flight} passengers={passengerCollection} />
 
-				<SeatReviewSection
-					groups={seatReviewGroups}
-					notSelected={selectedSeats.length===0}
-				/>
+				<SeatReviewSection groups={seatReviewGroups} notSelected={selectedSeats.length === 0} />
 
 				<CheckoutPricingSection
 					presentation={pricingPresentation}
@@ -1148,8 +1207,8 @@ export default function CheckoutReviewScreen() {
 					<Text className="font-inter-semibold text-base text-white">Continue to payment</Text>
 				</Pressable>
 				<Text className="mt-3 text-center font-inter text-xs leading-5 text-gray-200">
-					Continuing opens the existing payment placeholder only. No order, reservation or payment is
-					created in this checkpoint.
+					Continuing opens the existing payment placeholder only. No order, reservation or payment
+					is created in this checkpoint.
 				</Text>
 			</ScrollView>
 		</SafeAreaView>
