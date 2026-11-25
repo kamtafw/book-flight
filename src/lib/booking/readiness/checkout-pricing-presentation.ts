@@ -43,7 +43,7 @@ export interface CheckoutPricingPresentation {
 		currentPrice: Money
 		acceptanceRequired: boolean
 		accepted: boolean
-	}
+	} | null
 	seatLines: CheckoutSeatPricingLine[]
 	allAcceptancesSatisfied: boolean
 }
@@ -70,12 +70,7 @@ export function buildCheckoutPricingPresentation(
 			status: "blocked",
 			reason: "seat_validation_pending",
 			pricing: null,
-			flightFare: {
-				previousPrice: { amount: "0", currency: "XXX" },
-				currentPrice: { amount: "0", currency: "XXX" },
-				acceptanceRequired: true,
-				accepted: false,
-			},
+			flightFare: null,
 			seatLines: [],
 			allAcceptancesSatisfied: false,
 		}
