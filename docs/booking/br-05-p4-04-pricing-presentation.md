@@ -60,6 +60,7 @@ On success, navigation goes to the existing `/payment` placeholder. That placeho
 - Available seats with changed prices or disclosures remain in Checkout Review so the customer can accept them there.
 - Unavailable seats continue to route to seat selection for replacement or removal.
 - Mixed-currency pricing displays individual amounts and blocks progression.
+- Unresolved provider-passenger association is explicitly flagged and blocks progression rather than allowing the customer to accept a seat price against an ambiguous passenger.
 - Missing or stale fare/seat validation fails closed.
 - A new offer refresh invalidates prior acceptance through the existing store lifecycle.
 - Seat acceptances remain component-specific and are checked against exact current identity and values.
@@ -87,4 +88,4 @@ npx tsc --noEmit
 npx expo lint
 ```
 
-Manual verification should cover unchanged fare/no seats, changed fare acceptance, changed seat price acceptance, disclosure acknowledgement, combined seat price and disclosure changes, and the progression gate. A mixed-currency result may not be available from the current provider test offers; its deterministic domain test covers the no-total/blocking behaviour.
+Manual verification should cover unchanged fare/no seats, changed fare acceptance, changed seat price acceptance, disclosure acknowledgement, combined seat price and disclosure changes, passenger/document display with masked document numbers, connecting-flight layover display, and the progression gate. A mixed-currency result may not be available from the current provider test offers; its deterministic domain test covers the no-total/blocking behaviour.
