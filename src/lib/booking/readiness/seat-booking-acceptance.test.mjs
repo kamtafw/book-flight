@@ -210,3 +210,21 @@ test("unavailable seats and missing current validation cannot be accepted", () =
 	assert.equal(store.getState().acknowledgeCurrentSeatDisclosures(requirement.componentKey), false)
 	assert.equal(store.getState().areCurrentSeatRequirementsSatisfied(), false)
 })
+
+test("a review with no selected seats has no seat acceptance requirements", () => {
+	const store = useFlightBookingStore
+	store.getState().abandonBookingSession()
+	const original = offer("offer-selected")
+	const refreshed = offer("offer-current")
+	store.getState().beginBookingSession({ id: original.id })
+	store.getState().getOrCreateCheckoutReviewSession(original.id)
+	const offerAttempt = store.getState().startOfferReviewRefresh()
+	assert.ok(offerAttempt)
+	const offerOutcome = createOfferReviewOutcome(original, { status: "valid", offer: refreshed })
+	assert.equal(store.getState().completeOfferReviewRefresh(offerAttempt, offerOutcome), true)
+
+	const seatStart = store.getState().startSeatReviewValidation("2027-05-21T10:00:00Z")
+	assert.equal(seatStart.kind, "not_selected")
+	assert.deepEqual(store.getState().getCurrentSeatAcceptanceRequirements(), [])
+	assert.equal(store.getState().areCurrentSeatRequirementsSatisfied(), true)
+})
