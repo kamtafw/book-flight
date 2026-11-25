@@ -45,7 +45,7 @@ No passenger or selection array position is used to identify a seat component.
 
 - The store keeps separate collections for seat-price acceptances and disclosure acknowledgements.
 - Acceptance actions target a current component key derived from the full identity.
-- Requirements are exposed only when the offer review and seat validation outcomes belong to the current review/booking session and the current selected-seat snapshot.
+- Requirements are exposed only when the offer review and seat validation outcomes belong to the current review/booking session, the current selected-seat snapshot matches the validated snapshot, and the validated offer has not expired.
 - A fresh offer refresh clears seat validation and all seat acceptances.
 - A new booking session, abandoned/completed booking, or cleared review lifecycle also clears seat acceptances.
 - A seat-only selection change does not clear unrelated acceptance records. After the new seat snapshot is validated, an acceptance remains applicable only if the exact accepted component and values are still present.
