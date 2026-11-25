@@ -757,16 +757,34 @@ export default function CheckoutReviewScreen() {
 	}
 
 	const continueToPaymentPlaceholder = () => {
-		if (entryState !== "ready") return
 		const state = useFlightBookingStore.getState()
-		const fareAccepted = state.isCurrentFlightFareAccepted()
-		const seatsAccepted = state.areCurrentSeatRequirementsSatisfied()
 		if (
-			!fareAccepted ||
-			!seatsAccepted ||
-			pricingPresentation.status !== "ready" ||
-			!pricingPresentation.allAcceptancesSatisfied ||
-			pricingPresentation.pricing?.status !== "complete"
+			getCheckoutReviewEntryState(
+				flightId,
+				flight,
+				state.activeBookingSession,
+				state.passengerCollection,
+			) !== "ready"
+		) {
+			return
+		}
+		const currentFareReview = state.getCurrentFlightFareReview()
+		const currentSeatRequirements = state.getCurrentSeatAcceptanceRequirements()
+		const currentPricing = buildCheckoutPricingPresentation({
+			flightFareReview: currentFareReview,
+			flightFareAccepted: state.isCurrentFlightFareAccepted(),
+			seatRequirements: currentSeatRequirements,
+			seatPriceAcceptances: state.seatPriceAcceptances,
+			seatDisclosureAcknowledgements: state.seatDisclosureAcknowledgements,
+			passengerLabels,
+			segmentLabels,
+		})
+		if (
+			currentPricing.status !== "ready" ||
+			!currentPricing.allAcceptancesSatisfied ||
+			currentPricing.pricing?.status !== "complete" ||
+			!state.areCurrentSeatRequirementsSatisfied() ||
+			!state.isCurrentFlightFareAccepted()
 		) {
 			return
 		}
