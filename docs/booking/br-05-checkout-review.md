@@ -1102,7 +1102,7 @@ Implement the complete pricing and acceptance contract.
 - Reject malformed amounts, invalid currencies, unsupported component kinds and duplicate component IDs.
 - If components use different currencies, return their individual amounts and currencies without calculating a grand total. Do not perform implicit currency conversion.
 
-**P4-01 implementation checkpoint:** Added `src/lib/booking/readiness/pricing.ts` and focused tests. The pure pricing model currently covers exact addition/subtraction, component aggregation, zero-component subtotals, currency consistency and malformed input. Local verification is pending.
+**P4-01 implementation checkpoint — complete and locally verified:** Added `src/lib/booking/readiness/pricing.ts` and focused tests covering exact addition/subtraction, component aggregation, zero-component subtotals, currency consistency and malformed input. The user confirmed the focused suite, full test suite, TypeScript check and Expo lint all passed.
 
 #### P4-02 — Flight fare comparison and acceptance
 
@@ -1110,6 +1110,8 @@ Implement the complete pricing and acceptance contract.
 - Require explicit acceptance for any fare change, including a decrease.
 - Bind acceptance to the exact offer identity and current amount/currency.
 - Invalidate acceptance when the accepted offer or price identity changes.
+
+**P4-02 implementation checkpoint — complete and locally verified:** Added `src/lib/booking/readiness/flight-fare-review.ts` and store integration for explicit fare acceptance. Any amount or currency change requires acceptance, including a fare decrease. Acceptance is bound to the review/booking sessions, selected/refreshed offer identities, comparison baseline and exact current amount/currency. A new offer refresh or booking-session transition invalidates the acceptance. The user confirmed both focused suites, the full test suite, TypeScript and Expo lint passed, and pushed the verified changes to `main`.
 
 #### P4-03 — Seat price and disclosure acceptance
 
