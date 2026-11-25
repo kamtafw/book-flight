@@ -84,17 +84,17 @@ export function buildSeatReviewPresentation(
 	passengerCollection: PassengerCollection,
 	offer: FlightOffer,
 ): SeatReviewPresentationGroup[] {
+	if (outcome.status === "not_selected") {
+		if (selections.length > 0 || outcome.selections.length > 0) {
+			throw new Error("A not-selected seat outcome cannot be used with existing seat selections.")
+		}
+		return []
+	}
+
 	// Seat selection can change before the focus effect replaces the previous
 	// validation outcome. The current selection is authoritative for presentation:
 	// never render stale seat rows while the new empty snapshot is being recorded.
 	if (selections.length === 0) return []
-
-	if (outcome.status === "not_selected") {
-		if (outcome.selections.length !== 0) {
-			throw new Error("A not-selected seat outcome cannot contain seat selections.")
-		}
-		return []
-	}
 
 	const segmentLabels = getSegmentLabels(offer)
 	const passengerMatchesForSelection = (selection: SelectedSeatService) =>
