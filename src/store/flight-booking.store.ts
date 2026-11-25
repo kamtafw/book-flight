@@ -403,6 +403,7 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 				return null
 			}
 			if (
+				expectedIdentity &&
 				(current.status === "ready" || current.status === "price_changed") &&
 				!shouldStartOfferReviewRefresh(current, identity)
 			) {
