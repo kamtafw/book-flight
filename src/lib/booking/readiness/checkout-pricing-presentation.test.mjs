@@ -100,6 +100,15 @@ test("builds an exact consolidated total from current fare and validated seat pr
 	assert.equal(result.allAcceptancesSatisfied, true)
 })
 
+test("no selected seats produces a fare-only total with a zero seat subtotal", () => {
+	const result = build({ seatRequirements: [] })
+	assert.equal(result.status, "ready")
+	assert.equal(result.pricing?.status, "complete")
+	assert.equal(result.pricing?.seatSubtotal.amount, "0.00")
+	assert.equal(result.pricing?.total.amount, "100.00")
+	assert.equal(result.allAcceptancesSatisfied, true)
+})
+
 test("changed flight fare remains blocked until explicitly accepted", () => {
 	const review = fareReview("100.00", "115.50")
 	const result = build({ flightFareReview: review, flightFareAccepted: false })
