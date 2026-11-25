@@ -472,6 +472,7 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 			...clearBookingSessionState(state),
 			offerReviewLifecycle: null,
 			seatReviewLifecycle: null,
+			flightFareAcceptance: null,
 		})),
 
 	initializePassengerCollection: (offer) =>
