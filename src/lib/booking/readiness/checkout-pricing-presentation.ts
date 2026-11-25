@@ -88,7 +88,8 @@ export function buildCheckoutPricingPresentation(
 		const componentKey = createSeatAcceptanceComponentKey(requirement.identity)
 		const resolvedPassengerLabel = input.passengerLabels?.[requirement.identity.passengerId]
 		const passengerAssociationResolved = Boolean(resolvedPassengerLabel?.trim())
-		const passengerLabel = resolvedPassengerLabel ?? "Passenger association needs attention"
+		const passengerLabel =
+			resolvedPassengerLabel?.trim() || "Passenger association needs attention"
 		const segmentLabel =
 			input.segmentLabels?.[requirement.identity.segmentId] ?? "Flight segment"
 		const label = `${passengerLabel} · ${segmentLabel} · Seat ${requirement.identity.seatDesignator}`
