@@ -29,6 +29,16 @@ import {
 	type OfferReviewLifecycle,
 	type OfferReviewLifecycleIdentity,
 } from "@/lib/booking/readiness/offer-review-lifecycle"
+import {
+	acceptSeatPriceChange,
+	acknowledgeSeatDisclosures,
+	areSeatAcceptanceRequirementsSatisfied,
+	createSeatAcceptanceComponentKey,
+	createSeatAcceptanceRequirements,
+	type SeatAcceptanceRequirement,
+	type SeatDisclosureAcknowledgement,
+	type SeatPriceAcceptance,
+} from "@/lib/booking/readiness/seat-acceptance"
 import type { SeatReviewOutcome } from "@/lib/booking/readiness/seat-review"
 import {
 	completeSeatReviewValidation,
@@ -51,6 +61,8 @@ interface FlightBookingState {
 	offerReviewLifecycle: OfferReviewLifecycle | null
 	seatReviewLifecycle: SeatReviewLifecycle | null
 	flightFareAcceptance: FlightFareAcceptance | null
+	seatPriceAcceptances: SeatPriceAcceptance[]
+	seatDisclosureAcknowledgements: SeatDisclosureAcknowledgement[]
 
 	setOutboundSeats: (seats: string[]) => void
 	toggleOutboundSeat: (seat: string) => void
@@ -67,6 +79,10 @@ interface FlightBookingState {
 	getCurrentFlightFareReview: () => FlightFareReview | null
 	acceptCurrentFlightFareChange: (acceptedAt?: string) => boolean
 	isCurrentFlightFareAccepted: () => boolean
+	getCurrentSeatAcceptanceRequirements: () => SeatAcceptanceRequirement[] | null
+	acceptCurrentSeatPriceChange: (componentKey: string, acceptedAt?: string) => boolean
+	acknowledgeCurrentSeatDisclosures: (componentKey: string, acknowledgedAt?: string) => boolean
+	areCurrentSeatRequirementsSatisfied: () => boolean
 	startSeatReviewValidation: (
 		offerExpiresAt: string | null,
 		retry?: boolean,
@@ -176,6 +192,65 @@ function resolveCurrentFlightFareReview(
 	}
 }
 
+function resolveCurrentSeatAcceptanceRequirements(
+	state: Pick<
+		FlightBookingState,
+		| "checkoutReviewSession"
+		| "activeBookingSession"
+		| "offerReviewLifecycle"
+		| "seatReviewLifecycle"
+		| "selectedOutboundSeatServices"
+	>,
+): SeatAcceptanceRequirement[] | null {
+	const reviewSession = state.checkoutReviewSession
+	const bookingSession = state.activeBookingSession
+	const offerLifecycle = state.offerReviewLifecycle
+	const seatLifecycle = state.seatReviewLifecycle
+	const offerOutcome = offerLifecycle?.outcome
+	const seatOutcome = seatLifecycle?.outcome
+
+	if (
+		!reviewSession ||
+		!bookingSession ||
+		!offerLifecycle ||
+		!seatLifecycle ||
+		!offerOutcome ||
+		!seatOutcome ||
+		!seatLifecycle.offerExpiresAt ||
+		!Number.isFinite(Date.parse(seatLifecycle.offerExpiresAt)) ||
+		Date.parse(seatLifecycle.offerExpiresAt) <= Date.now() ||
+		reviewSession.bookingSessionId !== bookingSession.id ||
+		reviewSession.offerId !== bookingSession.offerId ||
+		offerLifecycle.reviewSessionId !== reviewSession.id ||
+		offerLifecycle.bookingSessionId !== bookingSession.id ||
+		offerLifecycle.offerId !== reviewSession.offerId ||
+		(offerOutcome.status !== "valid" && offerOutcome.status !== "price_changed") ||
+		seatLifecycle.reviewSessionId !== reviewSession.id ||
+		seatLifecycle.bookingSessionId !== bookingSession.id ||
+		seatLifecycle.offerId !== reviewSession.offerId ||
+		(seatLifecycle.status !== "not_selected" &&
+			seatLifecycle.status !== "valid" &&
+			seatLifecycle.status !== "action_required") ||
+		seatLifecycle.snapshotKey !== createSeatReviewSnapshotKey(state.selectedOutboundSeatServices)
+	) {
+		return null
+	}
+
+	try {
+		return createSeatAcceptanceRequirements(
+			{
+				reviewSessionId: reviewSession.id,
+				bookingSessionId: bookingSession.id,
+				selectedOfferId: reviewSession.offerId,
+				currentOfferId: offerOutcome.currentOffer.id,
+			},
+			seatOutcome,
+		)
+	} catch {
+		return null
+	}
+}
+
 export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 	selectedOutboundSeats: [],
 	selectedOutboundSeatServices: [],
@@ -185,6 +260,8 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 	offerReviewLifecycle: null,
 	seatReviewLifecycle: null,
 	flightFareAcceptance: null,
+	seatPriceAcceptances: [],
+	seatDisclosureAcknowledgements: [],
 
 	setOutboundSeats: (seats) => {
 		set({ selectedOutboundSeats: seats })
@@ -265,6 +342,8 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 			offerReviewLifecycle: null,
 			seatReviewLifecycle: null,
 			flightFareAcceptance: null,
+			seatPriceAcceptances: [],
+			seatDisclosureAcknowledgements: [],
 		})
 		return next.activeBookingSession!.id
 	},
@@ -323,6 +402,9 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 		}
 		set({
 			flightFareAcceptance: null,
+			seatReviewLifecycle: null,
+			seatPriceAcceptances: [],
+			seatDisclosureAcknowledgements: [],
 			offerReviewLifecycle: {
 				...attempt,
 				status: "refreshing",
@@ -348,6 +430,9 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 		}
 		set({
 			flightFareAcceptance: null,
+			seatReviewLifecycle: null,
+			seatPriceAcceptances: [],
+			seatDisclosureAcknowledgements: [],
 			offerReviewLifecycle: {
 				...attempt,
 				status: getOfferReviewOutcomeStatus(outcome),
@@ -382,7 +467,13 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 		return true
 	},
 	clearOfferReviewLifecycle: () =>
-		set({ offerReviewLifecycle: null, seatReviewLifecycle: null, flightFareAcceptance: null }),
+		set({
+			offerReviewLifecycle: null,
+			seatReviewLifecycle: null,
+			flightFareAcceptance: null,
+			seatPriceAcceptances: [],
+			seatDisclosureAcknowledgements: [],
+		}),
 	getCurrentFlightFareReview: () => resolveCurrentFlightFareReview(get()),
 	acceptCurrentFlightFareChange: (acceptedAt) => {
 		const review = resolveCurrentFlightFareReview(get())
@@ -401,6 +492,55 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 		if (!review) return false
 		if (review.status === "unchanged") return true
 		return isFlightFareAcceptanceCurrent(review, state.flightFareAcceptance)
+	},
+	getCurrentSeatAcceptanceRequirements: () => resolveCurrentSeatAcceptanceRequirements(get()),
+	acceptCurrentSeatPriceChange: (componentKey, acceptedAt) => {
+		const requirements = resolveCurrentSeatAcceptanceRequirements(get())
+		const requirement = requirements?.find((item) => item.componentKey === componentKey)
+		if (!requirement?.priceAcceptanceRequired) return false
+		try {
+			const acceptance = acceptSeatPriceChange(requirement, acceptedAt)
+			set((state) => ({
+				seatPriceAcceptances: [
+					...state.seatPriceAcceptances.filter(
+						(item) => createSeatAcceptanceComponentKey(item.identity) !== componentKey,
+					),
+					acceptance,
+				],
+			}))
+			return true
+		} catch {
+			return false
+		}
+	},
+	acknowledgeCurrentSeatDisclosures: (componentKey, acknowledgedAt) => {
+		const requirements = resolveCurrentSeatAcceptanceRequirements(get())
+		const requirement = requirements?.find((item) => item.componentKey === componentKey)
+		if (!requirement?.disclosureAcknowledgementRequired) return false
+		try {
+			const acknowledgement = acknowledgeSeatDisclosures(requirement, acknowledgedAt)
+			set((state) => ({
+				seatDisclosureAcknowledgements: [
+					...state.seatDisclosureAcknowledgements.filter(
+						(item) => createSeatAcceptanceComponentKey(item.identity) !== componentKey,
+					),
+					acknowledgement,
+				],
+			}))
+			return true
+		} catch {
+			return false
+		}
+	},
+	areCurrentSeatRequirementsSatisfied: () => {
+		const state = get()
+		const requirements = resolveCurrentSeatAcceptanceRequirements(state)
+		if (!requirements) return false
+		return areSeatAcceptanceRequirementsSatisfied(
+			requirements,
+			state.seatPriceAcceptances,
+			state.seatDisclosureAcknowledgements,
+		)
 	},
 	startSeatReviewValidation: (offerExpiresAt, retry = false) => {
 		const state = get()
@@ -471,6 +611,8 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 			offerReviewLifecycle: null,
 			seatReviewLifecycle: null,
 			flightFareAcceptance: null,
+			seatPriceAcceptances: [],
+			seatDisclosureAcknowledgements: [],
 		})),
 	completeBookingSession: () =>
 		set((state) => ({
@@ -478,6 +620,8 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 			offerReviewLifecycle: null,
 			seatReviewLifecycle: null,
 			flightFareAcceptance: null,
+			seatPriceAcceptances: [],
+			seatDisclosureAcknowledgements: [],
 		})),
 
 	initializePassengerCollection: (offer) =>

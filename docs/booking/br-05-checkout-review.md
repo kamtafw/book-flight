@@ -1102,7 +1102,7 @@ Implement the complete pricing and acceptance contract.
 - Reject malformed amounts, invalid currencies, unsupported component kinds and duplicate component IDs.
 - If components use different currencies, return their individual amounts and currencies without calculating a grand total. Do not perform implicit currency conversion.
 
-**P4-01 implementation checkpoint:** Added `src/lib/booking/readiness/pricing.ts` and focused tests. The pure pricing model currently covers exact addition/subtraction, component aggregation, zero-component subtotals, currency consistency and malformed input. Local verification is pending.
+**P4-01 implementation checkpoint — complete and locally verified:** Added `src/lib/booking/readiness/pricing.ts` and focused tests covering exact addition/subtraction, component aggregation, zero-component subtotals, currency consistency and malformed input. The user confirmed the focused suite, full test suite, TypeScript check and Expo lint all passed.
 
 #### P4-02 — Flight fare comparison and acceptance
 
@@ -1111,12 +1111,18 @@ Implement the complete pricing and acceptance contract.
 - Bind acceptance to the exact offer identity and current amount/currency.
 - Invalidate acceptance when the accepted offer or price identity changes.
 
+**P4-02 implementation checkpoint — complete and locally verified:** Added `src/lib/booking/readiness/flight-fare-review.ts` and store integration for explicit fare acceptance. Any amount or currency change requires acceptance, including a fare decrease. Acceptance is bound to the review/booking sessions, selected/refreshed offer identities, comparison baseline and exact current amount/currency. A new offer refresh or booking-session transition invalidates the acceptance. The user confirmed both focused suites, the full test suite, TypeScript and Expo lint passed, and pushed the verified changes to `main`.
+
 #### P4-03 — Seat price and disclosure acceptance
 
 - Track price acceptance independently for each seat-service component.
 - Track disclosure acknowledgement independently from price acceptance.
 - Allow both requirements to apply to the same seat.
 - Preserve acceptance for unrelated unchanged components.
+
+**P4-03 implementation checkpoint:** Added `src/lib/booking/readiness/seat-acceptance.ts` to derive per-seat requirements from the existing P3 seat-review outcome. Each requirement is bound to the review session, booking session, selected and refreshed offer IDs, service, provider passenger, segment and seat designator. A changed price and changed disclosures are separate acceptance requirements, so a seat can require both independently. Price acceptance is bound to the exact previous and current amount/currency; disclosure acknowledgement is bound to the exact previous and current disclosure content. Disclosure order alone does not invalidate acknowledgement.
+The Zustand store now keeps per-component price acceptances and disclosure acknowledgements, exposes actions to accept/acknowledge a specific current seat component, and reports whether all current seat requirements are satisfied. A new offer refresh, booking session, or cleared review lifecycle invalidates the relevant seat acceptances. A seat-only selection change does not discard acceptances for other components; they remain applicable only if the same exact component and current provider values are still present after validation. Unavailable seats cannot be accepted and continue to block review.
+Focused domain and store lifecycle suites are registered as `npm run test:seat-acceptance` and `npm run test:seat-booking-acceptance`. Local verification is pending.
 
 #### P4-04 — Pricing presentation and integration
 
