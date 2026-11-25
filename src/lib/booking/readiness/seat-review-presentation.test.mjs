@@ -209,7 +209,7 @@ test("rejects an inconsistent not-selected outcome with existing selections", ()
 				{ passengers: [passenger("p1", "pas_1")], relationships: [] },
 				offer(),
 			),
-		/\/not-selected seat outcome cannot be used with existing seat selections\//,
+		/not-selected seat outcome cannot be used with existing seat selections/,
 	)
 })
 
