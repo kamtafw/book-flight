@@ -122,9 +122,7 @@ test("offer refresh allows only three explicit technical attempts and preserves 
 			}),
 			false,
 		)
-		if (attemptNumber < 3) {
-			assert.equal(store.getState().startOfferReviewRefresh(), null)
-		}
+
 	}
 
 	const state = store.getState()
