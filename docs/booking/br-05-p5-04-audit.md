@@ -1,7 +1,7 @@
 # BR-05 P5-04: Acceptance-Criteria Audit
 
 **Branch:** `feat/br-05-p5-03-failure-recovery`  
-**Audit status:** Code-level audit complete; P5-04 local verification and manual integration matrix pending  
+**Audit status:** Code-level audit, local verification and manual integration matrix complete  
 **Scope:** The 28 acceptance criteria in `br-05-checkout-review.md`. This audit does not authorize a merge.
 
 ## Audit method
@@ -51,7 +51,7 @@ The initial audit identified three presentation issues and the implementation br
 2. **Itinerary completeness:** display airport names alongside codes, segment duration and operating carrier when it differs from the marketing carrier.
 3. **Refreshed provider data and local time:** render the normalized refreshed offer's descriptive itinerary data, not the original search metadata; preserve provider-local timestamp components for display instead of converting them to the device timezone.
 
-These corrections are committed on the P5 branch but have not yet been locally verified. The current normalized `FlightSegment` contract does not expose cabin class or airline-logo assets, so those optional details are not fabricated. If these become available in the provider mapping later, the review can display them.
+These corrections were locally verified by the user. The current normalized `FlightSegment` contract does not expose cabin class or airline-logo assets, so those optional details are not fabricated. If these become available in the provider mapping later, the review can display them.
 
 ## Verification still required
 
@@ -69,20 +69,22 @@ npx expo lint
 
 | Scenario | Expected result | Status |
 | --- | --- | --- |
-| Direct flight, no seats | One segment, no layover, no empty seat rows, fare-only total; Continue opens placeholder. | Pending user verification |
-| Connecting flight, no seats | Every segment and connection appears in order; layover duration is plausible and local departure/arrival times are correct. | Pending user verification |
-| Connecting flight, seats on multiple segments/passengers | Every seat appears under the correct passenger and segment. | Pending user verification |
+| Direct flight, no seats | One segment, no layover, no empty seat rows, fare-only total; Continue opens placeholder. | Verified by user |
+| Connecting flight, no seats | Every segment and connection appears in order; layover duration is plausible and local departure/arrival times are correct. | Verified by user |
+| Connecting flight, seats on multiple segments/passengers | Every seat appears under the correct passenger and segment. | Verified by user |
 | Changed flight fare | Previous/current fare visible; progression blocked until fare acceptance. | Provider-dependent; deterministic tests cover acceptance |
 | Changed seat price | Previous/current seat price visible; only that seat component requires acceptance. | Provider-dependent; deterministic tests cover acceptance |
 | Changed seat disclosures | Previous/current conditions visible; acknowledgement is separate from price acceptance. | Provider-dependent; deterministic tests cover acknowledgement |
 | Unavailable seat | Customer is sent to seat selection to replace/remove it; it is never silently removed. | Provider-dependent; deterministic tests cover outcome |
-| Passenger edit | Passenger data is preserved; return navigation is correct; offer/seat validations are reused only when still current. | Previously manually verified; repeat in final matrix |
+| Passenger edit | Passenger data is preserved; return navigation is correct; offer/seat validations are reused only when still current. | Verified by user |
 | Offer refresh technical failure | Explicit retries; third failure blocks progression without deleting draft. | P5-03 manually verified |
 | Seat validation technical failure | Explicit retries; third failure blocks progression while successful offer validation is retained. | P5-03 manually verified |
-| Payment boundary | Continue navigates to placeholder only; no order, reservation or payment action is initiated. | Pending final confirmation |
+| Payment boundary | Continue navigates to placeholder only; no order, reservation or payment action is initiated. | Verified by user |
 
-Provider-driven fare changes, seat-price changes, disclosure changes and seat unavailability may not be reproducible on demand with live inventory. Deterministic automated tests are the authoritative coverage for those outcomes; manual testing should verify the visible flow whenever the provider supplies a reproducible case.
+Provider-driven fare changes, seat-price changes, disclosure changes and seat unavailability may not be reproducible on demand with live inventory. Deterministic automated tests are the authoritative coverage for those outcomes; manual testing verified the applicable live flows available during this run. The user confirmed the full manual integration verification passed.
 
 ## Closeout decision
 
-The inspected code satisfies the acceptance criteria at the domain/store/route level, subject to the P5-04 presentation changes passing local checks and the remaining manual matrix being completed. Do not mark BR-05 fully closed or merge the branch until those checks are reported and the final diff has been reviewed.
+The user confirmed that `npm test`, `npx tsc --noEmit`, `npx expo lint` and manual integration verification all passed after the P5-04 changes. The 28-criterion audit is complete, the implementation notes reflect the verified behaviour, and the remaining provider-dependent cases are covered by deterministic automated tests where live inventory could not reliably produce them.
+
+**P5-04 is complete. BR-05 is ready for an explicit merge decision.** The branch remains unmerged; no merge has been performed.
