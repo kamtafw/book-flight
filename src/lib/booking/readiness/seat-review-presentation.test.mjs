@@ -175,6 +175,19 @@ test("presents unavailable seats with the provider's specific reason", () => {
 	assert.equal(groups[0].seats[0].currentAmount, null)
 })
 
+test("returns no seat rows when the current selection is empty but the previous validation outcome is stale", () => {
+	const previouslySelected = seat()
+	assert.deepEqual(
+		buildSeatReviewPresentation(
+			validOutcome([previouslySelected]),
+			[],
+			{ passengers: [passenger("p1", "pas_1")], relationships: [] },
+			offer(),
+		),
+		[],
+	)
+})
+
 test("returns no seat rows for an explicit not-selected outcome", () => {
 	assert.deepEqual(
 		buildSeatReviewPresentation(
