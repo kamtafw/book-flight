@@ -4,7 +4,10 @@ import { useCallback, useEffect, useMemo } from "react"
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
-import type { PassengerCollection } from "@/lib/booking/passengers/passenger-domain"
+import type {
+	PassengerCollection,
+	PassengerRelationship,
+} from "@/lib/booking/passengers/passenger-domain"
 import { isCheckoutReviewSessionCurrent } from "@/lib/booking/readiness/booking-session"
 import { buildCheckoutPricingPresentation } from "@/lib/booking/readiness/checkout-pricing-presentation"
 import { getCheckoutReviewEntryState } from "@/lib/booking/readiness/checkout-review"
@@ -475,9 +478,11 @@ function formatLayoverDuration(arrivalAt: string, departureAt: string): string |
 function PassengerAndItinerarySection({
 	flight,
 	passengers,
+	relationships,
 }: {
 	flight: FlightOffer | undefined
 	passengers: PassengerCollection | null
+	relationships: PassengerRelationship[]
 }) {
 	const passengerName = (passenger: NonNullable<typeof passengers>["passengers"][number]) => {
 		const name = [
@@ -500,12 +505,49 @@ function PassengerAndItinerarySection({
 							{passenger.category}
 						</Text>
 					</View>
-					{passenger.contacts.map((contact) => (
-						<Text key={contact.id} className="mt-2 font-inter text-xs text-gray-200">
-							{contact.type === "email" ? "Email" : "Phone"}: {contact.value}
-							{contact.belongsTo === "other" ? " · supplied by another contact" : ""}
+					{passenger.identity.title ||
+					passenger.identity.dateOfBirth ||
+					passenger.identity.gender ||
+					passenger.identity.nationality ? (
+						<Text className="mt-2 font-inter text-xs leading-5 text-gray-200">
+							{[
+								passenger.identity.title,
+								passenger.identity.gender,
+								passenger.identity.dateOfBirth
+									? `Date of birth: ${passenger.identity.dateOfBirth}`
+									: null,
+								passenger.identity.nationality
+									? `Nationality: ${passenger.identity.nationality}`
+									: null,
+							]
+								.filter((value): value is string => Boolean(value?.trim()))
+								.join(" · ")}
 						</Text>
-					))}
+					) : null}
+					{passenger.contacts.map((contact) => {
+						const relatedPerson = contact.relatedPersonPassengerId
+							? passengers?.passengers.find(
+									(candidate) => candidate.id === contact.relatedPersonPassengerId,
+								)
+							: null
+						const relatedName = relatedPerson
+							? [
+									relatedPerson.identity.givenName,
+									relatedPerson.identity.middleName,
+									relatedPerson.identity.familyName,
+								]
+									.filter((part): part is string => Boolean(part?.trim()))
+									.join(" ")
+							: ""
+						return (
+							<Text key={contact.id} className="mt-2 font-inter text-xs text-gray-200">
+								{contact.type === "email" ? "Email" : "Phone"}: {contact.value}
+								{contact.belongsTo === "other"
+									? ` · belongs to ${relatedName || "another contact"}`
+									: " · belongs to this passenger"}
+							</Text>
+						)
+					})}
 					{passenger.travelDocuments.map((document) => (
 						<View key={document.id} className="mt-2 border-t border-border pt-2">
 							<Text className="font-inter-medium text-xs text-black">
@@ -537,15 +579,25 @@ function PassengerAndItinerarySection({
 									{segment.departureAirportCode} → {segment.arrivalAirportCode}
 								</Text>
 								<Text className="mt-1 font-inter text-xs text-gray-200">
-									{segment.marketingCarrierName} · {segment.marketingCarrierCode}{" "}
-									{segment.flightNumber}
+									{segment.marketingCarrierName} · {segment.flightNumber}
+								</Text>
+								{segment.operatingCarrierName &&
+								segment.operatingCarrierName !== segment.marketingCarrierName ? (
+									<Text className="mt-1 font-inter text-xs text-gray-200">
+										Operated by {segment.operatingCarrierName}
+									</Text>
+								) : null}
+								<Text className="mt-1 font-inter text-xs text-gray-200">
+									{segment.departureAirportName} ({segment.departureAirportCode}) ·{" "}
+									{new Date(segment.departureAt).toLocaleString()}
 								</Text>
 								<Text className="mt-1 font-inter text-xs text-gray-200">
-									{new Date(segment.departureAt).toLocaleString()} –{" "}
+									{segment.arrivalAirportName} ({segment.arrivalAirportCode}) ·{" "}
 									{new Date(segment.arrivalAt).toLocaleString()}
 								</Text>
 								<Text className="mt-1 font-inter text-xs text-gray-200">
 									Flight segment {index + 1}
+									{segment.duration ? ` · ${segment.duration}` : ""}
 								</Text>
 							</View>
 							{layover ? (
@@ -727,10 +779,16 @@ export default function CheckoutReviewScreen() {
 		})
 		return labels
 	}, [flightId, passengerCollection])
+	const reviewedOffer =
+		currentLifecycle?.outcome &&
+		(currentLifecycle.outcome.status === "valid" ||
+			currentLifecycle.outcome.status === "price_changed")
+			? currentLifecycle.outcome.currentOffer
+			: flight
 	const segmentLabels = useMemo(() => {
 		const labels: Record<string, string> = {}
 		let index = 0
-		flight?.slices.forEach((slice) => {
+		reviewedOffer?.slices.forEach((slice) => {
 			slice.segments.forEach((segment) => {
 				index += 1
 				labels[segment.id] =
@@ -738,7 +796,7 @@ export default function CheckoutReviewScreen() {
 			})
 		})
 		return labels
-	}, [flight])
+	}, [reviewedOffer])
 	const pricingPresentation = useMemo(
 		() =>
 			buildCheckoutPricingPresentation({
@@ -766,7 +824,7 @@ export default function CheckoutReviewScreen() {
 			selectedSeats.length === 0 ||
 			!currentSeatLifecycle?.outcome ||
 			!passengerCollection ||
-			!flight ||
+			!reviewedOffer ||
 			currentSeatLifecycle.outcome.status === "not_selected"
 		) {
 			return []
@@ -775,9 +833,9 @@ export default function CheckoutReviewScreen() {
 			currentSeatLifecycle.outcome,
 			selectedSeats,
 			passengerCollection,
-			flight,
+			reviewedOffer,
 		)
-	}, [currentSeatLifecycle, flight, passengerCollection, selectedSeats])
+	}, [currentSeatLifecycle, reviewedOffer, passengerCollection, selectedSeats])
 
 	useFocusEffect(
 		useCallback(() => {
@@ -1170,7 +1228,11 @@ export default function CheckoutReviewScreen() {
 					</View>
 				)}
 
-				<PassengerAndItinerarySection flight={flight} passengers={passengerCollection} />
+				<PassengerAndItinerarySection
+					flight={reviewedOffer}
+					passengers={passengerCollection}
+					relationships={passengerCollection?.relationships ?? []}
+				/>
 
 				<SeatReviewSection groups={seatReviewGroups} notSelected={selectedSeats.length === 0} />
 
