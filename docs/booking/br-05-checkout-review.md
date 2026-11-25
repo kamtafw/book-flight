@@ -1118,6 +1118,12 @@ Implement the complete pricing and acceptance contract.
 - Allow both requirements to apply to the same seat.
 - Preserve acceptance for unrelated unchanged components.
 
+**P4-03 implementation checkpoint:** Added `src/lib/booking/readiness/seat-acceptance.ts` to derive per-seat requirements from the existing P3 seat-review outcome. Each requirement is bound to the review session, booking session, selected and refreshed offer IDs, service, provider passenger, segment and seat designator. A changed price and changed disclosures are separate acceptance requirements, so a seat can require both independently. Price acceptance is bound to the exact previous and current amount/currency; disclosure acknowledgement is bound to the exact previous and current disclosure content. Disclosure order alone does not invalidate acknowledgement.
+
+The Zustand store now keeps per-component price acceptances and disclosure acknowledgements, exposes actions to accept/acknowledge a specific current seat component, and reports whether all current seat requirements are satisfied. A new offer refresh, booking session, or cleared review lifecycle invalidates the relevant seat acceptances. A seat-only selection change does not discard acceptances for other components; they remain applicable only if the same exact component and current provider values are still present after validation. Unavailable seats cannot be accepted and continue to block review.
+
+Focused domain and store lifecycle suites are registered as `npm run test:seat-acceptance` and `npm run test:seat-booking-acceptance`. Local verification is pending.
+
 #### P4-04 — Pricing presentation and integration
 
 - Present the consolidated pricing breakdown and individual changed components.
