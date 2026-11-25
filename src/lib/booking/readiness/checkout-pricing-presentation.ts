@@ -30,6 +30,7 @@ export interface CheckoutSeatPricingLine {
 	priceAccepted: boolean
 	disclosureAcknowledgementRequired: boolean
 	disclosuresAcknowledged: boolean
+	passengerAssociationResolved: boolean
 	previousDisclosures: string[]
 	currentDisclosures: string[]
 }
@@ -85,8 +86,9 @@ export function buildCheckoutPricingPresentation(
 
 	const seatLines: CheckoutSeatPricingLine[] = requirements.map((requirement) => {
 		const componentKey = createSeatAcceptanceComponentKey(requirement.identity)
-		const passengerLabel =
-			input.passengerLabels?.[requirement.identity.passengerId] ?? "Passenger"
+		const resolvedPassengerLabel = input.passengerLabels?.[requirement.identity.passengerId]
+		const passengerAssociationResolved = Boolean(resolvedPassengerLabel?.trim())
+		const passengerLabel = resolvedPassengerLabel ?? "Passenger association needs attention"
 		const segmentLabel =
 			input.segmentLabels?.[requirement.identity.segmentId] ?? "Flight segment"
 		const label = `${passengerLabel} · ${segmentLabel} · Seat ${requirement.identity.seatDesignator}`
@@ -104,6 +106,7 @@ export function buildCheckoutPricingPresentation(
 				priceAccepted: false,
 				disclosureAcknowledgementRequired: false,
 				disclosuresAcknowledged: false,
+				passengerAssociationResolved,
 				previousDisclosures: [...requirement.selection.selection.disclosures],
 				currentDisclosures: [],
 			}
@@ -136,6 +139,7 @@ export function buildCheckoutPricingPresentation(
 			disclosuresAcknowledged:
 				!requirement.disclosureAcknowledgementRequired ||
 				isSeatDisclosureAcknowledgementCurrent(requirement, disclosureAcknowledgement),
+			passengerAssociationResolved,
 			previousDisclosures:
 				"previousDisclosures" in requirement
 					? [...requirement.previousDisclosures]
@@ -179,7 +183,11 @@ export function buildCheckoutPricingPresentation(
 		input.seatPriceAcceptances,
 		input.seatDisclosureAcknowledgements,
 	)
-	const allAcceptancesSatisfied = flightFare.accepted && seatRequirementsSatisfied
+	const allPassengerAssociationsResolved = seatLines.every(
+		(line) => line.passengerAssociationResolved,
+	)
+	const allAcceptancesSatisfied =
+		flightFare.accepted && seatRequirementsSatisfied && allPassengerAssociationsResolved
 
 	if (pricing.status === "mixed_currency") {
 		return {
