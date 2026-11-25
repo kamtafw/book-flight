@@ -126,6 +126,27 @@ function snapshotMoney(money: Money): Money {
 	return { ...money }
 }
 
+function validateCurrentSeatIdentity(
+	selection: SeatReviewSelectionOutcome["selection"],
+	current: {
+		serviceId: string
+		passengerId: string
+		segmentId: string
+		seatDesignator: string
+		disclosures: string[]
+	},
+): void {
+	if (
+		current.serviceId !== selection.id ||
+		current.passengerId !== selection.passengerId ||
+		current.segmentId !== selection.segmentId ||
+		current.seatDesignator !== selection.seatDesignator
+	) {
+		throw new Error("Current seat details do not match the selected seat identity.")
+	}
+	validateDisclosures(current.disclosures)
+}
+
 function sameIdentity(left: SeatAcceptanceIdentity, right: SeatAcceptanceIdentity): boolean {
 	return (
 		left.reviewSessionId === right.reviewSessionId &&
@@ -186,6 +207,9 @@ export function createSeatAcceptanceRequirements(
 			seatDesignator: selection.seatDesignator,
 		})
 		const componentKey = createSeatAcceptanceComponentKey(identity)
+		if (selectionOutcome.status !== "unavailable") {
+			validateCurrentSeatIdentity(selection, selectionOutcome.current)
+		}
 
 		switch (selectionOutcome.status) {
 			case "valid":
