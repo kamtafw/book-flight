@@ -1199,7 +1199,7 @@ P5 is a final integration and verification pass, not an invitation to add new pr
 - Complete the manual integration matrix for direct and connecting flights, with and without seats, price/disclosure acceptance, unavailable seats, passenger edits and recovery.
 - Confirm that the app proceeds only to the existing payment placeholder and performs no order creation, reservation or payment operation.
 - Record provider-dependent scenarios that cannot be reproduced manually and rely on deterministic automated coverage for those outcomes.
-- Update this contract and the implementation notes to reflect verified behaviour and known limitations.
+- Update this contract and the implementation notes to reflect verified behaviour and known limitations. **Complete:** the audit and implementation notes record the verified presentation behaviour and the provider-dependent cases covered deterministically.
 
 **P5-04 audit findings and implementation follow-up**
 
@@ -1207,11 +1207,11 @@ The initial code audit identified presentation gaps against the approved Checkou
 
 The itinerary and seat segment labels now use the successfully refreshed offer returned by BR-02, so harmless provider metadata changes are reflected in the review rather than leaving the original search metadata on screen. Provider timestamps are formatted using their supplied local wall-clock components; layover durations continue to use the absolute timestamps and are omitted when timezone information is insufficient.
 
-The criterion-by-criterion code audit is recorded in `docs/booking/br-05-p5-04-audit.md`. The code changes in this follow-up have not yet been locally verified. The full P5-04 test and manual integration matrix remains pending.
+The criterion-by-criterion code audit is recorded in `docs/booking/br-05-p5-04-audit.md`. The user confirmed that the full automated test suite, TypeScript check, Expo lint and manual integration verification all passed after the presentation follow-up.
 
-**Current status:** Implementation follow-up added; local verification and manual integration audit pending.
+**Current status:** P5-04 implementation, local verification and manual integration audit complete. BR-05 is ready for an explicit merge decision.
 
-**Exit:** All 28 acceptance criteria are verified, the full test/type/lint checks pass, documentation reflects the actual implementation, and BR-05 is ready for an explicit merge decision. No merge occurs without your approval.
+**Exit:** All 28 acceptance criteria have been audited against the implementation; the user confirmed all automated checks and manual integration verification passed. Documentation reflects the implementation and known provider-dependent limitations. BR-05 is ready for an explicit merge decision. No merge occurs without your approval.
 
 Each checkpoint should be committed and pushed for your review. We should agree on its exact task breakdown before implementation, and no checkpoint should be merged without your approval.
 
