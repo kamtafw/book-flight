@@ -494,6 +494,15 @@ function PassengerAndItinerarySection({
 			.join(" ")
 		return name || "Name not supplied"
 	}
+	const responsibleAdultName = (infantPassengerId: string) => {
+		const relationship = relationships.find(
+			(item) => item.type === "responsible_adult" && item.passengerId === infantPassengerId,
+		)
+		const adult = relationship
+			? passengers?.passengers.find((item) => item.id === relationship.relatedPassengerId)
+			: null
+		return adult ? passengerName(adult) : "Not assigned"
+	}
 	return (
 		<View className="mt-5 rounded-2xl border border-border bg-white p-4">
 			<Text className="font-inter-semibold text-base text-black">Passengers</Text>
@@ -505,6 +514,11 @@ function PassengerAndItinerarySection({
 							{passenger.category}
 						</Text>
 					</View>
+					{passenger.category === "infant" ? (
+						<Text className="mt-2 font-inter text-xs text-gray-200">
+							Responsible adult: {responsibleAdultName(passenger.id)}
+						</Text>
+					) : null}
 					{passenger.identity.title ||
 					passenger.identity.dateOfBirth ||
 					passenger.identity.gender ||
