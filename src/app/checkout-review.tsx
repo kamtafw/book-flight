@@ -655,7 +655,10 @@ export default function CheckoutReviewScreen() {
 
 	const flightFareReview = getCurrentFlightFareReview()
 	const currentSeatRequirements = getCurrentSeatAcceptanceRequirements()
-	const flightFareAccepted = isCurrentFlightFareAccepted()
+	const flightFareAccepted = useMemo(
+		() => isCurrentFlightFareAccepted(),
+		[flightFareAcceptance, isCurrentFlightFareAccepted],
+	)
 	const passengerLabels = useMemo(() => {
 		const labels: Record<string, string> = {}
 		passengerCollection?.passengers.forEach((passenger) => {
@@ -698,7 +701,6 @@ export default function CheckoutReviewScreen() {
 			currentSeatRequirements,
 			flightFareAccepted,
 			flightFareReview,
-			flightFareAcceptance,
 			passengerLabels,
 			seatDisclosureAcknowledgements,
 			seatPriceAcceptances,
