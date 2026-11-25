@@ -229,7 +229,11 @@ function resolveCurrentSeatAcceptanceRequirements(
 		seatLifecycle.reviewSessionId !== reviewSession.id ||
 		seatLifecycle.bookingSessionId !== bookingSession.id ||
 		seatLifecycle.offerId !== reviewSession.offerId ||
-		(seatLifecycle.status !== "not_selected" && seatLifecycle.status !== "valid" && seatLifecycle.status !== "action_required") ||
+		(
+			seatLifecycle.status !== "not_selected" &&
+			seatLifecycle.status !== "valid" &&
+			seatLifecycle.status !== "action_required"
+		) ||
 		seatLifecycle.snapshotKey !== createSeatReviewSnapshotKey(state.selectedOutboundSeatServices)
 	) {
 		return null
