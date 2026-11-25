@@ -76,7 +76,7 @@ function prepareReview() {
 }
 
 function startOfferFailure(store, message = "Network unavailable") {
-	const attempt = store.getState().startOfferReviewRefresh()
+	const attempt = store.getState().startOfferReviewRefresh(undefined, true)
 	assert.ok(attempt)
 	assert.equal(store.getState().failOfferReviewRefresh(attempt, message), true)
 	return store.getState().offerReviewLifecycle
@@ -123,8 +123,7 @@ test("offer refresh allows only three explicit technical attempts and preserves 
 			false,
 		)
 		if (attemptNumber < 3) {
-			const retry = store.getState().startOfferReviewRefresh()
-			assert.equal(retry?.attemptNumber, attemptNumber + 1)
+			assert.equal(store.getState().startOfferReviewRefresh(), null)
 		}
 	}
 
