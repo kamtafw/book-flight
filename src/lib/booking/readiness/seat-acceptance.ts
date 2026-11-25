@@ -140,7 +140,7 @@ function sameIdentity(left: SeatAcceptanceIdentity, right: SeatAcceptanceIdentit
 }
 
 function canonicalDisclosures(disclosures: string[]): string[] {
-	return [...disclosures].sort((a, b) => a.localeCompare(b))
+	return [...disclosures].sort()
 }
 
 function sameDisclosureSet(left: string[], right: string[]): boolean {
@@ -175,6 +175,9 @@ export function createSeatAcceptanceRequirements(
 
 	return outcome.selections.map((selectionOutcome) => {
 		const selection = selectionOutcome.selection
+		if (selection.offerId !== context.selectedOfferId) {
+			throw new Error("Seat selection does not belong to the selected offer.")
+		}
 		const identity = validateIdentity({
 			...context,
 			serviceId: selection.id,
