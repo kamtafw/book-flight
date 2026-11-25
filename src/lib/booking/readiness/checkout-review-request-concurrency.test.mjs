@@ -100,6 +100,11 @@ function deferred() {
 	return { promise, resolve, reject }
 }
 
+function startFreshOfferRefresh(store) {
+	store.getState().clearOfferReviewLifecycle()
+	return store.getState().startOfferReviewRefresh()
+}
+
 function startNewOfferReview(store, offer) {
 	store.getState().beginBookingSession({ id: offer.id })
 	store.getState().initializePassengerCollection(offer)
@@ -167,10 +172,8 @@ test("a stale seat-validation callback cannot start work for a replaced seat sna
 
 test("overlapping review focus events cannot start duplicate provider requests", () => {
 	const { store, offer } = prepareReview()
-	const offerAttempt = store.getState().startOfferReviewRefresh()
-	assert.ok(offerAttempt)
 	assert.equal(store.getState().startOfferReviewRefresh(), null)
-	assert.equal(store.getState().offerReviewLifecycle.attemptId, offerAttempt.attemptId)
+	assert.equal(store.getState().offerReviewLifecycle.status, "ready")
 
 	const selected = makeSeat("12A")
 	store.getState().selectOutboundSeatService(selected)
@@ -180,9 +183,18 @@ test("overlapping review focus events cannot start duplicate provider requests",
 	assert.equal(store.getState().seatReviewLifecycle.attemptId, seatAttempt.attempt.attemptId)
 })
 
+test("overlapping refresh starts cannot create two in-flight attempts", () => {
+	const { store } = prepareReview()
+	const firstAttempt = startFreshOfferRefresh(store)
+	assert.ok(firstAttempt)
+	assert.equal(store.getState().startOfferReviewRefresh(), null)
+	assert.equal(store.getState().offerReviewLifecycle.attemptId, firstAttempt.attemptId)
+	assert.equal(store.getState().offerReviewLifecycle.status, "refreshing")
+})
+
 test("a delayed offer-refresh success from an earlier booking cannot replace the current attempt", async () => {
 	const { store, offer } = prepareReview()
-	const oldAttempt = store.getState().startOfferReviewRefresh()
+	const oldAttempt = startFreshOfferRefresh(store)
 	assert.ok(oldAttempt)
 	const pending = deferred()
 	const oldRequest = pending.promise.then((response) =>
