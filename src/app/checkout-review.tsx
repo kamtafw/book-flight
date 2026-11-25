@@ -935,7 +935,10 @@ export default function CheckoutReviewScreen() {
 		)
 	}
 
-	if (currentSeatLifecycle?.status === "action_required") {
+	if (
+		currentSeatLifecycle?.status === "action_required" &&
+		currentSeatRequirements?.some((requirement) => requirement.status === "unavailable")
+	) {
 		return (
 			<SafeAreaView className="flex-1 bg-background">
 				<ScrollView className="flex-1 px-6 pt-8" contentContainerStyle={{ paddingBottom: 32 }}>
