@@ -463,6 +463,20 @@ function maskDocumentNumber(value: string | undefined): string {
 	return normalized.length <= 4 ? "••••" : `••••${normalized.slice(-4)}`
 }
 
+function formatProviderLocalDateTime(value: string): string {
+	const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(value)
+	if (!match) return "Time unavailable"
+	const [, year, month, day, hour, minute] = match
+	const providerLocalTime = new Date(
+		Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute)),
+	)
+	return new Intl.DateTimeFormat(undefined, {
+		dateStyle: "medium",
+		timeStyle: "short",
+		timeZone: "UTC",
+	}).format(providerLocalTime)
+}
+
 function formatLayoverDuration(arrivalAt: string, departureAt: string): string | null {
 	const hasExplicitTimezone = (value: string) => /(?:Z|[+-]\d{2}:\d{2})$/i.test(value)
 	if (!hasExplicitTimezone(arrivalAt) || !hasExplicitTimezone(departureAt)) return null
@@ -603,11 +617,11 @@ function PassengerAndItinerarySection({
 								) : null}
 								<Text className="mt-1 font-inter text-xs text-gray-200">
 									{segment.departureAirportName} ({segment.departureAirportCode}) ·{" "}
-									{new Date(segment.departureAt).toLocaleString()}
+									{formatProviderLocalDateTime(segment.departureAt)}
 								</Text>
 								<Text className="mt-1 font-inter text-xs text-gray-200">
 									{segment.arrivalAirportName} ({segment.arrivalAirportCode}) ·{" "}
-									{new Date(segment.arrivalAt).toLocaleString()}
+									{formatProviderLocalDateTime(segment.arrivalAt)}
 								</Text>
 								<Text className="mt-1 font-inter text-xs text-gray-200">
 									Flight segment {index + 1}
