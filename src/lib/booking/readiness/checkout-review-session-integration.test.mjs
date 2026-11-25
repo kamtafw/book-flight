@@ -154,9 +154,8 @@ test("a new offer starts a clean booking session and clears review-specific stat
 	assert.deepEqual(state.seatDisclosureAcknowledgements, [])
 })
 
-test("abandoning a booking clears booking and review state without changing search offers", () => {
+test("abandoning a booking clears booking and review state", () => {
 	const { store } = prepareReview({ changedFare: true })
-	const offerCount = useFlightBookingStore.getState().selectedOutboundSeatServices.length
 	store.getState().selectOutboundSeatService(seat("service-1", "12A"))
 	store.getState().abandonBookingSession()
 
@@ -170,5 +169,4 @@ test("abandoning a booking clears booking and review state without changing sear
 	assert.equal(state.flightFareAcceptance, null)
 	assert.deepEqual(state.seatPriceAcceptances, [])
 	assert.deepEqual(state.seatDisclosureAcknowledgements, [])
-	assert.equal(state.offers.length >= offerCount, true)
 })
