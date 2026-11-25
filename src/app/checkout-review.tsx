@@ -15,7 +15,7 @@ import {
 import { buildCheckoutPricingPresentation } from "@/lib/booking/readiness/checkout-pricing-presentation"
 import { createSeatReviewOutcome } from "@/lib/booking/readiness/seat-review"
 import { buildSeatReviewPresentation, type SeatReviewPresentationGroup } from "@/lib/booking/readiness/seat-review-presentation"
-import { isSeatReviewLifecycleForSession } from "@/lib/booking/readiness/seat-review-lifecycle"
+import { createSeatReviewSnapshotKey, isSeatReviewLifecycleForSession } from "@/lib/booking/readiness/seat-review-lifecycle"
 import { refreshOffer, validateSeatServices } from "@/lib/flights/api"
 import type { PassengerCollection } from "@/lib/booking/passengers/passenger-domain"
 import type { FlightOffer } from "@/lib/flights/types"
@@ -595,8 +595,8 @@ export default function CheckoutReviewScreen() {
 	const currentLifecycle = lifecycleMatchesSession ? offerReviewLifecycle : null
 
 	const runOfferRefresh = useCallback(async () => {
-		if (!flight) return
-		const attempt = startOfferReviewRefresh()
+		if (!flight || !reviewIdentity || flight.id !== reviewIdentity.offerId) return
+		const attempt = startOfferReviewRefresh(reviewIdentity)
 		if (!attempt) return
 
 		try {
@@ -608,17 +608,21 @@ export default function CheckoutReviewScreen() {
 				error instanceof Error ? error.message : "We couldn't verify this flight. Please try again."
 			failOfferReviewRefresh(attempt, message)
 		}
-	}, [completeOfferReviewRefresh, failOfferReviewRefresh, flight, startOfferReviewRefresh])
+	}, [completeOfferReviewRefresh, failOfferReviewRefresh, flight, reviewIdentity, startOfferReviewRefresh])
 
 	const runSeatValidation = useCallback(
 		async (retry = false) => {
-			if (!flightId || !currentLifecycle?.outcome) return
+			if (!flightId || !reviewIdentity || !currentLifecycle?.outcome) return
 			const offerOutcome = currentLifecycle.outcome
 			if (offerOutcome.status !== "valid" && offerOutcome.status !== "price_changed") return
 			const offerExpiry = offerOutcome.currentOffer.expiresAt
 			const offerExpiryTime = offerExpiry ? Date.parse(offerExpiry) : Number.NaN
 			if (!Number.isFinite(offerExpiryTime) || offerExpiryTime <= Date.now()) return
-			const start = startSeatReviewValidation(offerOutcome.currentOffer.expiresAt, retry)
+			const start = startSeatReviewValidation(offerOutcome.currentOffer.expiresAt, retry, {
+				...reviewIdentity,
+				snapshotKey: createSeatReviewSnapshotKey(selectedSeats),
+				offerReviewAttemptId: currentLifecycle.attemptId,
+			})
 			if (start.kind !== "started" || !start.attempt) return
 
 			try {
@@ -636,6 +640,7 @@ export default function CheckoutReviewScreen() {
 		[
 			completeSeatReviewValidation,
 			currentLifecycle,
+			reviewIdentity,
 			failSeatReviewValidation,
 			flightId,
 			selectedSeats,
