@@ -76,7 +76,7 @@ function prepareReview() {
 }
 
 function startOfferFailure(store, message = "Network unavailable") {
-	const attempt = store.getState().startOfferReviewRefresh(undefined, true)
+	const attempt = store.getState().startOfferReviewRefresh()
 	assert.ok(attempt)
 	assert.equal(store.getState().failOfferReviewRefresh(attempt, message), true)
 	return store.getState().offerReviewLifecycle
@@ -106,6 +106,7 @@ test("offer refresh allows only three explicit technical attempts and preserves 
 	const passengerId = store.getState().passengerCollection.passengers[0].id
 	store.getState().updatePassengerIdentity(passengerId, { givenName: "Tiva" })
 	store.getState().selectOutboundSeatService(makeSeat())
+	store.getState().clearOfferReviewLifecycle()
 
 	for (let attemptNumber = 1; attemptNumber <= 3; attemptNumber += 1) {
 		const lifecycle = startOfferFailure(store)
@@ -139,6 +140,7 @@ test("returning to search clears failed validation state but preserves the draft
 	const passengerId = store.getState().passengerCollection.passengers[0].id
 	store.getState().updatePassengerIdentity(passengerId, { givenName: "Tiva" })
 	store.getState().selectOutboundSeatService(makeSeat())
+	store.getState().clearOfferReviewLifecycle()
 	startOfferFailure(store)
 
 	const before = store.getState()
