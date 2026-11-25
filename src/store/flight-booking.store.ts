@@ -338,6 +338,8 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 			offerReviewLifecycle: null,
 			seatReviewLifecycle: null,
 			flightFareAcceptance: null,
+			seatPriceAcceptances: [],
+			seatDisclosureAcknowledgements: [],
 		})
 		return next.activeBookingSession!.id
 	},
