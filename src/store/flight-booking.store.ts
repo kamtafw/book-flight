@@ -73,7 +73,7 @@ interface FlightBookingState {
 
 	beginBookingSession: (offer: Pick<FlightOffer, "id">) => string
 	getOrCreateCheckoutReviewSession: (offerId: string) => CheckoutReviewSession | null
-	startOfferReviewRefresh: (expectedIdentity?: OfferReviewLifecycleIdentity) => OfferReviewAttempt | null
+	startOfferReviewRefresh: (expectedIdentity?: OfferReviewLifecycleIdentity, force?: boolean) => OfferReviewAttempt | null
 	completeOfferReviewRefresh: (attempt: OfferReviewAttempt, outcome: OfferReviewOutcome) => boolean
 	failOfferReviewRefresh: (attempt: OfferReviewAttempt, message: string) => boolean
 	clearOfferReviewLifecycle: () => void
@@ -367,7 +367,7 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 		return next
 	},
 
-	startOfferReviewRefresh: (expectedIdentity) => {
+	startOfferReviewRefresh: (expectedIdentity, force = false) => {
 		const state = get()
 		const reviewSession = state.checkoutReviewSession
 		const bookingSession = state.activeBookingSession
@@ -403,7 +403,7 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 				return null
 			}
 			if (
-				expectedIdentity &&
+				!force &&
 				(current.status === "ready" || current.status === "price_changed") &&
 				!shouldStartOfferReviewRefresh(current, identity)
 			) {
