@@ -703,6 +703,7 @@ export default function CheckoutReviewScreen() {
 
 	const seatReviewGroups = useMemo(() => {
 		if (
+			selectedSeats.length === 0 ||
 			!currentSeatLifecycle?.outcome ||
 			!passengerCollection ||
 			!flight ||
@@ -1111,7 +1112,7 @@ export default function CheckoutReviewScreen() {
 
 				<SeatReviewSection
 					groups={seatReviewGroups}
-					notSelected={currentSeatLifecycle?.status === "not_selected"}
+					notSelected={selectedSeats.length === 0}
 				/>
 
 				<CheckoutPricingSection
