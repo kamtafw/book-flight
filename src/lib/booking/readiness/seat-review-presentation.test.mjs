@@ -139,10 +139,7 @@ test("does not guess passenger ownership when provider references are missing or
 		validOutcome([selected]),
 		[selected],
 		{
-			passengers: [
-				passenger("p1", "pas_1"),
-				passenger("p2", "pas_1"),
-			],
+			passengers: [passenger("p1", "pas_1"), passenger("p2", "pas_1")],
 			relationships: [],
 		},
 		offer(),
@@ -175,6 +172,19 @@ test("presents unavailable seats with the provider's specific reason", () => {
 	assert.equal(groups[0].seats[0].currentAmount, null)
 })
 
+test("returns no seat rows when the current selection is empty but the previous validation outcome is stale", () => {
+	const previouslySelected = seat()
+	assert.deepEqual(
+		buildSeatReviewPresentation(
+			validOutcome([previouslySelected]),
+			[],
+			{ passengers: [passenger("p1", "pas_1")], relationships: [] },
+			offer(),
+		),
+		[],
+	)
+})
+
 test("returns no seat rows for an explicit not-selected outcome", () => {
 	assert.deepEqual(
 		buildSeatReviewPresentation(
@@ -196,7 +206,7 @@ test("rejects an inconsistent not-selected outcome with existing selections", ()
 				{ passengers: [passenger("p1", "pas_1")], relationships: [] },
 				offer(),
 			),
-		/not-selected seat outcome cannot contain/,
+		/not-selected seat outcome cannot be used with existing seat selections/,
 	)
 })
 

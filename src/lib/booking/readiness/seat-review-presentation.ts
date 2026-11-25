@@ -40,7 +40,9 @@ function passengerDisplayName(
 	]
 		.filter((part): part is string => Boolean(part?.trim()))
 		.join(" ")
-	return name || `${passenger.category === "unknown" ? "Passenger" : passenger.category} ${index + 1}`
+	return (
+		name || `${passenger.category === "unknown" ? "Passenger" : passenger.category} ${index + 1}`
+	)
 }
 
 function getSegmentLabels(offer: FlightOffer): Map<string, string> {
@@ -63,14 +65,16 @@ function selectionForOutcome(
 	selection: SelectedSeatService,
 ): SeatReviewSelectionOutcome | null {
 	if (outcome.status === "not_selected") return null
-	return outcome.selections.find(
-		(item) =>
-			item.selection.id === selection.id &&
-			item.selection.offerId === selection.offerId &&
-			item.selection.passengerId === selection.passengerId &&
-			item.selection.segmentId === selection.segmentId &&
-			item.selection.seatDesignator === selection.seatDesignator,
-	) ?? null
+	return (
+		outcome.selections.find(
+			(item) =>
+				item.selection.id === selection.id &&
+				item.selection.offerId === selection.offerId &&
+				item.selection.passengerId === selection.passengerId &&
+				item.selection.segmentId === selection.segmentId &&
+				item.selection.seatDesignator === selection.seatDesignator,
+		) ?? null
+	)
 }
 
 /**
@@ -85,14 +89,16 @@ export function buildSeatReviewPresentation(
 	offer: FlightOffer,
 ): SeatReviewPresentationGroup[] {
 	if (outcome.status === "not_selected") {
-		if (selections.length !== 0 || outcome.selections.length !== 0) {
-			throw new Error("A not-selected seat outcome cannot contain seat selections.")
+		if (selections.length > 0 || outcome.selections.length > 0) {
+			throw new Error("A not-selected seat outcome cannot be used with existing seat selections.")
 		}
 		return []
 	}
-	if (selections.length === 0) {
-		throw new Error("A seat validation outcome requires at least one selected seat.")
-	}
+
+	// Seat selection can change before the focus effect replaces the previous
+	// validation outcome. The current selection is authoritative for presentation:
+	// never render stale seat rows while the new empty snapshot is being recorded.
+	if (selections.length === 0) return []
 
 	const segmentLabels = getSegmentLabels(offer)
 	const passengerMatchesForSelection = (selection: SelectedSeatService) =>
@@ -147,9 +153,7 @@ export function buildSeatReviewPresentation(
 					const matches = passengerMatchesForSelection(selection)
 					return matches.length === 1 && matches[0].passenger.id === passenger.id
 				})
-				.map((selection) =>
-					createRow(selection, passenger.id, passengerLabel, passenger.category),
-				)
+				.map((selection) => createRow(selection, passenger.id, passengerLabel, passenger.category))
 			return {
 				passengerId: passenger.id,
 				passengerLabel,
@@ -170,12 +174,7 @@ export function buildSeatReviewPresentation(
 			passengerCategory: null,
 			associationWarning: true,
 			seats: unmatched.map((selection) =>
-				createRow(
-					selection,
-					null,
-					"Passenger association needs attention",
-					null,
-				),
+				createRow(selection, null, "Passenger association needs attention", null),
 			),
 		})
 	}

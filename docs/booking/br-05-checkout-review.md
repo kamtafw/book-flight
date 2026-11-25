@@ -1,6 +1,6 @@
 # BR-05: Checkout Review Contract
 
-**Status:** Approved; P1, P2, and P3 complete; P4 in progress  
+**Status:** Approved; P1, P2, P3, and P4 complete; P5 in progress  
 **Scope:** Checkout Review for the current one-way booking flow, including connecting itineraries with multiple segments  
 **Depends on:** BR-01 checkout contract, BR-02 offer refresh/validation, BR-03 seat-service validation, and BR-04 passenger domain, provider-validation, readiness, and lifecycle work  
 **Current-flow boundary:** The current search implementation creates one-way offers. BR-05 must display every segment within the selected journey, including connections, but must not introduce round-trip or multi-city search support.
@@ -902,9 +902,9 @@ These are the proposed completion criteria for BR-05.
 | BR05-27 | Review validation results cannot be reused across unrelated booking sessions.                                                                                                                                           |
 | BR05-28 | No order, payment, ticket issuance or booking confirmation is created by BR-05.                                                                                                                                         |
 
-## 12.1 Implementation progress
+### 12.1 Implementation progress
 
-### P1: Review foundation — complete
+#### P1: Review foundation — complete
 
 P1 has been implemented, locally verified and merged into `main`.
 
@@ -916,7 +916,7 @@ P1 has been implemented, locally verified and merged into `main`.
 
 P1 establishes the review entry point only. It does not refresh offers, validate seats, calculate checkout pricing, or implement customer acceptance.
 
-### P2: Fresh offer integration — in progress
+#### P2: Fresh offer integration — in progress
 
 P2 connects the existing BR-02 `refresh-offer` backend action to the Checkout Review screen. It must preserve the original selected offer as the comparison baseline and use the refreshed provider offer only when BR-02 says it is safe to continue.
 
@@ -1136,7 +1136,7 @@ Focused domain and store lifecycle suites are registered as `npm run test:seat-a
 
 Checkout Review now presents passenger names, contact details and travel-document summaries with document numbers masked; the complete selected itinerary with segment sequence and derivable layover durations; current selected-seat details; explicit fare acceptance; independent per-seat price acceptance and condition acknowledgement; and a consolidated fare/seat/additional-service breakdown. The additional-services subtotal is currently zero because no additional services are in BR-05 scope. The Continue action is gated by current fare acceptance, all seat requirements, complete single-currency pricing and current passenger/review readiness. It navigates only to the existing payment placeholder. No order, reservation or payment operation is performed.
 
-The implementation deliberately allows seats with changed prices or disclosures to remain in Checkout Review for customer acceptance. Only unavailable seats route back to seat selection. Added `npm run test:checkout-pricing-presentation` and registered the focused suite in `npm test`. Local verification is pending.
+The implementation deliberately allows seats with changed prices or disclosures to remain in Checkout Review for customer acceptance. Only unavailable seats route back to seat selection. Added `npm run test:checkout-pricing-presentation` and registered the focused suite in `npm test`. The user confirmed the focused suite, full test suite, TypeScript check and Expo lint all passed; the changes were committed and pushed to `main`. P4-04 is complete and locally verified.
 
 **P4 exit:** Customer can understand and explicitly accept every applicable price change and disclosure requirement.
 
@@ -1144,16 +1144,50 @@ The implementation deliberately allows seats with changed prices or disclosures 
 
 ### Checkpoint 5: Integration and final verification (P5)
 
-Verify the complete Checkout Review lifecycle.
+P5 is a final integration and verification pass, not an invitation to add new product features. It will close gaps between the already implemented P1-P4 domains and the actual Checkout Review route/store lifecycle.
 
-- Test navigation and data preservation.
-- Test validation invalidation.
-- Test overlapping requests and stale responses.
-- Test failure and recovery paths.
-- Verify all BR05 acceptance criteria.
-- Update project documentation.
+#### P5-01 — Cross-stage navigation and state preservation
 
-  Exit: BR-05 is complete, verified and ready for an explicit merge decision.
+- Trace the real route sequence from flight selection through seat selection, passenger information and Checkout Review.
+- Verify that passenger edits preserve the active booking session, selected offer, seat selections and still-current offer validation/acceptance.
+- Verify that seat edits preserve unrelated passenger and fare state while invalidating and revalidating the complete current seat selection.
+- Verify that starting a different booking session or abandoning the current one clears all review-specific state and acceptances.
+- Add or extend deterministic tests around the store/session transitions where existing tests do not cover the integrated behaviour.
+
+**P5-01 implementation checkpoint:** Added `checkout-review-session-integration.test.mjs` and registered `npm run test:checkout-review-session-integration` in the full `npm test` suite. The new store-level integration coverage verifies that passenger edits preserve the active booking/review identities and current fare acceptance; changing a seat invalidates the old seat snapshot while preserving accepted flight fare; selecting a new offer clears the previous booking and review state; and abandoning a booking clears booking-specific data and acceptances. The user confirmed the initial P5-01 focused suite, full test suite, TypeScript check and Expo lint passed, and the three original manual flows were successful. During the additional manual no-seat path, removing the final selected seat exposed a render-order defect: the current selection became empty before the previous seat-validation outcome was replaced with `not_selected`, and the presentation builder incorrectly treated that transient stale outcome as an invariant violation. The presentation domain and Checkout Review screen now treat the current empty selection as authoritative, render the no-seat state immediately, and avoid displaying stale seat rows. Added a regression test for an empty current selection paired with a stale prior validation outcome. Re-verification of this fix is pending.
+
+**Exit:** Backward navigation preserves valid customer work; only state dependent on changed data is invalidated.
+
+#### P5-02 — Async concurrency and stale-result protection
+
+- Audit offer-refresh and seat-validation request initiation, completion and failure paths in the Checkout Review screen and store.
+- Verify that each response is accepted only for the exact active review attempt, booking session, offer and relevant seat snapshot.
+- Cover overlapping entry/focus events, retry versus in-flight requests, seat changes during validation, and a newer review attempt superseding an older request.
+- Ensure stale successes and stale failures cannot overwrite newer state, clear a current loading state, or create acceptance requirements from obsolete data.
+- Add deterministic deferred-promise tests for any integration-level race conditions not already covered by the lifecycle unit tests.
+
+**Exit:** No response from an obsolete request can change the active review state or permit progression.
+
+#### P5-03 — Failure, retry and recovery integration
+
+- Verify offer-refresh and seat-validation technical failures independently.
+- Verify the three-attempt limit, explicit retry behaviour and retry-exhausted state.
+- Verify that business outcomes (unavailable offer, changed itinerary, unavailable seat) are not treated as technical retry cases.
+- Verify recovery after returning to search, changing a seat, or starting a fresh review/booking session.
+- Confirm that failed attempts preserve the booking draft and do not silently discard passenger or seat data.
+
+**Exit:** Every failure has the correct recovery path, and retrying one failed operation does not unnecessarily repeat a successful unrelated operation.
+
+#### P5-04 — Acceptance-criteria audit and final closeout
+
+- Walk through all 28 BR-05 acceptance criteria against the implemented route, domain contracts, store and backend boundary.
+- Run the full automated test suite, TypeScript and Expo lint.
+- Complete the manual integration matrix for direct and connecting flights, with and without seats, price/disclosure acceptance, unavailable seats, passenger edits and recovery.
+- Confirm that the app proceeds only to the existing payment placeholder and performs no order creation, reservation or payment operation.
+- Record any provider-dependent scenarios that cannot be reproduced manually and rely on deterministic automated coverage for those outcomes.
+- Update this contract and the implementation notes to reflect verified behaviour and known limitations.
+
+**Exit:** BR-05 is complete, verified and ready for an explicit merge decision. No merge occurs without your approval.
 
 Each checkpoint should be committed and pushed for your review. We should agree on its exact task breakdown before implementation, and no checkpoint should be merged without your approval.
 
