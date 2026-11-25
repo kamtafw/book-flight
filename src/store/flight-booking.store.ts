@@ -217,6 +217,9 @@ function resolveCurrentSeatAcceptanceRequirements(
 		!seatLifecycle ||
 		!offerOutcome ||
 		!seatOutcome ||
+		!seatLifecycle.offerExpiresAt ||
+		!Number.isFinite(Date.parse(seatLifecycle.offerExpiresAt)) ||
+		Date.parse(seatLifecycle.offerExpiresAt) <= Date.now() ||
 		reviewSession.bookingSessionId !== bookingSession.id ||
 		reviewSession.offerId !== bookingSession.offerId ||
 		offerLifecycle.reviewSessionId !== reviewSession.id ||
