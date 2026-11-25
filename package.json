@@ -52,7 +52,7 @@
 		"ios": "expo start --ios",
 		"web": "expo start --web",
 		"lint": "expo lint",
-		"test": "tsx --test src/lib/booking/passengers/passenger-domain.test.mjs src/lib/booking/passengers/providers/duffel/passenger-requirements.test.mjs src/lib/booking/passengers/providers/duffel/passenger-validation.test.mjs src/lib/booking/readiness/booking-readiness.test.mjs src/lib/booking/readiness/checkout-review.test.mjs src/lib/booking/readiness/offer-review.test.mjs src/lib/booking/readiness/offer-review-lifecycle.test.mjs src/lib/booking/readiness/booking-session.test.mjs src/lib/flights/api.test.mjs functions/flight-search/src/main.test.js src/lib/booking/readiness/seat-review.test.mjs src/lib/booking/readiness/seat-review-lifecycle.test.mjs src/lib/booking/readiness/seat-review-presentation.test.mjs src/lib/booking/readiness/pricing.test.mjs src/lib/booking/readiness/flight-fare-review.test.mjs src/lib/booking/readiness/flight-booking-fare-acceptance.test.mjs",
+		"test": "tsx --test src/lib/booking/passengers/passenger-domain.test.mjs src/lib/booking/passengers/providers/duffel/passenger-requirements.test.mjs src/lib/booking/passengers/providers/duffel/passenger-validation.test.mjs src/lib/booking/readiness/booking-readiness.test.mjs src/lib/booking/readiness/checkout-review.test.mjs src/lib/booking/readiness/offer-review.test.mjs src/lib/booking/readiness/offer-review-lifecycle.test.mjs src/lib/booking/readiness/booking-session.test.mjs src/lib/flights/api.test.mjs functions/flight-search/src/main.test.js src/lib/booking/readiness/seat-review.test.mjs src/lib/booking/readiness/seat-review-lifecycle.test.mjs src/lib/booking/readiness/seat-review-presentation.test.mjs src/lib/booking/readiness/pricing.test.mjs src/lib/booking/readiness/flight-fare-review.test.mjs src/lib/booking/readiness/flight-booking-fare-acceptance.test.mjs src/lib/booking/readiness/seat-acceptance.test.mjs src/lib/booking/readiness/seat-booking-acceptance.test.mjs",
 		"test:passenger-domain": "tsx --test src/lib/booking/passengers/passenger-domain.test.mjs",
 		"test:passenger-requirements": "tsx --test src/lib/booking/passengers/providers/duffel/passenger-requirements.test.mjs",
 		"test:passenger-validation": "tsx --test src/lib/booking/passengers/providers/duffel/passenger-validation.test.mjs",
@@ -66,7 +66,9 @@
 		"test:seat-review-presentation": "tsx --test src/lib/booking/readiness/seat-review-presentation.test.mjs",
 		"test:pricing": "tsx --test src/lib/booking/readiness/pricing.test.mjs",
 		"test:flight-fare-review": "tsx --test src/lib/booking/readiness/flight-fare-review.test.mjs",
-		"test:flight-booking-fare-acceptance": "tsx --test src/lib/booking/readiness/flight-booking-fare-acceptance.test.mjs"
+		"test:flight-booking-fare-acceptance": "tsx --test src/lib/booking/readiness/flight-booking-fare-acceptance.test.mjs",
+		"test:seat-acceptance": "tsx --test src/lib/booking/readiness/seat-acceptance.test.mjs",
+		"test:seat-booking-acceptance": "tsx --test src/lib/booking/readiness/seat-booking-acceptance.test.mjs"
 	},
 	"private": true
 }
