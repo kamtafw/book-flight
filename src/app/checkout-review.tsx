@@ -17,6 +17,8 @@ import { createSeatReviewOutcome } from "@/lib/booking/readiness/seat-review"
 import { buildSeatReviewPresentation, type SeatReviewPresentationGroup } from "@/lib/booking/readiness/seat-review-presentation"
 import { isSeatReviewLifecycleForSession } from "@/lib/booking/readiness/seat-review-lifecycle"
 import { refreshOffer, validateSeatServices } from "@/lib/flights/api"
+import type { PassengerCollection } from "@/lib/booking/passengers/passenger-domain"
+import type { FlightOffer } from "@/lib/flights/types"
 import { useFlightBookingStore } from "@/store/flight-booking.store"
 import { useFlightOffersStore } from "@/store/flight-offers.store"
 
@@ -412,8 +414,8 @@ function PassengerAndItinerarySection({
 	flight,
 	passengers,
 }: {
-	flight: NonNullable<ReturnType<typeof useFlightOffersStore.getState>["offers"][number]> | undefined
-	passengers: ReturnType<typeof useFlightBookingStore.getState>["passengerCollection"]
+	flight: FlightOffer | undefined
+	passengers: PassengerCollection | null
 }) {
 	const passengerName = (passenger: NonNullable<typeof passengers>["passengers"][number]) => {
 		const name = [
@@ -498,15 +500,10 @@ export default function CheckoutReviewScreen() {
 	const acknowledgeCurrentSeatDisclosures = useFlightBookingStore(
 		(state) => state.acknowledgeCurrentSeatDisclosures,
 	)
-	const areCurrentSeatRequirementsSatisfied = useFlightBookingStore(
-		(state) => state.areCurrentSeatRequirementsSatisfied,
-	)
 	const seatPriceAcceptances = useFlightBookingStore((state) => state.seatPriceAcceptances)
 	const seatDisclosureAcknowledgements = useFlightBookingStore(
 		(state) => state.seatDisclosureAcknowledgements,
 	)
-	const flightFareAcceptance = useFlightBookingStore((state) => state.flightFareAcceptance)
-
 	const entryState = useMemo(
 		() => getCheckoutReviewEntryState(flightId, flight, activeBookingSession, passengerCollection),
 		[activeBookingSession, flight, flightId, passengerCollection],
@@ -700,6 +697,7 @@ export default function CheckoutReviewScreen() {
 	}
 
 	const continueToPaymentPlaceholder = () => {
+		if (entryState !== "ready") return
 		const state = useFlightBookingStore.getState()
 		const fareAccepted = state.isCurrentFlightFareAccepted()
 		const seatsAccepted = state.areCurrentSeatRequirementsSatisfied()
@@ -1014,8 +1012,7 @@ export default function CheckoutReviewScreen() {
 							</Text>
 						</View>
 						<Text className="mt-3 font-inter text-xs leading-5 text-gray-200">
-							This updated fare will require your explicit acceptance later in checkout. You cannot
-							proceed until the remaining review and acceptance steps are complete.
+							The updated fare requires your explicit acceptance in the pricing section below.
 						</Text>
 					</View>
 				) : (
