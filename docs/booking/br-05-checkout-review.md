@@ -1154,6 +1154,8 @@ P5 is a final integration and verification pass, not an invitation to add new pr
 - Verify that starting a different booking session or abandoning the current one clears all review-specific state and acceptances.
 - Add or extend deterministic tests around the store/session transitions where existing tests do not cover the integrated behaviour.
 
+**P5-01 implementation checkpoint:** Added `checkout-review-session-integration.test.mjs` and registered `npm run test:checkout-review-session-integration` in the full `npm test` suite. The new store-level integration coverage verifies that passenger edits preserve the active booking/review identities and current fare acceptance; changing a seat invalidates the old seat snapshot while preserving accepted flight fare; selecting a new offer clears the previous booking and review state; and abandoning a booking clears booking-specific data and acceptances. The focused suite and full local verification are pending.
+
 **Exit:** Backward navigation preserves valid customer work; only state dependent on changed data is invalidated.
 
 #### P5-02 — Async concurrency and stale-result protection
