@@ -657,7 +657,13 @@ export default function CheckoutReviewScreen() {
 	const currentSeatRequirements = getCurrentSeatAcceptanceRequirements()
 	const flightFareAccepted = useMemo(
 		() => isCurrentFlightFareAccepted(),
-		[flightFareAcceptance, isCurrentFlightFareAccepted],
+		[
+			activeBookingSession,
+			checkoutReviewSession,
+			flightFareAcceptance,
+			isCurrentFlightFareAccepted,
+			offerReviewLifecycle,
+		],
 	)
 	const passengerLabels = useMemo(() => {
 		const labels: Record<string, string> = {}
