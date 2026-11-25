@@ -423,7 +423,7 @@ function maskDocumentNumber(value: string | undefined): string {
 }
 
 function formatLayoverDuration(arrivalAt: string, departureAt: string): string | null {
-	const hasExplicitTimezone = (value: string) => /(?:Z|[+-]\\d{2}:\\d{2})$/i.test(value)
+	const hasExplicitTimezone = (value: string) => /(?:Z|[+-]\d{2}:\d{2})$/i.test(value)
 	if (!hasExplicitTimezone(arrivalAt) || !hasExplicitTimezone(departureAt)) return null
 	const arrival = Date.parse(arrivalAt)
 	const departure = Date.parse(departureAt)
