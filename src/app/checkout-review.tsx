@@ -564,7 +564,6 @@ export default function CheckoutReviewScreen() {
 	const seatDisclosureAcknowledgements = useFlightBookingStore(
 		(state) => state.seatDisclosureAcknowledgements,
 	)
-	const flightFareAcceptance = useFlightBookingStore((state) => state.flightFareAcceptance)
 	const entryState = useMemo(
 		() => getCheckoutReviewEntryState(flightId, flight, activeBookingSession, passengerCollection),
 		[activeBookingSession, flight, flightId, passengerCollection],
