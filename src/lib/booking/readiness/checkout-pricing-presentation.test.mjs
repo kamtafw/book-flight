@@ -161,6 +161,14 @@ test("mixed currencies show component prices without a grand total", () => {
 	assert.equal(result.allAcceptancesSatisfied, false)
 })
 
+test("unresolved passenger association blocks progression even when prices are accepted", () => {
+	const result = build({ passengerLabels: {} })
+	assert.equal(result.status, "ready")
+	assert.equal(result.pricing?.status, "complete")
+	assert.equal(result.seatLines[0].passengerAssociationResolved, false)
+	assert.equal(result.allAcceptancesSatisfied, false)
+})
+
 test("missing seat validation or fare review fails closed", () => {
 	assert.equal(build({ seatRequirements: null }).status, "blocked")
 	assert.equal(build({ flightFareReview: null }).status, "blocked")
