@@ -161,6 +161,29 @@ test("returning to search clears failed validation state but preserves the draft
 	assert.equal(store.getState().offerReviewLifecycle.status, "refreshing")
 })
 
+test("starting a different booking after failure clears the old draft and opens a clean review", () => {
+	const { store } = prepareReview()
+	store.getState().clearOfferReviewLifecycle()
+	startOfferFailure(store)
+	store.getState().selectOutboundSeatService(makeSeat())
+
+	const nextOffer = makeOffer("offer-next")
+	store.getState().beginBookingSession({ id: nextOffer.id })
+	store.getState().initializePassengerCollection(nextOffer)
+	store.getState().getOrCreateCheckoutReviewSession(nextOffer.id)
+
+	const state = store.getState()
+	assert.equal(state.activeBookingSession.offerId, "offer-next")
+	assert.equal(state.offerReviewLifecycle, null)
+	assert.equal(state.seatReviewLifecycle, null)
+	assert.equal(state.checkoutReviewSession.offerId, "offer-next")
+	assert.deepEqual(state.selectedOutboundSeatServices, [])
+	assert.equal(state.passengerCollection.passengers.length, 1)
+
+	const attempt = store.getState().startOfferReviewRefresh()
+	assert.equal(attempt.attemptNumber, 1)
+})
+
 test("seat validation allows three explicit technical attempts without repeating successful offer refresh", () => {
 	const { store } = prepareReview()
 	store.getState().selectOutboundSeatService(makeSeat())
@@ -212,11 +235,14 @@ test("changing the selected seat after a technical failure starts a fresh valida
 test("unavailable and itinerary-changed offers are business blocks, not technical retry states", () => {
 	for (const outcomeFactory of [unavailableOutcome, itineraryChangedOutcome]) {
 		const { store, offer } = prepareReview()
-		const attempt = store.getState().startOfferReviewRefresh( undefined, true )
+		const attempt = store.getState().startOfferReviewRefresh(undefined, true)
 		assert.ok(attempt)
 		assert.equal(store.getState().completeOfferReviewRefresh(attempt, outcomeFactory(offer)), true)
 		const lifecycle = store.getState().offerReviewLifecycle
-		assert.equal(lifecycle.status, outcomeFactory === unavailableOutcome ? "unavailable" : "itinerary_changed")
+		assert.equal(
+			lifecycle.status,
+			outcomeFactory === unavailableOutcome ? "unavailable" : "itinerary_changed",
+		)
 		assert.equal(store.getState().startOfferReviewRefresh(), null)
 	}
 })
