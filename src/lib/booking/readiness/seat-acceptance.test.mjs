@@ -213,3 +213,23 @@ test("rejects malformed seat acceptance identity and timestamps", () => {
 		"not-a-date",
 	))
 })
+
+test("rejects seat results whose provider identity differs from the selected component", () => {
+	const selected = seat()
+	assert.throws(() => createSeatAcceptanceRequirements(context, {
+		status: "action_required",
+		selections: [{
+			status: "price_changed",
+			selection: selected,
+			current: current(selected, { serviceId: "different-service" }),
+		}],
+	}), /do not match/)
+	assert.throws(() => createSeatAcceptanceRequirements(context, {
+		status: "action_required",
+		selections: [{
+			status: "price_changed",
+			selection: { ...selected, offerId: "different-offer" },
+			current: current(selected, { amount: "29.00" }),
+		}],
+	}), /does not belong/)
+})
