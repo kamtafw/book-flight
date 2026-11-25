@@ -41,8 +41,15 @@ Acceptance is explicit and timestamped. The domain does not infer acceptance fro
   - `isFlightFareAcceptanceCurrent()` verifies the acceptance against the exact current review.
 - `src/lib/booking/readiness/flight-fare-review.test.mjs`
   - Covers unchanged fares, increases, decreases, currency changes, exact acceptance identity, invalidation, malformed money, and invalid timestamps.
+- `src/store/flight-booking.store.ts`
+  - Stores the current fare acceptance within the active booking/review state.
+  - Exposes actions to derive the current fare review, explicitly accept a changed fare, and determine whether the current fare is accepted.
+  - Clears acceptance when a new offer refresh starts/completes, when the review lifecycle is cleared, or when the booking session changes/ends.
+  - Does not clear fare acceptance for passenger edits or seat-only changes.
+- `src/lib/booking/readiness/flight-booking-fare-acceptance.test.mjs`
+  - Covers store-level acceptance, refresh invalidation, unchanged fare handling, and currency changes.
 - `package.json`
-  - Adds `npm run test:flight-fare-review` and includes the suite in `npm test`.
+  - Adds focused scripts for the domain and store lifecycle suites and includes both in `npm test`.
 
 ## Boundaries
 
