@@ -135,6 +135,7 @@ function resolveCurrentFlightFareReview(
 	if (
 		!reviewSession ||
 		!bookingSession ||
+		!lifecycle ||
 		!outcome ||
 		reviewSession.bookingSessionId !== bookingSession.id ||
 		reviewSession.offerId !== bookingSession.offerId ||
