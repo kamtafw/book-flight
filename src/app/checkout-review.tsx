@@ -4,7 +4,10 @@ import { useCallback, useEffect, useMemo } from "react"
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
-import type { PassengerCollection } from "@/lib/booking/passengers/passenger-domain"
+import type {
+	PassengerCollection,
+	PassengerRelationship,
+} from "@/lib/booking/passengers/passenger-domain"
 import { isCheckoutReviewSessionCurrent } from "@/lib/booking/readiness/booking-session"
 import { buildCheckoutPricingPresentation } from "@/lib/booking/readiness/checkout-pricing-presentation"
 import { getCheckoutReviewEntryState } from "@/lib/booking/readiness/checkout-review"
@@ -460,6 +463,20 @@ function maskDocumentNumber(value: string | undefined): string {
 	return normalized.length <= 4 ? "••••" : `••••${normalized.slice(-4)}`
 }
 
+function formatProviderLocalDateTime(value: string): string {
+	const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(value)
+	if (!match) return "Time unavailable"
+	const [, year, month, day, hour, minute] = match
+	const providerLocalTime = new Date(
+		Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute)),
+	)
+	return new Intl.DateTimeFormat(undefined, {
+		dateStyle: "medium",
+		timeStyle: "short",
+		timeZone: "UTC",
+	}).format(providerLocalTime)
+}
+
 function formatLayoverDuration(arrivalAt: string, departureAt: string): string | null {
 	const hasExplicitTimezone = (value: string) => /(?:Z|[+-]\d{2}:\d{2})$/i.test(value)
 	if (!hasExplicitTimezone(arrivalAt) || !hasExplicitTimezone(departureAt)) return null
@@ -475,9 +492,11 @@ function formatLayoverDuration(arrivalAt: string, departureAt: string): string |
 function PassengerAndItinerarySection({
 	flight,
 	passengers,
+	relationships,
 }: {
 	flight: FlightOffer | undefined
 	passengers: PassengerCollection | null
+	relationships: PassengerRelationship[]
 }) {
 	const passengerName = (passenger: NonNullable<typeof passengers>["passengers"][number]) => {
 		const name = [
@@ -488,6 +507,15 @@ function PassengerAndItinerarySection({
 			.filter((part): part is string => Boolean(part?.trim()))
 			.join(" ")
 		return name || "Name not supplied"
+	}
+	const responsibleAdultName = (infantPassengerId: string) => {
+		const relationship = relationships.find(
+			(item) => item.type === "responsible_adult" && item.passengerId === infantPassengerId,
+		)
+		const adult = relationship
+			? passengers?.passengers.find((item) => item.id === relationship.relatedPassengerId)
+			: null
+		return adult ? passengerName(adult) : "Not assigned"
 	}
 	return (
 		<View className="mt-5 rounded-2xl border border-border bg-white p-4">
@@ -500,12 +528,54 @@ function PassengerAndItinerarySection({
 							{passenger.category}
 						</Text>
 					</View>
-					{passenger.contacts.map((contact) => (
-						<Text key={contact.id} className="mt-2 font-inter text-xs text-gray-200">
-							{contact.type === "email" ? "Email" : "Phone"}: {contact.value}
-							{contact.belongsTo === "other" ? " · supplied by another contact" : ""}
+					{passenger.category === "infant" ? (
+						<Text className="mt-2 font-inter text-xs text-gray-200">
+							Responsible adult: {responsibleAdultName(passenger.id)}
 						</Text>
-					))}
+					) : null}
+					{passenger.identity.title ||
+					passenger.identity.dateOfBirth ||
+					passenger.identity.gender ||
+					passenger.identity.nationality ? (
+						<Text className="mt-2 font-inter text-xs leading-5 text-gray-200">
+							{[
+								passenger.identity.title,
+								passenger.identity.gender,
+								passenger.identity.dateOfBirth
+									? `Date of birth: ${passenger.identity.dateOfBirth}`
+									: null,
+								passenger.identity.nationality
+									? `Nationality: ${passenger.identity.nationality}`
+									: null,
+							]
+								.filter((value): value is string => Boolean(value?.trim()))
+								.join(" · ")}
+						</Text>
+					) : null}
+					{passenger.contacts.map((contact) => {
+						const relatedPerson = contact.relatedPersonPassengerId
+							? passengers?.passengers.find(
+									(candidate) => candidate.id === contact.relatedPersonPassengerId,
+								)
+							: null
+						const relatedName = relatedPerson
+							? [
+									relatedPerson.identity.givenName,
+									relatedPerson.identity.middleName,
+									relatedPerson.identity.familyName,
+								]
+									.filter((part): part is string => Boolean(part?.trim()))
+									.join(" ")
+							: ""
+						return (
+							<Text key={contact.id} className="mt-2 font-inter text-xs text-gray-200">
+								{contact.type === "email" ? "Email" : "Phone"}: {contact.value}
+								{contact.belongsTo === "other"
+									? ` · belongs to ${relatedName || "another contact"}`
+									: " · belongs to this passenger"}
+							</Text>
+						)
+					})}
 					{passenger.travelDocuments.map((document) => (
 						<View key={document.id} className="mt-2 border-t border-border pt-2">
 							<Text className="font-inter-medium text-xs text-black">
@@ -537,15 +607,25 @@ function PassengerAndItinerarySection({
 									{segment.departureAirportCode} → {segment.arrivalAirportCode}
 								</Text>
 								<Text className="mt-1 font-inter text-xs text-gray-200">
-									{segment.marketingCarrierName} · {segment.marketingCarrierCode}{" "}
-									{segment.flightNumber}
+									{segment.marketingCarrierName} · {segment.flightNumber}
+								</Text>
+								{segment.operatingCarrierName &&
+								segment.operatingCarrierName !== segment.marketingCarrierName ? (
+									<Text className="mt-1 font-inter text-xs text-gray-200">
+										Operated by {segment.operatingCarrierName}
+									</Text>
+								) : null}
+								<Text className="mt-1 font-inter text-xs text-gray-200">
+									{segment.departureAirportName} ({segment.departureAirportCode}) ·{" "}
+									{formatProviderLocalDateTime(segment.departureAt)}
 								</Text>
 								<Text className="mt-1 font-inter text-xs text-gray-200">
-									{new Date(segment.departureAt).toLocaleString()} –{" "}
-									{new Date(segment.arrivalAt).toLocaleString()}
+									{segment.arrivalAirportName} ({segment.arrivalAirportCode}) ·{" "}
+									{formatProviderLocalDateTime(segment.arrivalAt)}
 								</Text>
 								<Text className="mt-1 font-inter text-xs text-gray-200">
 									Flight segment {index + 1}
+									{segment.duration ? ` · ${segment.duration}` : ""}
 								</Text>
 							</View>
 							{layover ? (
@@ -727,10 +807,16 @@ export default function CheckoutReviewScreen() {
 		})
 		return labels
 	}, [flightId, passengerCollection])
+	const reviewedOffer =
+		currentLifecycle?.outcome &&
+		(currentLifecycle.outcome.status === "valid" ||
+			currentLifecycle.outcome.status === "price_changed")
+			? currentLifecycle.outcome.currentOffer
+			: flight
 	const segmentLabels = useMemo(() => {
 		const labels: Record<string, string> = {}
 		let index = 0
-		flight?.slices.forEach((slice) => {
+		reviewedOffer?.slices.forEach((slice) => {
 			slice.segments.forEach((segment) => {
 				index += 1
 				labels[segment.id] =
@@ -738,7 +824,7 @@ export default function CheckoutReviewScreen() {
 			})
 		})
 		return labels
-	}, [flight])
+	}, [reviewedOffer])
 	const pricingPresentation = useMemo(
 		() =>
 			buildCheckoutPricingPresentation({
@@ -766,7 +852,7 @@ export default function CheckoutReviewScreen() {
 			selectedSeats.length === 0 ||
 			!currentSeatLifecycle?.outcome ||
 			!passengerCollection ||
-			!flight ||
+			!reviewedOffer ||
 			currentSeatLifecycle.outcome.status === "not_selected"
 		) {
 			return []
@@ -775,9 +861,9 @@ export default function CheckoutReviewScreen() {
 			currentSeatLifecycle.outcome,
 			selectedSeats,
 			passengerCollection,
-			flight,
+			reviewedOffer,
 		)
-	}, [currentSeatLifecycle, flight, passengerCollection, selectedSeats])
+	}, [currentSeatLifecycle, reviewedOffer, passengerCollection, selectedSeats])
 
 	useFocusEffect(
 		useCallback(() => {
@@ -1170,7 +1256,11 @@ export default function CheckoutReviewScreen() {
 					</View>
 				)}
 
-				<PassengerAndItinerarySection flight={flight} passengers={passengerCollection} />
+				<PassengerAndItinerarySection
+					flight={reviewedOffer}
+					passengers={passengerCollection}
+					relationships={passengerCollection?.relationships ?? []}
+				/>
 
 				<SeatReviewSection groups={seatReviewGroups} notSelected={selectedSeats.length === 0} />
 

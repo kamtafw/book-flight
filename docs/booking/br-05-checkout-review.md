@@ -1166,7 +1166,7 @@ P5 is a final integration and verification pass, not an invitation to add new pr
 - Ensure stale successes and stale failures cannot overwrite newer state, clear a current loading state, or create acceptance requirements from obsolete data.
 - Add deterministic deferred-promise tests for any integration-level race conditions not already covered by the lifecycle unit tests.
 
-**P5-02 implementation checkpoint:** The Checkout Review screen now passes the captured review/booking/offer identity into offer-refresh initiation. The store rejects a stale callback whose captured identity no longer matches the active booking, and ordinary focus-driven starts cannot refresh an already-ready or price-changed offer while that provider offer remains unexpired. A separate explicit `force` argument represents an intentional new refresh and bypasses only that freshness guard; it does not bypass the in-flight, retry-exhausted, unavailable or stale-identity protections. Acceptance invalidation tests now express that explicit intent. Seat-validation initiation now receives the captured review identity, current seat-snapshot key and offer-refresh attempt ID; the store checks all three against current state before starting a provider request. This prevents a stale screen callback from validating an old seat list under a newer seat snapshot or against a superseded offer-review attempt. Completion and failure remain guarded by the exact attempt and current snapshot, so late success and failure responses cannot overwrite the active attempt. Added `checkout-review-request-concurrency.test.mjs` with deferred-promise coverage for duplicate focus starts, stale callbacks after booking/seat changes, and delayed offer/seat successes and failures. Registered `npm run test:checkout-review-request-concurrency` and included it in `npm test`. The P5-01 lint warning was addressed by removing unnecessary memoisation and the now-unused fare-acceptance store selector. Local verification is pending.
+**P5-02 implementation checkpoint:** The Checkout Review screen now passes the captured review/booking/offer identity into offer-refresh initiation. The store rejects a stale callback whose captured identity no longer matches the active booking, and ordinary focus-driven starts cannot refresh an already-ready or price-changed offer while that provider offer remains unexpired. A separate explicit `force` argument represents an intentional new refresh and bypasses only that freshness guard; it does not bypass the in-flight, retry-exhausted, unavailable or stale-identity protections. Acceptance invalidation tests now express that explicit intent. Seat-validation initiation now receives the captured review identity, current seat-snapshot key and offer-refresh attempt ID; the store checks all three against current state before starting a provider request. This prevents a stale screen callback from validating an old seat list under a newer seat snapshot or against a superseded offer-review attempt. Completion and failure remain guarded by the exact attempt and current snapshot, so late success and failure responses cannot overwrite the active attempt. Added `checkout-review-request-concurrency.test.mjs` with deferred-promise coverage for duplicate focus starts, stale callbacks after booking/seat changes, and delayed offer/seat successes and failures. Registered `npm run test:checkout-review-request-concurrency` and included it in `npm test`. The P5-01 lint warning was addressed by removing unnecessary memoisation and the now-unused fare-acceptance store selector. The user subsequently confirmed that the focused concurrency suite, full test suite, TypeScript check and Expo lint all passed, and that the changes were committed and pushed to `main`. P5-02 is complete and locally verified.
 
 **Exit:** No response from an obsolete request can change the active review state or permit progression.
 
@@ -1178,18 +1178,40 @@ P5 is a final integration and verification pass, not an invitation to add new pr
 - Verify recovery after returning to search, changing a seat, or starting a fresh review/booking session.
 - Confirm that failed attempts preserve the booking draft and do not silently discard passenger or seat data.
 
+**P5-03 implementation checkpoint — complete and locally verified**
+
+- Added `checkout-review-failure-recovery.test.mjs` to exercise the real booking store and lifecycle transitions together rather than duplicating the pure lifecycle unit tests.
+- Offer-refresh coverage starts from a fresh review, simulates three consecutive technical failures and verifies the attempt numbers, retry-exhausted state, and that the focus predicate does not automatically restart a failed attempt. It also verifies that passenger details and selected seats remain in the booking draft after exhaustion.
+- Recovery coverage verifies that clearing review validation state when returning to search preserves the active booking/review session, passenger data and selected seats, and permits a new first refresh attempt. A separate fresh-booking test verifies that starting a different offer after failure clears the old draft and validation state before a clean review begins.
+- Seat-validation coverage simulates three technical failures for the same selected-seat snapshot. It verifies that retry is explicit, exhaustion blocks further attempts, selected seats and passenger data remain intact, and the successful offer-refresh lifecycle is not replaced or repeated while seat validation is retried.
+- Seat-change recovery coverage verifies that replacing a seat after a technical failure creates a new seat snapshot and starts a fresh attempt cycle without invalidating the still-current offer validation.
+- Business-outcome coverage verifies that unavailable offers and materially changed itineraries remain blocking business states rather than technical retry states. An unavailable seat remains an `action_required` result and is reused for customer resolution rather than being exposed as a technical retry.
+- Registered `npm run test:checkout-review-failure-recovery` and included the new suite in `npm test`.
+- No production behaviour was changed in P5-03; the tests established that the existing screen/store recovery paths satisfy the retry and recovery contract.
+- The user confirmed the focused recovery suite, full test suite, TypeScript check, Expo lint and manual verification all passed. P5-03 is complete. Its changes remain on `feat/br-05-p5-03-failure-recovery` and have not been merged into `main`.
+
 **Exit:** Every failure has the correct recovery path, and retrying one failed operation does not unnecessarily repeat a successful unrelated operation.
 
 #### P5-04 — Acceptance-criteria audit and final closeout
 
 - Walk through all 28 BR-05 acceptance criteria against the implemented route, domain contracts, store and backend boundary.
-- Run the full automated test suite, TypeScript and Expo lint.
+- Run the full automated test suite, TypeScript and Expo lint after the final integration changes.
 - Complete the manual integration matrix for direct and connecting flights, with and without seats, price/disclosure acceptance, unavailable seats, passenger edits and recovery.
 - Confirm that the app proceeds only to the existing payment placeholder and performs no order creation, reservation or payment operation.
-- Record any provider-dependent scenarios that cannot be reproduced manually and rely on deterministic automated coverage for those outcomes.
-- Update this contract and the implementation notes to reflect verified behaviour and known limitations.
+- Record provider-dependent scenarios that cannot be reproduced manually and rely on deterministic automated coverage for those outcomes.
+- Update this contract and the implementation notes to reflect verified behaviour and known limitations. **Complete:** the audit and implementation notes record the verified presentation behaviour and the provider-dependent cases covered deterministically.
 
-**Exit:** BR-05 is complete, verified and ready for an explicit merge decision. No merge occurs without your approval.
+**P5-04 audit findings and implementation follow-up**
+
+The initial code audit identified presentation gaps against the approved Checkout Review information requirements. The review screen now includes the passenger identity fields available in the passenger domain (title, gender, date of birth and nationality), identifies an infant's responsible adult, resolves contact ownership labels where a related passenger is known, and displays document type/issuer/expiry with the document number masked. It also displays airport names and codes, segment durations, marketing carrier/flight number and a distinct operating carrier where applicable.
+
+The itinerary and seat segment labels now use the successfully refreshed offer returned by BR-02, so harmless provider metadata changes are reflected in the review rather than leaving the original search metadata on screen. Provider timestamps are formatted using their supplied local wall-clock components; layover durations continue to use the absolute timestamps and are omitted when timezone information is insufficient.
+
+The criterion-by-criterion code audit is recorded in `docs/booking/br-05-p5-04-audit.md`. The user confirmed that the full automated test suite, TypeScript check, Expo lint and manual integration verification all passed after the presentation follow-up.
+
+**Current status:** P5-04 implementation, local verification and manual integration audit complete. BR-05 is ready for an explicit merge decision.
+
+**Exit:** All 28 acceptance criteria have been audited against the implementation; the user confirmed all automated checks and manual integration verification passed. Documentation reflects the implementation and known provider-dependent limitations. BR-05 is ready for an explicit merge decision. No merge occurs without your approval.
 
 Each checkpoint should be committed and pushed for your review. We should agree on its exact task breakdown before implementation, and no checkpoint should be merged without your approval.
 
