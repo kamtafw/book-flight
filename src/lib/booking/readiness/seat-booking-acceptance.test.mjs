@@ -80,15 +80,6 @@ function priceChanged(selection, amount) {
 	}
 }
 
-function disclosuresChanged(selection, disclosures) {
-	return {
-		status: "disclosures_changed",
-		selection,
-		current: validated(selection, { disclosures }),
-		priceChanged: false,
-	}
-}
-
 function valid(selection) {
 	return { status: "valid", selection, current: validated(selection) }
 }
