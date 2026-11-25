@@ -25,6 +25,7 @@ import {
 	getOfferReviewOutcomeStatus,
 	isOfferReviewAttemptCurrent,
 	isOfferReviewLifecycleForSession,
+	shouldStartOfferReviewRefresh,
 	type OfferReviewAttempt,
 	type OfferReviewLifecycle,
 	type OfferReviewLifecycleIdentity,
@@ -398,6 +399,12 @@ export const useFlightBookingStore = create<FlightBookingState>((set, get) => ({
 				current.status === "retry_exhausted" ||
 				current.status === "itinerary_changed" ||
 				current.status === "unavailable"
+			) {
+				return null
+			}
+			if (
+				(current.status === "ready" || current.status === "price_changed") &&
+				!shouldStartOfferReviewRefresh(current, identity)
 			) {
 				return null
 			}
