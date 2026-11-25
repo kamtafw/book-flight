@@ -221,7 +221,7 @@ test("a delayed offer-refresh success from an earlier booking cannot replace the
 
 test("a delayed offer-refresh failure from an earlier booking cannot overwrite the current attempt", async () => {
 	const { store } = prepareReview()
-	const oldAttempt = store.getState().startOfferReviewRefresh()
+	const oldAttempt = startFreshOfferRefresh(store)
 	assert.ok(oldAttempt)
 	const pending = deferred()
 	const oldRequest = pending.promise.catch((error) =>
